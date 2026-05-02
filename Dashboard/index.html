@@ -763,10 +763,21 @@
             // Thay đổi Nút bấm dựa trên Tab
             let actionsHtml = '';
             if (currentTab === 'pending') {
+                // Lấy Trạng thái duyệt của dòng hiện tại
+                const trangThaiDuyet = String(row['Trạng thái duyệt'] || '').trim();
+                
+                // Chỉ tạo nút Bỏ qua nếu Trạng thái duyệt là "Chờ kiểm tra"
+                let rejectButtonHtml = '';
+                if (trangThaiDuyet === 'Chờ kiểm tra') {
+                    rejectButtonHtml = `
+                        <button class="btn-reject" id="btn-reject-${rId}" onclick="rejectRow(${rId}, '${rawSoHieu}')" title="Đánh dấu không liên quan">
+                            <i class="fa-solid fa-ban"></i> Bỏ qua
+                        </button>
+                    `;
+                }
+
                 actionsHtml = `
-                    <button class="btn-reject" id="btn-reject-${rId}" onclick="rejectRow(${rId}, '${rawSoHieu}')" title="Đánh dấu không liên quan">
-                        <i class="fa-solid fa-ban"></i> Bỏ qua
-                    </button>
+                    ${rejectButtonHtml}
                     <button class="btn-edit" onclick="openModal(${rId})" title="Sửa thông tin">
                         <i class="fa-solid fa-pen"></i>
                     </button>
