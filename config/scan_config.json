@@ -1,0 +1,98 @@
+{
+  "run_mode": "crawl_giao_duc_all_pages",
+  "crawl_strategy": "list_url_pageindex",
+  "dry_run": false,
+  "enabled": true,
+  "debug_save_request_body": true,
+  "ma_linh_vuc": "giao-duc",
+  "ten_linh_vuc_luatvietnam": "Giáo dục",
+  "list_url": "https://luatvietnam.vn/van-ban-moi.html?lFieldId=5&DocTypeId=0&EffectStatusId=0&OrganId=0&ShowSapo=0",
+  "page_size": 20,
+  "max_pages_per_field": 0,
+  "max_documents_per_run": 0,
+
+  "filters": {
+    "required_luatvietnam_field_contains": [
+      "Giáo dục"
+    ],
+    "doc_type_ids_to_crawl": [21, 11, 10, 58
+    ],
+    "accepted_doc_types": ["Thông tư", "Nghị định", "Luật", "Bộ luật"
+    ],
+    "required_url_path_contains": [
+      "/giao-duc/",
+      "/dau-tu/",
+      "/lao-dong/",
+      "/nguoi-khuyet-tat/",
+      "/tai-chinh/"
+    ],
+    "exclude_url_path_contains": [
+      "/kinh-te/",
+      "/ngan-hang/",
+      "/chung-khoan/",
+      "/bao-hiem/",
+      "/thuong-mai/",
+      "/cong-nghiep/",
+      "/nong-nghiep/",
+      "/lam-nghiep/",
+      "/thuy-san/",
+      "/cong-nghe/",
+      "/thong-tin/",
+      "/truyen-thong/",
+      "/van-hoa/",
+      "/the-thao/",
+      "/du-lich/",
+      "/y-te/",
+      "/suc-khoe/",
+      "/moi-truong/",
+      "/tai-nguyen/",
+      "/khoang-san/",
+      "/nang-luong/",
+      "/giao-thong/",
+      "/van-tai/",
+      "/xay-dung/",
+      "/bat-dong-san/",
+      "/quoc-phong/",
+      "/an-ninh/",
+      "/tu-phap/",
+      "/hai-quan/",
+      "/ngoai-giao/",
+      "/xa-hoi/",
+      "/phu-nu/",
+      "/tre-em/",
+      "/nguoi-cao-tuoi/",
+      "/dan-toc/",
+      "/ton-giao/"
+    ],
+
+    "skip_doc_types": [
+      "Chỉ thị",
+      "Quyết định",
+      "Văn bản hợp nhất",
+      "Công văn"
+    ],
+    "exclude_title_keywords": [
+      "Văn bản hợp nhất",
+      "VBHN",
+      "Công văn",
+      "Chỉ thị",
+      "Quyết định",
+      "Kế hoạch"
+    ],
+    "exclude_url_keywords": [
+      "van-ban-hop-nhat",
+      "cong-van", 
+      "chi-thi",
+      "quyet-dinh",
+      "ke-hoach"
+    ],
+    "exclude_so_hieu_keywords": [
+      "/CT-",
+      "/QĐ-",
+      "/QD-",
+      "/CV-",
+      "/VBHN-",
+      "/KH-"
+    ]
+  }
+}

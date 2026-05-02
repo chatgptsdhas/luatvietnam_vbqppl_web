@@ -1,0 +1,28 @@
+{
+  "sheet_columns": [
+    "ID VĂN BẢN",
+    "Lĩnh vực",
+    "Chủ đề",
+    "Mục",
+    "Loại văn bản",
+    "Tên văn bản",
+    "Số hiệu",
+    "Ngày hiệu lực",
+    "Bộ phận chủ trì",
+    "Link Văn bản",
+    "Căn cứ pháp lý",
+    "Hướng dẫn thực hiện",
+    "Sửa đổi, bổ sung cho",
+    "Sửa đổi, bổ sung bởi",
+    "Trạng thái duyệt",
+    "Trạng thái xử lý",
+    "Nội dung căn cứ",
+    "Gợi ý căn cứ pháp lý",
+    "Văn bản chưa có trong danh mục",
+    "Trạng thái quan hệ pháp lý",
+    "Ghi chú quan hệ pháp lý",
+    "Nguồn dữ liệu",
+    "Ngày Python quét",
+    "Ghi chú Python"
+  ]
+}

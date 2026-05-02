@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Duyệt VBQPPL - H.A.S</title>
+    <!-- Font Awesome cho Icon -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Bộ màu thương hiệu Hanoi Adelaide School (HAS) */
+            --has-navy: #1b2a59;
+            --has-teal: #00949a;
+            --has-orange: #f57025;
+            
+            /* Màu phụ trợ UI */
+            --success: #0f9d58;
+            --success-bg: #e6f4ea;
+            --warning: #f29900;
+            --warning-bg: #fef7e0;
+            --danger: #d93025;
+            --bg-body: #f4f6f9;
+            --surface: #ffffff;
+            --text-main: #202124;
+            --text-muted: #5f6368;
+            --border-color: #eaebed;
+            --border-highlight: #d2e3fc;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1440px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            gap: 16px;
+        }
+
+        /* --- HEADER --- */
+        .top-header {
+            background: var(--surface);
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.05);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        
+        .logo { height: 48px; width: auto; object-fit: contain; }
+        
+        .title-group h1 {
+            margin: 0 0 4px 0;
+            font-size: 22px;
+            color: var(--has-navy);
+            font-weight: 700;
+        }
+        .title-group p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .header-actions { display: flex; gap: 12px; }
+
+        /* --- BUTTONS --- */
+        button {
+            padding: 8px 16px; border: none; border-radius: 6px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            font-size: 13px; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-outline-primary {
+            background: white; color: var(--has-navy);
+            border: 1px solid var(--border-highlight);
+        }
+        .btn-outline-primary:hover { background: #f8f9fa; border-color: var(--has-navy); }
+        
+        .btn-primary { background: var(--has-navy); color: white; }
+        .btn-primary:hover { background: #131e40; box-shadow: 0 2px 6px rgba(27,42,89,0.2); }
+
+        .btn-edit {
+            background: #fff8e1; color: #b06000;
+            border: 1px solid #ffe0b2; padding: 6px 12px; font-size: 12px;
+        }
+        .btn-edit:hover { background: #ffecb3; }
+
+        .btn-transfer {
+            background: var(--success); color: white;
+            padding: 6px 12px; font-size: 12px;
+        }
+        .btn-transfer:hover { background: #0b8043; }
+        .btn-transfer:disabled { background: var(--border-color); color: var(--text-muted); cursor: not-allowed; }
+
+        /* --- STATS CARDS --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .stat-card {
+            background: var(--surface); padding: 20px; border-radius: 12px;
+            display: flex; align-items: center; gap: 16px;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.04);
+            border: 1px solid var(--border-color);
+        }
+        .stat-icon {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; cursor: help;}
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--has-navy); margin: 0; line-height: 1; }
+
+        .icon-blue { background: #e8f0fe; color: #1a73e8; }
+        .icon-orange { background: #feefe6; color: var(--has-orange); }
+        .icon-green { background: #e6f4ea; color: #1e8e3e; }
+        .icon-purple { background: #f3e8fd; color: #9334e6; }
+        
+        #stat-pending { color: var(--has-orange); }
+        #stat-transferred { color: #1e8e3e; }
+        #stat-time { color: #9334e6; }
+
+        /* --- TABLE AREA --- */
+        .table-wrapper {
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.05);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .table-toolbar {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-scroll {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        th {
+            background-color: var(--surface); color: var(--has-navy);
+            font-weight: 600; position: sticky; top: 0; z-index: 10;
+            border-bottom: 2px solid var(--border-highlight);
+        }
+
+        .main-row:hover td { background-color: #f8faff; }
+        .main-row td { transition: background-color 0.3s; }
+
+        /* --- ACCORDION DETAILS --- */
+        .expand-btn {
+            background: transparent; color: var(--has-teal);
+            border: none; padding: 4px; width: 24px; height: 24px;
+            border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .expand-btn:hover { background: #e0f2f1; }
+        
+        .details-row { display: none; background: #f8faff; }
+        .details-row.open { display: table-row; }
+        
+        .details-content {
+            margin: 8px 32px 16px 56px; padding: 16px;
+            background: white; border-radius: 8px;
+            border: 1px solid var(--border-highlight);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .detail-item {
+            display: grid; grid-template-columns: 200px 1fr;
+            padding: 8px 0; border-bottom: 1px dashed var(--border-color);
+        }
+        .detail-item:last-child { border-bottom: none; }
+        .detail-label { display: flex; align-items: center; gap: 10px; font-weight: 500; color: var(--has-navy); }
+        .detail-value { color: var(--text-main); line-height: 1.5; word-wrap: break-word;}
+
+        /* --- BADGES --- */
+        .badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 600; text-align: center;
+        }
+        .badge-blue { background: #e8f0fe; color: #1a73e8; }
+        .badge-purple { background: #f3e8fd; color: #9334e6; }
+        .badge-green { background: #e6f4ea; color: #1e8e3e; }
+        .badge-orange { background: #feefe6; color: var(--has-orange); }
+        .badge-gray { background: #f1f3f4; color: #5f6368; }
+
+        .doc-title {
+            font-weight: 500; line-height: 1.5; color: var(--text-main);
+            white-space: normal; word-wrap: break-word; max-width: 500px;
+        }
+        .doc-link { color: var(--has-teal); text-decoration: none; font-weight: 600; }
+        .doc-link:hover { text-decoration: underline; color: var(--has-navy); }
+
+        /* --- STATES --- */
+        .loading-state, .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .loading-state i { font-size: 32px; color: var(--has-teal); margin-bottom: 16px; }
+        .empty-state i { font-size: 48px; color: var(--success); margin-bottom: 16px; opacity: 0.5; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(27,42,89,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(2px);}
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content { background: white; width: 600px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s; }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
+        .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--has-navy); color: white; border-radius: 12px 12px 0 0;}
+        .modal-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+        .close-btn { background: transparent; color: rgba(255,255,255,0.7); border: none; font-size: 20px; cursor: pointer; padding: 0;}
+        .close-btn:hover { color: white; }
+        .modal-body { padding: 24px; display: grid; gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 13px; font-weight: 600; color: var(--has-navy); }
+        .form-group label .req { color: var(--danger); }
+        .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--has-teal); box-shadow: 0 0 0 2px rgba(0,148,154,0.2); }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: #f8f9fa; border-radius: 0 0 12px 12px;}
+
+        /* --- TOAST --- */
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { min-width: 300px; background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: flex-start; gap: 12px; transform: translateX(120%); transition: transform 0.3s ease; border-left: 4px solid var(--has-navy); }
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast-icon { font-size: 20px; }
+        .toast.success .toast-icon { color: var(--success); }
+        .toast.error .toast-icon { color: var(--danger); }
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text-main); }
+        .toast-message { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <div class="top-header">
+        <div class="header-left">
+            <img src="C:\Users\Admin\Desktop\luatvietnam_vbqppl\Dashboard\HAS.png" alt="H.A.S Logo" class="logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2232/2232688.png'">
+            <div class="title-group">
+                <h1>Trung tâm Xử lý VBQPPL</h1>
+                <p>Theo dõi, phân loại và chuyển xử lý các văn bản pháp luật tác động đến hoạt động giáo dục</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <!-- NÚT GỌI ĐẾN HÀM XỬ LÝ NHẢY CÓC THÔNG MINH -->
+            <button class="btn-primary" onclick="scrollToNextAction()">
+                <i class="fa-solid fa-arrow-down"></i> Đi tới văn bản cần xử lý
+            </button>
+            <button class="btn-outline-primary" onclick="loadData()">
+                <i class="fa-solid fa-arrows-rotate"></i> Làm mới
+            </button>
+        </div>
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-file-lines"></i></div>
+            <div class="stat-info">
+                <span class="stat-label" title="Bao gồm: Trùng số hiệu + Đã chuyển">Tổng văn bản</span>
+                <span class="stat-value" id="stat-total">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-orange"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <div class="stat-info">
+                <span class="stat-label" title="Chỉ đếm các văn bản có trạng thái chờ xử lý hợp lệ">Cần xử lý</span>
+                <span class="stat-value" id="stat-pending">0</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-green"><i class="fa-solid fa-paper-plane"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Đã chuyển</span>
+                <span class="stat-value" id="stat-transferred">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-purple"><i class="fa-regular fa-clock"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Cập nhật gần nhất</span>
+                <span class="stat-value" style="font-size: 18px;" id="stat-time">--:--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE AREA -->
+    <div class="table-wrapper">
+        <div class="table-toolbar">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-filter"></i> Sắp xếp danh sách:
+                <select id="sortSelect" onchange="applySort()" style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; color: var(--has-navy); font-size: 13px; font-weight: 500; cursor: pointer;">
+                    <option value="row_desc">Dòng (Mới nhất trước)</option>
+                    <option value="row_asc">Dòng (Cũ nhất trước)</option>
+                    <option value="priority">Mức độ ưu tiên xử lý</option>
+                </select>
+            </div>
+            <div style="margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500;" id="recordCount">
+                -- văn bản
+            </div>
+        </div>
+        
+        <div id="loading" class="loading-state">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <div>Đang tải dữ liệu từ Google Sheet...</div>
+        </div>
+
+        <div class="table-scroll" id="scrollArea">
+            <table id="dataTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th width="3%"></th>
+                        <th width="7%">Dòng</th>
+                        <th width="15%">Số hiệu</th>
+                        <th width="15%" style="text-align: center;">Loại văn bản</th>
+                        <th width="45%">Tên văn bản</th>
+                        <th width="15%" style="text-align: right;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Dữ liệu sẽ chèn vào đây -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fa-regular fa-circle-check"></i>
+            <h3>Tuyệt vời!</h3>
+            <p>Hệ thống không còn văn bản nào cần xử lý.</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CHỈNH SỬA VĂN BẢN -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Chỉnh sửa thông tin</h2>
+            <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editRowNumber">
+            
+            <div class="form-group">
+                <label>Lĩnh vực <span class="req">*</span></label>
+                <input type="text" id="editLinhVuc" list="listLinhVuc" placeholder="Chọn hoặc nhập lĩnh vực...">
+                <datalist id="listLinhVuc">
+                    <option value="Giáo dục">
+                    <option value="Sở hữu trí tuệ">
+                    <option value="Quảng cáo">
+                    <option value="Doanh nghiệp - Thương mại">
+                </datalist>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Chủ đề <span style="font-weight: normal; color: var(--text-muted);">(Không B/B)</span></label>
+                    <input type="text" id="editChuDe" placeholder="Nhập chủ đề...">
+                </div>
+                <div class="form-group">
+                    <label>Mục <span style="font-weight: normal; color: var(--text-muted);">(Không B/B)</span></label>
+                    <input type="text" id="editMuc" placeholder="Nhập mục...">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Mức độ tác động <span class="req">*</span></label>
+                    <select id="editMucDo">
+                        <option value="">-- Chọn --</option>
+                        <option value="H">Cao (H)</option>
+                        <option value="M">Trung bình (M)</option>
+                        <option value="L">Thấp (L)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bộ phận chủ trì <span class="req">*</span></label>
+                    <select id="editBoPhan">
+                        <option value="">-- Chọn --</option>
+                        <option value="HO">HO</option>
+                        <option value="HR">HR</option>
+                        <option value="FAD">FAD</option>
+                        <option value="ITD">ITD</option>
+                        <option value="SOD">SOD</option>
+                        <option value="EDU">EDU</option>
+                        <option value="CREM">CREM</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal()" class="btn-outline-primary">Hủy bỏ</button>
+            <button class="btn-primary" onclick="saveEdit()" id="btnSaveEdit">
+                <i class="fa-solid fa-floppy-disk"></i> Cập nhật
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+    // --- CẤU HÌNH KẾT NỐI ---
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDES8M8mTjzpeIZJ78QqZYz1cDo5ODNzU2DGMbZDSRVzH-yXLh7ashwHh8CeDQwXnwww/exec"; 
+    const TOKEN = "T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0";
+
+    let currentRecords = [];
+    let globalTransferredCount = '--'; // Biến lưu số lượng đã chuyển từ backend
+
+    const table = document.getElementById('dataTable');
+    const tableBody = document.getElementById('tableBody');
+    const loadingDiv = document.getElementById('loading');
+    const emptyState = document.getElementById('emptyState');
+    const editModal = document.getElementById('editModal');
+
+    window.onload = () => {
+        if (WEBAPP_URL === "ĐIỀN_URL_WEB_APP_CỦA_BẠN_VÀO_ĐÂY" || !WEBAPP_URL.includes("/exec")) {
+            showToast("Lỗi Cấu Hình", "Vui lòng điền đúng WEBAPP_URL (có /exec ở cuối).", "error");
+        } else {
+            loadData();
+        }
+    };
+
+    function getBadgeClass(type) {
+        const t = String(type || '').toLowerCase();
+        if (t.includes('thông tư')) return 'badge-blue';
+        if (t.includes('nghị định')) return 'badge-purple';
+        if (t.includes('quyết định')) return 'badge-green';
+        if (t.includes('công văn')) return 'badge-orange';
+        if (t.includes('luật')) return 'badge-purple';
+        return 'badge-gray';
+    }
+
+    function updateTime() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('stat-time').innerText = timeStr;
+    }
+
+    function showToast(title, message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const iconClass = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+        toast.innerHTML = `
+            <div class="toast-icon"><i class="fa-solid ${iconClass}"></i></div>
+            <div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 5000);
+    }
+
+    function toggleDetails(rowId) {
+        const detailRow = document.getElementById(`details-${rowId}`);
+        const icon = document.getElementById(`icon-${rowId}`);
+        
+        if (detailRow.classList.contains('open')) {
+            detailRow.classList.remove('open');
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        } else {
+            detailRow.classList.add('open');
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        }
+    }
+
+    // --- HÀM TÍNH TOÁN VÀ CẬP NHẬT THỐNG KÊ ---
+    function updateStatsUI() {
+        // 1. Tính "Cần xử lý": Chỉ đếm 5 trạng thái quy định
+        const targetStatuses = ['Cần quét căn cứ', 'Chờ kiểm tra tự động', 'Có thể chuyển', 'Lỗi đọc dữ liệu', 'Cần kiểm tra thủ công'];
+        const pendingCount = currentRecords.filter(r => targetStatuses.includes(String(r['Trạng thái xử lý'] || '').trim())).length;
+        document.getElementById('stat-pending').innerText = pendingCount;
+
+        // 2. Lấy số lượng "Trùng số hiệu" hiện có trên bảng
+        const duplicateCount = currentRecords.filter(r => String(r['Trạng thái xử lý'] || '').trim() === 'Trùng số hiệu').length;
+
+        // 3. Tính Tổng = Trùng số hiệu + Đã chuyển
+        document.getElementById('stat-transferred').innerText = globalTransferredCount;
+        
+        if (typeof globalTransferredCount === 'number') {
+            document.getElementById('stat-total').innerText = globalTransferredCount + duplicateCount;
+        } else {
+            document.getElementById('stat-total').innerText = '--'; // Nếu backend chưa update
+        }
+    }
+
+    // --- HÀM SẮP XẾP DANH SÁCH ---
+    function applySort() {
+        if (!currentRecords || currentRecords.length === 0) {
+            document.getElementById('recordCount').innerText = "0 văn bản";
+            return;
+        }
+        
+        const sortType = document.getElementById('sortSelect').value;
+
+        if (sortType === 'row_desc') {
+            // Sắp xếp theo Số thứ tự dòng giảm dần (Mới nhất trước)
+            currentRecords.sort((a, b) => b._rowNumber - a._rowNumber);
+        } else if (sortType === 'row_asc') {
+            // Sắp xếp theo Số thứ tự dòng tăng dần (Cũ nhất trước)
+            currentRecords.sort((a, b) => a._rowNumber - b._rowNumber);
+        } else if (sortType === 'priority') {
+            // Sắp xếp theo Mức độ ưu tiên xử lý
+            const priorityOrder = [
+                'Có thể chuyển', 
+                'Chờ kiểm tra tự động', 
+                'Cần kiểm tra thủ công', 
+                'Cần quét căn cứ', 
+                'Lỗi đọc dữ liệu',
+                'Trùng số hiệu',
+                'Chưa gán'
+            ];
+            currentRecords.sort((a, b) => {
+                const statusA = String(a['Trạng thái xử lý'] || 'Chưa gán').trim();
+                const statusB = String(b['Trạng thái xử lý'] || 'Chưa gán').trim();
+                
+                let idxA = priorityOrder.indexOf(statusA);
+                let idxB = priorityOrder.indexOf(statusB);
+                
+                if (idxA === -1) idxA = 999;
+                if (idxB === -1) idxB = 999;
+                
+                if (idxA !== idxB) {
+                    return idxA - idxB;
+                }
+                // Nếu cùng trạng thái, ưu tiên dòng mới hơn
+                return b._rowNumber - a._rowNumber;
+            });
+        }
+        
+        document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
+        
+        // Render lại bảng với thứ tự mới
+        tableBody.innerHTML = '';
+        renderTable(currentRecords);
+    }
+
+    async function loadData() {
+        table.style.display = 'none';
+        emptyState.style.display = 'none';
+        loadingDiv.style.display = 'block';
+        tableBody.innerHTML = '';
+        currentRecords = [];
+
+        try {
+            const response = await fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                redirect: "follow",
+                body: JSON.stringify({ token: TOKEN, action: "get_pending_records" })
+            });
+
+            const result = await response.json();
+            loadingDiv.style.display = 'none';
+            updateTime();
+
+            if (result.ok) {
+                currentRecords = result.data || []; 
+                if (result.stats && result.stats.transferred !== undefined) {
+                    globalTransferredCount = result.stats.transferred;
+                }
+                
+                updateStatsUI();
+                applySort(); // Áp dụng bộ lọc ngay sau khi nhận dữ liệu
+            } else {
+                showToast("Lỗi Máy Chủ", result.message, "error");
+            }
+        } catch (error) {
+            loadingDiv.style.display = 'none';
+            showToast("Lỗi Kết Nối", "Không thể kết nối đến Google Sheet.", "error");
+        }
+    }
+
+    function renderTable(data) {
+        if (!data || data.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        table.style.display = 'table';
+        data.forEach(row => {
+            const rId = row._rowNumber;
+            
+            const linkVanBan = row['Link Văn bản'] ? String(row['Link Văn bản']).trim() : '';
+            const soHieuHtml = linkVanBan 
+                ? `<a href="${linkVanBan}" target="_blank" class="doc-link" title="Mở văn bản gốc">${row['Số hiệu']}</a>`
+                : `<span style="font-weight:600;">${row['Số hiệu']}</span>`;
+
+            const trMain = document.createElement('tr');
+            trMain.id = `row-${rId}`;
+            trMain.className = 'main-row data-row';
+            trMain.innerHTML = `
+                <td style="text-align:center;">
+                    <button class="expand-btn" onclick="toggleDetails(${rId})">
+                        <i id="icon-${rId}" class="fa-solid fa-chevron-down"></i>
+                    </button>
+                </td>
+                <td style="color: var(--text-muted);">#${rId}</td>
+                <td>${soHieuHtml}</td>
+                <td style="text-align: center;"><span class="badge ${getBadgeClass(row['Loại văn bản'])}">${row['Loại văn bản'] || '-'}</span></td>
+                <td><div class="doc-title">${row['Tên văn bản'] || '-'}</div></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button class="btn-edit" onclick="openModal(${rId})" title="Sửa thông tin">
+                        <i class="fa-solid fa-pen"></i> Sửa
+                    </button>
+                    <button class="btn-transfer" id="btn-${rId}" onclick="transferRow(${rId}, '${row['Số hiệu']}')">
+                        <i class="fa-solid fa-paper-plane"></i> Chuyển
+                    </button>
+                </td>
+            `;
+
+            const trDetail = document.createElement('tr');
+            trDetail.id = `details-${rId}`;
+            trDetail.className = 'details-row';
+            trDetail.innerHTML = `
+                <td colspan="6" style="padding: 0;">
+                    <div class="details-content">
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fa-solid fa-book" style="color: #1a73e8;"></i> Văn bản căn cứ</div>
+                            <div class="detail-value">${row['Căn cứ pháp lý'] || 'Không có'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fa-solid fa-file-lines" style="color: #1e8e3e;"></i> Văn bản hướng dẫn</div>
+                            <div class="detail-value">${row['Hướng dẫn thực hiện'] || 'Không có'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fa-solid fa-layer-group" style="color: var(--has-orange);"></i> Sửa đổi, bổ sung cho</div>
+                            <div class="detail-value">${row['Sửa đổi, bổ sung cho'] || 'Không có'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fa-solid fa-pen-to-square" style="color: #9334e6;"></i> Sửa đổi, bổ sung bởi</div>
+                            <div class="detail-value">${row['Sửa đổi, bổ sung bởi'] || 'Không có'}</div>
+                        </div>
+                    </div>
+                </td>
+            `;
+
+            tableBody.appendChild(trMain);
+            tableBody.appendChild(trDetail);
+        });
+    }
+
+    // --- LOGIC TÌM DÒNG CẦN XỬ LÝ ---
+    function scrollToNextAction() {
+        if (!currentRecords || currentRecords.length === 0) return;
+
+        const priority = [
+            'Có thể chuyển', 
+            'Chờ kiểm tra tự động', 
+            'Cần kiểm tra thủ công', 
+            'Cần quét căn cứ', 
+            'Lỗi đọc dữ liệu'
+        ];
+        
+        let targetRecord = null;
+
+        for (const statusToFind of priority) {
+            targetRecord = currentRecords.find(r => {
+                const currentStatus = String(r['Trạng thái xử lý'] || 'Chưa gán').trim();
+                return currentStatus === statusToFind;
+            });
+            if (targetRecord) break;
+        }
+
+        if (!targetRecord) {
+            showToast("Tuyệt vời", "Bạn không còn văn bản nào cần thao tác khẩn cấp.", "success");
+            return;
+        }
+
+        const targetElement = document.getElementById(`row-${targetRecord._rowNumber}`);
+        if (targetElement) {
+            const scrollArea = document.getElementById('scrollArea');
+            scrollArea.scrollTo({ 
+                top: targetElement.offsetTop - scrollArea.offsetTop - 45, 
+                behavior: 'smooth' 
+            });
+            targetElement.style.backgroundColor = '#ffecb3';
+            setTimeout(() => { targetElement.style.backgroundColor = ''; }, 2500);
+        }
+    }
+
+    // --- LOGIC MODAL & EDIT ---
+    function openModal(rowNum) {
+        const rowData = currentRecords.find(r => r._rowNumber === rowNum);
+        if (!rowData) return;
+
+        document.getElementById('modalTitle').innerText = `Cập nhật Dòng #${rowNum} - ${rowData['Số hiệu']}`;
+        document.getElementById('editRowNumber').value = rowNum;
+        
+        document.getElementById('editLinhVuc').value = rowData['Lĩnh vực'] || '';
+        document.getElementById('editChuDe').value = rowData['Chủ đề'] || '';
+        document.getElementById('editMuc').value = rowData['Mục'] || '';
+        document.getElementById('editMucDo').value = rowData['Mức độ tác động'] || '';
+        document.getElementById('editBoPhan').value = rowData['Bộ phận chủ trì'] || '';
+
+        editModal.classList.add('show');
+    }
+
+    function closeModal() { editModal.classList.remove('show'); }
+
+    async function saveEdit() {
+        const rowNum = document.getElementById('editRowNumber').value;
+        const btnSave = document.getElementById('btnSaveEdit');
+        
+        const updates = {
+            'Lĩnh vực': document.getElementById('editLinhVuc').value.trim(),
+            'Chủ đề': document.getElementById('editChuDe').value.trim(),
+            'Mục': document.getElementById('editMuc').value.trim(),
+            'Mức độ tác động': document.getElementById('editMucDo').value,
+            'Bộ phận chủ trì': document.getElementById('editBoPhan').value
+        };
+
+        if (!updates['Lĩnh vực'] || !updates['Mức độ tác động'] || !updates['Bộ phận chủ trì']) {
+            showToast("Lỗi nhập liệu", "Vui lòng điền đủ các trường có dấu sao (*).", "error");
+            return;
+        }
+
+        btnSave.disabled = true;
+        btnSave.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...`;
+
+        try {
+            const response = await fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                redirect: "follow",
+                body: JSON.stringify({ token: TOKEN, action: "update_record", payload: { row_number: rowNum, updates: updates } })
+            });
+
+            const result = await response.json();
+            btnSave.disabled = false;
+            btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
+
+            if (result.ok) {
+                showToast("Thành công!", "Đã cập nhật thông tin.", "success");
+                closeModal();
+                const rowIdx = currentRecords.findIndex(r => r._rowNumber == rowNum);
+                if (rowIdx > -1) Object.assign(currentRecords[rowIdx], updates);
+            } else {
+                showToast("Lỗi lưu", result.message, "error");
+            }
+        } catch (error) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
+            showToast("Lỗi Mạng", "Không thể kết nối đến máy chủ.", "error");
+        }
+    }
+
+    // --- LOGIC CHUYỂN DỮ LIỆU ---
+    async function transferRow(rowNumber, soHieu) {
+        const btn = document.getElementById(`btn-${rowNumber}`);
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+
+        try {
+            const response = await fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                redirect: "follow",
+                body: JSON.stringify({ token: TOKEN, action: "transfer_record", payload: { row_number: rowNumber } })
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                showToast("Thành công!", `Đã chuyển văn bản ${soHieu}.`, "success");
+                
+                // Nâng cấp số liệu Real-time
+                if (typeof globalTransferredCount === 'number') {
+                    globalTransferredCount++; // Tăng Đã chuyển
+                }
+
+                const rowMain = document.getElementById(`row-${rowNumber}`);
+                const rowDetail = document.getElementById(`details-${rowNumber}`);
+                
+                if (rowMain) {
+                    rowMain.style.transition = 'all 0.3s ease';
+                    rowMain.style.opacity = '0';
+                    rowMain.style.transform = 'translateX(20px)';
+                    if(rowDetail) rowDetail.style.display = 'none';
+                    
+                    setTimeout(() => {
+                        rowMain.remove();
+                        if(rowDetail) rowDetail.remove();
+                        
+                        // Lọc bỏ record khỏi mảng và cập nhật lại bộ đếm, thống kê
+                        currentRecords = currentRecords.filter(r => r._rowNumber != rowNumber);
+                        updateStatsUI();
+                        document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
+
+                        if(currentRecords.length === 0) {
+                            table.style.display = 'none';
+                            emptyState.style.display = 'block';
+                        }
+                    }, 300);
+                }
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Chuyển`;
+                
+                let errorMsg = result.message;
+                if (result.reason === 'missing_fields') {
+                    errorMsg = `Cần bổ sung: ${result.missing.join(', ')}. Hãy bấm nút "Sửa" kế bên.`;
+                }
+                showToast(`Lỗi dòng ${rowNumber}`, errorMsg, "error");
+            }
+        } catch (error) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Chuyển`;
+            showToast("Lỗi Mạng", "Không thể kết nối đến máy chủ.", "error");
+        }
+    }
+</script>
+
+</body>
+</html>
