@@ -1,0 +1,7 @@
+config/
+logs/
+output/
+auth/
+*.py
+*.ps1
+requirements.txt
