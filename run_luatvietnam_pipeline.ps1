@@ -152,5 +152,10 @@ try {
     exit 0
 }
 catch {
-    Stop-With-Error $_.Exception.Message 1
+    # Ghi log lỗi vào hệ thống (Xóa số 1 thừa ở đây)
+    Stop-With-Error $_.Exception.Message 
+
+    # Hiện thông báo Popup ra màn hình
+    $wshell = New-Object -ComObject WScript.Shell
+    $wshell.Popup("Cảnh báo: Hệ thống cập nhật Luật Việt Nam gặp lỗi!`n`nChi tiết: $($_.Exception.Message)", 0, "Lỗi hệ thống", 0x10)
 }
