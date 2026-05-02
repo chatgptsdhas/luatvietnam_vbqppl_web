@@ -295,8 +295,8 @@
                 <i class="fa-solid fa-ban"></i> Không liên quan
             </a>
         </li>
-        <li>
-            <a href="#" class="disabled" title="Tính năng đang được phát triển">
+        <li id="nav-item-expired">
+            <a onclick="switchTab('expired')">
                 <i class="fa-solid fa-clock-rotate-left"></i> Hết hiệu lực
             </a>
         </li>
@@ -536,8 +536,23 @@
 
     function updateTime() {
         const now = new Date();
+        
+        // Lấy Giờ:Phút
         const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('stat-time').innerText = timeStr;
+        
+        // Lấy Ngày/Tháng/Năm định dạng dd/MM/yyyy
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+        const yyyy = now.getFullYear();
+        const dateStr = `${dd}/${mm}/${yyyy}`;
+
+        // Ghép nối và hiển thị (Giờ chữ to, Ngày chữ nhỏ mờ hơn ở ngay bên dưới)
+        document.getElementById('stat-time').innerHTML = `
+            <div style="line-height: 1.2;">
+                <span>${timeStr}</span>
+                <div style="font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 2px;">${dateStr}</div>
+            </div>
+        `;
     }
 
     function showToast(title, message, type = 'success') {
@@ -585,6 +600,7 @@
         // Cập nhật UI Sidebar
         document.getElementById('nav-item-pending').classList.remove('active');
         document.getElementById('nav-item-irrelevant').classList.remove('active');
+        document.getElementById('nav-item-expired').classList.remove('active');
         document.getElementById(`nav-item-${tabId}`).classList.add('active');
 
         // Cập nhật Tiêu đề & Ẩn/Hiện Thống kê
@@ -597,7 +613,7 @@
                 <h3>Tuyệt vời!</h3>
                 <p>Hệ thống không còn văn bản nào cần xử lý.</p>
             `;
-        } else {
+        } else if (tabId === 'irrelevant') {
             document.getElementById('pageTitle').innerText = 'Danh sách Không liên quan';
             document.getElementById('statsGrid').style.display = 'none';
             document.getElementById('headerActions').style.display = 'none';
@@ -605,6 +621,15 @@
                 <i class="fa-solid fa-box-open"></i>
                 <h3>Trống!</h3>
                 <p>Chưa có văn bản nào bị đánh dấu không liên quan.</p>
+            `;
+        } else if (tabId === 'expired') {
+            document.getElementById('pageTitle').innerText = 'Danh sách Hết hiệu lực (Chờ xử lý)';
+            document.getElementById('statsGrid').style.display = 'none';
+            document.getElementById('headerActions').style.display = 'none';
+            document.getElementById('emptyState').innerHTML = `
+                <i class="fa-solid fa-clock"></i>
+                <h3>Trống!</h3>
+                <p>Chưa có văn bản nào được nhận diện là hết hiệu lực.</p>
             `;
         }
         
@@ -672,7 +697,9 @@
         currentRecords = [];
 
         // Gọi đúng API dựa trên Tab đang được chọn
-        const actionName = currentTab === 'pending' ? "get_pending_records" : "get_irrelevant_records";
+        let actionName = "get_pending_records";
+        if (currentTab === 'irrelevant') actionName = "get_irrelevant_records";
+        if (currentTab === 'expired') actionName = "get_expired_records";
 
         try {
             const response = await fetch(WEBAPP_URL, {
@@ -717,30 +744,49 @@
         }
 
         table.style.display = 'table';
+        const isExpired = currentTab === 'expired';
+
         data.forEach(row => {
             const rId = row._rowNumber;
             
             const linkVanBan = row['Link Văn bản'] ? String(row['Link Văn bản']).trim() : '';
-            const soHieuHtml = linkVanBan 
-                ? `<a href="${linkVanBan}" target="_blank" class="doc-link" title="Mở văn bản gốc">${row['Số hiệu']}</a>`
-                : `<span style="font-weight:600;">${row['Số hiệu']}</span>`;
+            
+            // Phân loại dữ liệu hiển thị theo tab
+            const rawSoHieu = isExpired ? (row['Số hiệu bị xử lý'] || '-') : (row['Số hiệu'] || '-');
+            const rawTenVanBan = isExpired ? (row['Tên văn bản bị xử lý'] || 'Chưa bóc tách được (Hệ thống tự quét)') : (row['Tên văn bản'] || '-');
+            const rawLoai = isExpired ? (row['Trạng thái xử lý'] || '-') : (row['Loại văn bản'] || '-');
+
+            const soHieuHtml = linkVanBan && !isExpired
+                ? `<a href="${linkVanBan}" target="_blank" class="doc-link" title="Mở văn bản gốc">${rawSoHieu}</a>`
+                : `<span style="font-weight:600;">${rawSoHieu}</span>`;
 
             // Thay đổi Nút bấm dựa trên Tab
-            const actionsHtml = currentTab === 'pending' ? `
-                <button class="btn-reject" id="btn-reject-${rId}" onclick="rejectRow(${rId}, '${row['Số hiệu']}')" title="Đánh dấu không liên quan">
-                    <i class="fa-solid fa-ban"></i> Bỏ qua
-                </button>
-                <button class="btn-edit" onclick="openModal(${rId})" title="Sửa thông tin">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
-                <button class="btn-transfer" id="btn-${rId}" onclick="transferRow(${rId}, '${row['Số hiệu']}')" title="Chuyển dữ liệu">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
-            ` : `
-                <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreRow(${rId}, '${row['Số hiệu']}')" title="Khôi phục về trạng thái chờ xử lý">
-                    <i class="fa-solid fa-rotate-left"></i> Khôi phục
-                </button>
-            `;
+            let actionsHtml = '';
+            if (currentTab === 'pending') {
+                actionsHtml = `
+                    <button class="btn-reject" id="btn-reject-${rId}" onclick="rejectRow(${rId}, '${rawSoHieu}')" title="Đánh dấu không liên quan">
+                        <i class="fa-solid fa-ban"></i> Bỏ qua
+                    </button>
+                    <button class="btn-edit" onclick="openModal(${rId})" title="Sửa thông tin">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="btn-transfer" id="btn-${rId}" onclick="transferRow(${rId}, '${rawSoHieu}')" title="Chuyển dữ liệu">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                `;
+            } else if (currentTab === 'irrelevant') {
+                actionsHtml = `
+                    <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreRow(${rId}, '${rawSoHieu}')" title="Khôi phục về trạng thái chờ xử lý">
+                        <i class="fa-solid fa-rotate-left"></i> Khôi phục
+                    </button>
+                `;
+            } else if (currentTab === 'expired') {
+                actionsHtml = `
+                    <button class="btn-outline-primary" onclick="alert('Bản ghi này do hệ thống tự động kiểm soát dựa trên ngày hết hiệu lực.')" title="Tự động">
+                        <i class="fa-solid fa-robot"></i> Tự động
+                    </button>
+                `;
+            }
 
             const trMain = document.createElement('tr');
             trMain.id = `row-${rId}`;
@@ -753,8 +799,10 @@
                 </td>
                 <td style="color: var(--text-muted);">#${rId}</td>
                 <td>${soHieuHtml}</td>
-                <td style="text-align: center;"><span class="badge ${getBadgeClass(row['Loại văn bản'])}">${row['Loại văn bản'] || '-'}</span></td>
-                <td><div class="doc-title">${row['Tên văn bản'] || '-'}</div></td>
+                <td style="text-align: center;">
+                    <span class="badge ${isExpired ? (rawLoai.includes('Chờ xóa') ? 'badge-orange' : 'badge-gray') : getBadgeClass(rawLoai)}">${rawLoai}</span>
+                </td>
+                <td><div class="doc-title">${rawTenVanBan}</div></td>
                 <td style="text-align: right; white-space: nowrap;">
                     ${actionsHtml}
                 </td>
@@ -763,28 +811,54 @@
             const trDetail = document.createElement('tr');
             trDetail.id = `details-${rId}`;
             trDetail.className = 'details-row';
-            trDetail.innerHTML = `
-                <td colspan="6" style="padding: 0;">
-                    <div class="details-content">
-                        <div class="detail-item">
-                            <div class="detail-label"><i class="fa-solid fa-book" style="color: #1a73e8;"></i> Văn bản căn cứ</div>
-                            <div class="detail-value">${row['Căn cứ pháp lý'] || 'Không có'}</div>
+            
+            if (isExpired) {
+                trDetail.innerHTML = `
+                    <td colspan="6" style="padding: 0;">
+                        <div class="details-content">
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-calendar-xmark" style="color: var(--danger);"></i> Ngày áp dụng xóa</div>
+                                <div class="detail-value"><strong style="color: var(--danger); font-size: 14px;">${row['Ngày hết hiệu lực áp dụng'] || 'Chưa xác định (Cần xem thủ công)'}</strong></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-magnifying-glass" style="color: var(--has-teal);"></i> Lý do nhận diện</div>
+                                <div class="detail-value">${row['Lý do nhận diện'] || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-file-invoice" style="color: #9334e6;"></i> Bị thay thế/bãi bỏ bởi</div>
+                                <div class="detail-value">[${row['Số hiệu văn bản mới'] || ''}] ${row['Tên văn bản mới'] || ''}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-quote-left" style="color: var(--has-orange);"></i> Câu nguồn đối chiếu</div>
+                                <div class="detail-value"><i>"${row['Câu nguồn'] || '-'}"</i></div>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label"><i class="fa-solid fa-file-lines" style="color: #1e8e3e;"></i> Văn bản hướng dẫn</div>
-                            <div class="detail-value">${row['Hướng dẫn thực hiện'] || 'Không có'}</div>
+                    </td>
+                `;
+            } else {
+                trDetail.innerHTML = `
+                    <td colspan="6" style="padding: 0;">
+                        <div class="details-content">
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-book" style="color: #1a73e8;"></i> Văn bản căn cứ</div>
+                                <div class="detail-value">${row['Căn cứ pháp lý'] || 'Không có'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-file-lines" style="color: #1e8e3e;"></i> Văn bản hướng dẫn</div>
+                                <div class="detail-value">${row['Hướng dẫn thực hiện'] || 'Không có'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-layer-group" style="color: var(--has-orange);"></i> Sửa đổi, bổ sung cho</div>
+                                <div class="detail-value">${row['Sửa đổi, bổ sung cho'] || 'Không có'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label"><i class="fa-solid fa-pen-to-square" style="color: #9334e6;"></i> Sửa đổi, bổ sung bởi</div>
+                                <div class="detail-value">${row['Sửa đổi, bổ sung bởi'] || 'Không có'}</div>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label"><i class="fa-solid fa-layer-group" style="color: var(--has-orange);"></i> Sửa đổi, bổ sung cho</div>
-                            <div class="detail-value">${row['Sửa đổi, bổ sung cho'] || 'Không có'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label"><i class="fa-solid fa-pen-to-square" style="color: #9334e6;"></i> Sửa đổi, bổ sung bởi</div>
-                            <div class="detail-value">${row['Sửa đổi, bổ sung bởi'] || 'Không có'}</div>
-                        </div>
-                    </div>
-                </td>
-            `;
+                    </td>
+                `;
+            }
 
             tableBody.appendChild(trMain);
             tableBody.appendChild(trDetail);
