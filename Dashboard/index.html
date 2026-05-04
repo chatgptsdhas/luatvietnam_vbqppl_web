@@ -915,10 +915,12 @@
             firstRow.style.backgroundColor = '#ffecb3';
             setTimeout(() => { firstRow.style.backgroundColor = ''; }, 2500);
         }
+    } // Đã bù lại dấu đóng ngoặc bị thiếu của hàm scrollToNextAction
+
     // Thêm biến này ở ngay trên hàm openModal
     let isTransferMode = false;
 
-    // Sửa lại khai báo hàm openModal
+    // Khai báo hàm openModal MỚI (Đã xóa bỏ hàm cũ bị trùng lặp)
     function openModal(rowNum, isTransfer = false) {
         isTransferMode = isTransfer; // Ghi nhớ hành động
         const rowData = currentRecords.find(r => r._rowNumber === rowNum);
@@ -941,22 +943,6 @@
         } else {
             btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
         }
-
-        document.getElementById('editModal').classList.add('show');
-    }}
-
-    function openModal(rowNum) {
-        const rowData = currentRecords.find(r => r._rowNumber === rowNum);
-        if (!rowData) return;
-
-        document.getElementById('modalTitle').innerText = `Cập nhật Dòng #${rowNum} - ${rowData['Số hiệu']}`;
-        document.getElementById('editRowNumber').value = rowNum;
-        
-        document.getElementById('editLinhVuc').value = rowData['Lĩnh vực'] || '';
-        document.getElementById('editChuDe').value = rowData['Chủ đề'] || '';
-        document.getElementById('editMuc').value = rowData['Mục'] || '';
-        document.getElementById('editMucDo').value = rowData['Mức độ tác động'] || '';
-        document.getElementById('editBoPhan').value = rowData['Bộ phận chủ trì'] || '';
 
         document.getElementById('editModal').classList.add('show');
     }
