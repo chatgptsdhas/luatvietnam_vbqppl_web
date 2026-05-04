@@ -962,26 +962,31 @@
     }
 
     async function saveEdit() {
-        const rowNum = document.getElementById('editRowNumber').value;
         const btnSave = document.getElementById('btnSaveEdit');
-        
-        const updates = {
-            'Lĩnh vực': document.getElementById('editLinhVuc').value.trim(),
-            'Chủ đề': document.getElementById('editChuDe').value.trim(),
-            'Mục': document.getElementById('editMuc').value.trim(),
-            'Mức độ tác động': document.getElementById('editMucDo').value,
-            'Bộ phận chủ trì': document.getElementById('editBoPhan').value
-        };
-
-        if (!updates['Lĩnh vực'] || !updates['Mức độ tác động'] || !updates['Bộ phận chủ trì']) {
-            showToast("Lỗi nhập liệu", "Vui lòng điền đủ các trường có dấu sao (*).", "error");
-            return;
-        }
-
-        btnSave.disabled = true;
-        btnSave.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...`;
+        const originalText = btnSave.innerHTML; 
 
         try {
+            // Khóa nút ngay lập tức
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
+
+            // 1. Kiểm tra kỹ càng việc lấy dữ liệu (tránh lỗi sập trình duyệt do thiếu ID)
+            const rowNumInput = document.getElementById('editRowNumber');
+            if (!rowNumInput) throw new Error("Mất kết nối với ID Dòng (editRowNumber).");
+            const rowNum = rowNumInput.value;
+
+            const updates = {
+                "Lĩnh vực": document.getElementById('editLinhVuc') ? document.getElementById('editLinhVuc').value : '',
+                "Chủ đề": document.getElementById('editChuDe') ? document.getElementById('editChuDe').value : '',
+                "Mục": document.getElementById('editMuc') ? document.getElementById('editMuc').value : '',
+                "Mức độ tác động": document.getElementById('editMucDo') ? document.getElementById('editMucDo').value : '',
+                "Bộ phận chủ trì": document.getElementById('editBoPhan') ? document.getElementById('editBoPhan').value : ''
+            };
+
+            // 2. Bảo vệ biến cờ (tránh lỗi ReferenceError)
+            const isTransfer = typeof isTransferMode !== 'undefined' ? isTransferMode : false;
+
+            // 3. Gọi API lên Google
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -990,37 +995,37 @@
 
             const result = await response.json();
 
+            // 4. Xử lý kết quả trả về
             if (result.ok) {
-                // Cập nhật dữ liệu ở giao diện
-                const rowIdx = currentRecords.findIndex(r => r._rowNumber == rowNum);
+                const rId = parseInt(rowNum);
+                const rowIdx = currentRecords.findIndex(r => r._rowNumber == rId);
                 if (rowIdx > -1) Object.assign(currentRecords[rowIdx], updates);
 
-                // KIỂM TRA CHẾ ĐỘ: Nếu là Cập nhật & Chuyển
-                if (isTransferMode) {
-                    closeModal('editModal'); // Đóng popup
-                    const rowData = currentRecords[rowIdx];
-                    // Tự động kích hoạt luồng chuyển dữ liệu
-                    await transferRow(rowNum, rowData['Số hiệu']); 
+                btnSave.disabled = false;
+                btnSave.innerHTML = isTransfer ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển` : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
+
+                if (isTransfer) {
+                    closeModal('editModal');
+                    const soHieu = rowIdx > -1 ? currentRecords[rowIdx]['Số hiệu'] : '';
+                    setTimeout(() => { transferRow(rId, soHieu); }, 300);
                 } else {
-                    // Nếu chỉ là Sửa bình thường
-                    btnSave.disabled = false;
-                    btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
                     showToast("Thành công!", "Đã cập nhật thông tin.", "success");
                     closeModal('editModal');
                 }
             } else {
                 btnSave.disabled = false;
-                btnSave.innerHTML = isTransferMode ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển` : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
-                showToast("Lỗi lưu", result.message, "error");
+                btnSave.innerHTML = originalText;
+                showToast("Lỗi từ Máy chủ", result.message, "error");
             }
+
         } catch (error) {
+            // LƯỚI BẮT LỖI MẠNH NHẤT: Bắt buộc nhả nút và hiển thị thẳng lỗi lên màn hình
             btnSave.disabled = false;
-            btnSave.innerHTML = isTransferMode ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển` : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
-            showToast("Lỗi Mạng", "Vui lòng kiểm tra lại Web App URL.", "error");
+            btnSave.innerHTML = originalText;
+            console.error("LỖI GIAO DIỆN JS:", error);
+            alert("Đã xảy ra lỗi trên trang web!\nChi tiết: " + error.message);
         }
     }
-
-    let confirmActionCallback = null;
 
     function rejectRow(rowNumber, soHieu) {
         const msg = `Bạn có chắc chắn muốn đánh dấu văn bản <br><strong style="color: var(--has-navy); font-size: 16px;">[${soHieu}]</strong><br> là <b>KHÔNG LIÊN QUAN</b>?`;
