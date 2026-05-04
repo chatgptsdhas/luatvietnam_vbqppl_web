@@ -40,6 +40,19 @@
             flex-direction: row;
             overflow: hidden;
         }
+        /* 1. KHI CHƯA ĐĂNG NHẬP: Ẩn hoàn toàn không để lại dấu vết */
+        li.admin-only.locked {
+            display: none !important;
+        }
+
+        /* 2. KHI ĐÃ ĐĂNG NHẬP: Ép buộc sáng rõ và cho phép click */
+        li.admin-only:not(.locked) {
+            display: flex !important; /* Hoặc display: block tùy giao diện của bạn */
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            color: #ffffff !important;
+        }
 
         /* --- SIDEBAR ĐIỀU HƯỚNG --- */
         .sidebar {
@@ -62,7 +75,50 @@
         
         .sidebar-header i { font-size: 24px; color: #ffffff; }
         .sidebar-header h2 { margin: 0; color: #ffffff; font-size: 16px; font-weight: 700; line-height: 1.3;}
+        .btn-detail {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .filter-select {
+            padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 13px; width: 100%;
+        }
+        /* Class dùng để giấu các tính năng của Admin */
+        .menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff !important; /* 👉 Ép cứng màu trắng sáng cho tất cả chữ */
+            opacity: 0.8; /* Hơi mờ nhẹ khi chưa chọn để tạo chiều sâu */
+            transition: all 0.2s ease;
+        }
+
+        /* Khi rê chuột vào HOẶC khi tab đang được chọn (active) */
+        .menu li:hover, .menu li.active {
+            background: rgba(255, 255, 255, 0.1) !important;
+            opacity: 1 !important; /* 👉 Sáng rực rỡ lên 100% khi được chọn */
+            border-left: 4px solid #ffffff; /* Thêm vạch trắng bên trái cho tab đang chọn thêm ngầu (Tùy chọn) */
+        }
         
+        /* 1. KHI CHƯA ĐĂNG NHẬP: Ẩn hoàn toàn 2 tab quản trị */
+        li.admin-only.locked {
+            display: none !important;
+        }
+
+        /* 2. KHI ĐÃ ĐĂNG NHẬP: Gỡ bỏ class locked, hiển thị bình thường */
+        li.admin-only:not(.locked) {
+            display: flex !important;
+        }
+        .btn-detail:hover { background: #bbdefb; }
         .nav-links { list-style: none; padding: 16px 0; margin: 0; flex: 1; }
         .nav-links li { padding: 0 12px; margin-bottom: 8px; }
         .nav-links a {
@@ -277,6 +333,8 @@
         .toast-content { flex: 1; }
         .toast-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text-main); }
         .toast-message { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+
+        
     </style>
 </head>
 <body>
@@ -287,23 +345,33 @@
         <img src="logo.png" alt="H.A.S" style="height: 32px; width: auto; background: white; padding: 4px; border-radius: 4px;">
         <h2>Hệ thống VBQPPL</h2>
     </div>
-    <ul class="nav-links">
-        <li id="nav-item-all">
-            <a onclick="switchTab('all')">
-                <i class="fa-solid fa-list"></i> Danh sách tổng hợp</a>
-        </li>
-        <li class="active" id="nav-item-pending">
-            <a onclick="switchTab('pending')"><i class="fa-solid fa-chart-pie"></i> Văn bản cần xử lý</a>
-        </li>
-        <li id="nav-item-irrelevant">
-            <a onclick="switchTab('irrelevant')">
-                <i class="fa-solid fa-ban"></i> Văn bản không liên quan</a>
-        </li>
-        <li id="nav-item-expired">
-            <a onclick="switchTab('expired')">
-                <i class="fa-solid fa-clock-rotate-left"></i> Văn bản hết hiệu lực</a>
-        </li>
-    </ul>
+    <ul class="sidebar" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px;">
+            
+            <li id="tab-all" onclick="switchTab('all')" class="active" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-list"></i> Danh sách tổng hợp
+            </li>
+
+            <li id="tab-pending" onclick="switchTab('pending')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-clock"></i> Văn bản cần xử lý
+            </li>
+    
+            <li id="tab-irrelevant" onclick="switchTab('irrelevant')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-ban"></i> Văn bản không liên quan
+            </li>
+            
+            <li id="tab-expired" onclick="switchTab('expired')" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-clock-rotate-left"></i> Văn bản hết hiệu lực
+            </li>
+
+        </ul>
+
+        </ul>
+    <div style="margin-top: auto; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
+    <button id="authBtn" onclick="toggleAuth()" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); color: #ffffff; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; transition: 0.2s;">
+        <i id="authIcon" class="fa-solid fa-user-lock"></i> 
+        <span id="authText">Đăng nhập</span>
+    </button>
+</div>
 </aside>
 
 <!-- KHUNG NỘI DUNG CHÍNH (MAIN) -->
@@ -384,19 +452,40 @@
                     <span style="background: #1a73e8; color: white; padding: 6px 12px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
                         <i class="fa-solid fa-magnifying-glass"></i> Tra cứu
                     </span>
-                    <input type="text" id="searchInput" oninput="applySort()" placeholder="Nhập số hiệu hoặc tên văn bản..." style="border: none; padding: 6px 12px; outline: none; width: 260px; font-size: 13px; font-family: inherit; color: var(--text-main);">
+                    <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Nhập số hiệu hoặc tên văn bản..." style="border: none; padding: 6px 12px; outline: none; width: 260px; font-size: 13px; font-family: inherit; color: var(--text-main);">
                 </div>
 
                 <div style="margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500;" id="recordCount">
                     -- văn bản
                 </div>
             </div>
-            
+            <div id="filterContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px;">
+                <select id="filterLinhVuc" onchange="handleLinkedFilters('linhvuc')" class="filter-select">
+                    <option value="">-- Tất cả Lĩnh vực --</option>
+                </select>
+                
+                <select id="filterChuDe" onchange="handleLinkedFilters('chude')" class="filter-select">
+                    <option value="">-- Tất cả Chủ đề --</option>
+                </select>
+                
+                <select id="filterMuc" onchange="handleLinkedFilters('muc')" class="filter-select">
+                    <option value="">-- Tất cả Mục --</option>
+                </select>
+                <select id="filterBoPhan" onchange="applyFilters()" class="filter-select">
+                    <option value="">-- Tất cả Bộ phận Chủ trì --</option>
+                </select>
+                <select id="filterMucDo" onchange="applyFilters()" class="filter-select">
+                    <option value="">-- Tất cả Mức độ --</option>
+                </select>
+                <select id="filterLoaiVB" onchange="applyFilters()" class="filter-select">
+                    <option value="">-- Tất cả Loại VB --</option>
+                </select>
+            </div>
             <div id="loading" class="loading-state">
                 <i class="fa-solid fa-circle-notch fa-spin"></i>
-                <div>Đang tải dữ liệu từ Google Sheet...</div>
+                <div>Đang tải dữ liệu ...</div>
             </div>
-
+                    
             <div class="table-scroll" id="scrollArea">
                 <table id="dataTable" style="display: none;">
                     <thead>
@@ -519,7 +608,21 @@
         </div>
     </div>
 </div>
-
+<!-- Modal Xem Chi Tiết -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="detailTitle">Chi tiết văn bản</h3>
+                <button class="close-btn" onclick="closeModal('detailModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="detailBody" style="line-height: 1.6; font-size: 14px;">
+                <!-- Nội dung chi tiết sẽ được Javascript đổ vào đây -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('detailModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
 <div id="toast-container"></div>
 
 <script>
@@ -531,7 +634,7 @@
     let globalTotalCount = '--'; 
     let globalTransferredCount = '--'; 
     let hasShownWelcome = false;
-    let currentTab = 'pending'; 
+    let currentTab = 'all';
 
     const table = document.getElementById('dataTable');
     const tableBody = document.getElementById('tableBody');
@@ -604,60 +707,75 @@
     }
 
     function switchTab(tabId) {
-        currentTab = tabId;
+        // 1. Kiểm tra bảo mật
+        const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
+        if ((tabId === 'pending' || tabId === 'irrelevant') && !isAdmin) {
+            return; 
+        }
         
-        // Cập nhật UI Sidebar (Thêm dòng tắt active của tab all)
-        document.getElementById('nav-item-pending').classList.remove('active');
-        document.getElementById('nav-item-irrelevant').classList.remove('active');
-        document.getElementById('nav-item-expired').classList.remove('active');
-        const navAll = document.getElementById('nav-item-all');
-        if (navAll) navAll.classList.remove('active');
+        currentTab = tabId;
 
-        document.getElementById(`nav-item-${tabId}`).classList.add('active');
+        // 2. Tắt sáng toàn bộ các tab (Dùng mảng ID để quét, KHÔNG bao giờ lỗi null)
+        const allTabIds = ['tab-all', 'tab-pending', 'tab-irrelevant', 'tab-expired'];
+        allTabIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('active');
+                el.style.background = 'transparent'; // Trả về màu nền trong suốt
+            }
+        });
 
+        // 3. Bật sáng tab vừa được click
+        const activeEl = document.getElementById(`tab-${tabId}`);
+        if (activeEl) {
+            activeEl.classList.add('active');
+            activeEl.style.background = 'rgba(255,255,255,0.1)'; // Bôi nền sáng
+        }
+
+        // 4. Các dữ liệu giao diện tĩnh của bạn
         if (tabId === 'pending') {
             document.getElementById('pageTitle').innerText = 'Trung tâm Xử lý VBQPPL';
-            document.getElementById('statsGrid').style.display = 'grid';
-            document.getElementById('headerActions').style.display = 'flex';
-            document.getElementById('emptyState').innerHTML = `
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'grid';
+            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'flex';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-regular fa-circle-check"></i>
                 <h3>Tuyệt vời!</h3>
                 <p>Hệ thống không còn văn bản nào cần xử lý.</p>
             `;
         } else if (tabId === 'irrelevant') {
             document.getElementById('pageTitle').innerText = 'Danh sách Không liên quan';
-            document.getElementById('statsGrid').style.display = 'none';
-            document.getElementById('headerActions').style.display = 'none';
-            document.getElementById('emptyState').innerHTML = `
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-solid fa-box-open"></i>
                 <h3>Trống!</h3>
                 <p>Chưa có văn bản nào bị đánh dấu không liên quan.</p>
             `;
         } else if (tabId === 'expired') {
             document.getElementById('pageTitle').innerText = 'Danh sách Hết hiệu lực (Chờ xử lý)';
-            document.getElementById('statsGrid').style.display = 'none';
-            document.getElementById('headerActions').style.display = 'none';
-            document.getElementById('emptyState').innerHTML = `
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-solid fa-clock"></i>
                 <h3>Trống!</h3>
                 <p>Chưa có văn bản nào được nhận diện là hết hiệu lực.</p>
             `;
         } else if (tabId === 'all') {
             document.getElementById('pageTitle').innerText = 'Kho lưu trữ Tổng hợp VBQPPL';
-            document.getElementById('statsGrid').style.display = 'none';
-            document.getElementById('headerActions').style.display = 'none';
-            document.getElementById('emptyState').innerHTML = `
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-solid fa-folder-open"></i>
                 <h3>Trống!</h3>
                 <p>Kho dữ liệu hiện chưa có văn bản nào.</p>
             `;
         }
         
-        loadData()// Xóa nội dung tìm kiếm khi chuyển qua lại giữa các tab
+        // 5. Xóa khung tìm kiếm & Tải lại dữ liệu
         const searchInput = document.getElementById('searchInput');
         if (searchInput) searchInput.value = '';
 
-        loadData();
+        loadData(); 
     }
     // --- HÀM TẢI DỮ LIỆU ĐÃ ĐƯỢC LÀM SẠCH ---
     async function loadData() {
@@ -685,7 +803,7 @@
 
             if (result.ok) {
                 currentRecords = result.data || []; 
-                
+                populateFilters();
                 if (currentTab === 'pending') {
                     // Lấy chính xác con số từ máy chủ gửi về
                     globalTotalCount = result.total || 0;
@@ -694,7 +812,8 @@
                 } else {
                     document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
                 }
-                
+                handleLinkedFilters('init'); 
+                renderTable(currentRecords);
                 applySort(); 
             } else {
                 showToast("Lỗi Máy Chủ", result.message, "error");
@@ -705,8 +824,6 @@
         }
     }
 
-    // --- HÀM CẬP NHẬT GIAO DIỆN THỐNG KÊ MỚI ---
-    // --- HÀM CẬP NHẬT GIAO DIỆN THỐNG KÊ ---
     function updateStatsUI() {
         if (currentTab !== 'pending') return;
 
@@ -778,15 +895,27 @@
 
     // --- HÀM VẼ BẢNG DỮ LIỆU ĐÃ ĐƯỢC TÍCH HỢP ĐẦY ĐỦ 4 CỘT ---
     function renderTable(data) {
+        // 1. Kiểm tra nếu mảng rỗng thì hiện khung "Trống"
         if (!data || data.length === 0) {
-            emptyState.style.display = 'block';
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('tableBody').innerHTML = ''; // Bắt buộc phải dọn sạch bảng cũ
             return;
         }
 
-        table.style.display = 'table';
+        // 2. Ẩn khung "Trống", hiện bảng lên
+        document.getElementById('emptyState').style.display = 'none';
+        const tableBody = document.getElementById('tableBody');
+        const table = document.getElementById('dataTable'); // Đảm bảo bạn có id="dataTable" ở thẻ <table>
+        if (table) table.style.display = 'table';
+        
+        // 👇 CHÍNH LÀ DÒNG NÀY: Xóa sạch dữ liệu cũ trên giao diện trước khi vẽ 4 văn bản mới 👇
+        tableBody.innerHTML = ''; 
+
         const isExpired = currentTab === 'expired';
 
+        // 3. Vòng lặp vẽ giao diện của bạn giữ nguyên 100%
         data.forEach(row => {
+            // ... (Phần code bên trong forEach của bạn giữ nguyên không sửa 1 chữ nào)
             const rId = row._rowNumber;
             const linkVanBan = row['Link Văn bản'] ? String(row['Link Văn bản']).trim() : '';
             const rawSoHieu = isExpired ? (row['Số hiệu bị xử lý'] || '-') : (row['Số hiệu'] || '-');
@@ -830,9 +959,9 @@
                 `;
             } else if (currentTab === 'all') {
                 actionsHtml = `
-                    <span style="color: var(--success); font-weight: 500; font-size: 13px;">
-                        <i class="fa-solid fa-box-archive"></i> Đã lưu trữ
-                    </span>
+                    <button class="btn-detail" onclick="viewDetail(${rId})" title="Xem chi tiết văn bản">
+                        <i class="fa-solid fa-eye"></i> Xem
+                    </button>
                 `;
             }
 
@@ -1138,6 +1267,271 @@
                     emptyState.style.display = 'block';
                 }
             }, 300);
+        }
+    }
+    // Hàm hiển thị thông tin chi tiết
+    function viewDetail(rowNum) {
+        const rowData = currentRecords.find(r => r._rowNumber === rowNum);
+        if (!rowData) return;
+
+        let linkGoc = rowData['Link Văn bản'] ? String(rowData['Link Văn bản']).trim() : '';
+        let soHieuHtml = linkGoc 
+            ? `<a href="${linkGoc}" target="_blank" style="color: #1976d2; text-decoration: none; font-weight: bold;" title="Mở văn bản gốc">${rowData['Số hiệu'] || '--'} <i class="fa-solid fa-up-right-from-square" style="font-size: 11px;"></i></a>`
+            : `<span style="font-weight: 500;">${rowData['Số hiệu'] || '--'}</span>`;
+
+        let rawDate = rowData['Ngày hiệu lực'] || '--';
+        let ngayHieuLuc = rawDate;
+        if(rawDate !== '--' && rawDate.includes('T')) {
+            const d = new Date(rawDate);
+            ngayHieuLuc = d.toLocaleDateString('vi-VN');
+        }
+
+        // XỬ LÝ VĂN BẢN LIÊN QUAN: Luôn hiển thị, nếu rỗng thì báo "Không có" màu đỏ
+        const emptyText = '<span style="color: red; font-weight: 500;">Không có</span>';
+        
+        let canCuPhapLy = rowData['Căn cứ pháp lý'] ? rowData['Căn cứ pháp lý'].replace(/\n/g, '<br>') : emptyText;
+        let huongDanThucHien = rowData['Hướng dẫn thực hiện'] ? rowData['Hướng dẫn thực hiện'].replace(/\n/g, '<br>') : emptyText;
+        let suaDoiCho = rowData['Sửa đổi, bổ sung cho'] ? rowData['Sửa đổi, bổ sung cho'].replace(/\n/g, '<br>') : emptyText;
+        let suaDoiBoi = rowData['Sửa đổi, bổ sung bởi'] ? rowData['Sửa đổi, bổ sung bởi'].replace(/\n/g, '<br>') : emptyText;
+
+        let vanBanLienQuanHtml = `
+            <p style="margin: 5px 0 10px 0;"><strong>Căn cứ pháp lý:</strong><br>${canCuPhapLy}</p>
+            <p style="margin: 5px 0 10px 0;"><strong>Hướng dẫn thực hiện:</strong><br>${huongDanThucHien}</p>
+            <p style="margin: 5px 0 10px 0;"><strong>Sửa đổi, bổ sung cho:</strong><br>${suaDoiCho}</p>
+            <p style="margin: 5px 0;"><strong>Sửa đổi, bổ sung bởi:</strong><br>${suaDoiBoi}</p>
+        `;
+
+        const detailHtml = `
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: #d32f2f; margin: 0 0 10px 0; font-size: 16px;">
+                    <i class="fa-solid fa-scale-balanced"></i> ${rowData['Tên văn bản'] || 'Đang cập nhật'}
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                    <div>
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Số hiệu (Click để xem gốc)</p>
+                        <p style="margin: 2px 0 10px 0;">${soHieuHtml}</p>
+                        
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Ngày hiệu lực</p>
+                        <p style="margin: 2px 0 0 0; font-weight: 500;">${ngayHieuLuc}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Mức độ tác động</p>
+                        <p style="margin: 2px 0 10px 0; font-weight: 500;">${rowData['Mức độ tác động'] || '--'}</p>
+
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Bộ phận chủ trì</p>
+                        <p style="margin: 2px 0 0 0; color: #d32f2f; font-weight: bold;">${rowData['Bộ phận chủ trì'] || '--'}</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <p style="margin: 0 0 5px 0; color: #5f6368; font-size: 12px;">Văn bản liên quan</p>
+                <div style="background: #fff3e0; padding: 10px; border-radius: 6px; font-size: 13px; max-height: 250px; overflow-y: auto;">
+                    ${vanBanLienQuanHtml}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('detailTitle').innerText = 'Chi tiết văn bản';
+        document.getElementById('detailBody').innerHTML = detailHtml;
+        document.getElementById('detailModal').classList.add('show');
+    }
+    // Hàm 1: Tự động gom nhóm các giá trị vào thẻ Select Dropdown
+    function populateFilters() {
+        const filters = ['Lĩnh vực', 'Chủ đề', 'Mục', 'Bộ phận chủ trì', 'Mức độ tác động', 'Loại văn bản'];
+        const filterIds = ['filterLinhVuc', 'filterChuDe', 'filterMuc', 'filterBoPhan', 'filterMucDo', 'filterLoaiVB'];
+
+        filters.forEach((field, index) => {
+            const selectEle = document.getElementById(filterIds[index]);
+            if (!selectEle) return;
+            
+            // Lấy các giá trị duy nhất từ database hiện tại
+            const uniqueValues = [...new Set(currentRecords.map(item => item[field]).filter(val => val))];
+            
+            // Giữ lại dòng "-- Tất cả --" mặc định
+            selectEle.innerHTML = `<option value="">-- Tất cả ${field} --</option>`;
+            
+            // Thêm các lựa chọn vào Dropdown
+            uniqueValues.sort().forEach(val => {
+                selectEle.innerHTML += `<option value="${val}">${val}</option>`;
+            });
+        });
+    }
+    // HÀM XỬ LÝ DROPDOWN LIÊN KẾT 3 CẤP
+    function handleLinkedFilters(trigger) {
+        if (!currentRecords || currentRecords.length === 0) return;
+
+        const selL = document.getElementById('filterLinhVuc');
+        const selC = document.getElementById('filterChuDe');
+        const selM = document.getElementById('filterMuc');
+
+        let valL = selL.value;
+        let valC = selC.value;
+        let valM = selM.value;
+
+        // 1. Quét dữ liệu gốc để tìm các mối quan hệ cha-con
+        const validL = new Set();
+        const hierarchy = [];
+
+        currentRecords.forEach(row => {
+            const l = (row['Lĩnh vực'] || '').trim();
+            const c = (row['Chủ đề'] || '').trim();
+            const m = (row['Mục'] || '').trim();
+            
+            if (l) validL.add(l);
+            if (l || c || m) {
+                hierarchy.push({ l, c, m });
+            }
+        });
+
+        // 2. Logic Tự động điền ngược / Reset xuôi
+        if (trigger === 'muc' && valM !== "") {
+            // Khi chọn Mục: Tự động tìm Chủ đề và Lĩnh vực chứa nó
+            const match = hierarchy.find(x => x.m === valM);
+            if (match) {
+                if (match.l) valL = match.l;
+                if (match.c) valC = match.c;
+            }
+        } else if (trigger === 'chude' && valC !== "") {
+            // Khi chọn Chủ đề: Tự động tìm Lĩnh vực chứa nó và Xóa ô Mục
+            const match = hierarchy.find(x => x.c === valC);
+            if (match) {
+                if (match.l) valL = match.l;
+            }
+            valM = ""; 
+        } else if (trigger === 'linhvuc') {
+            // Khi chọn Lĩnh vực: Xóa ô Chủ đề và Mục để chọn lại
+            valC = "";
+            valM = "";
+        }
+
+        // 3. Tìm các Chủ đề và Mục hợp lệ dựa trên Lĩnh vực (và Chủ đề) đang chọn
+        const validC = new Set();
+        const validM = new Set();
+
+        hierarchy.forEach(x => {
+            if (valL === "" || x.l === valL) {
+                if (x.c) validC.add(x.c);
+                if (valC === "" || x.c === valC) {
+                    if (x.m) validM.add(x.m);
+                }
+            }
+        });
+
+        // 4. Hàm nội bộ dùng để vẽ lại danh sách <option>
+        function renderOptions(selectEle, dataSet, currentValue, defaultText) {
+            selectEle.innerHTML = `<option value="">-- ${defaultText} --</option>`;
+            [...dataSet].sort().forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                if (item === currentValue) opt.selected = true;
+                selectEle.appendChild(opt);
+            });
+        }
+
+        // 5. Cập nhật giao diện của 3 ô Dropdown
+        if (trigger === 'init') {
+            // Lần đầu chạy sẽ nạp toàn bộ Lĩnh vực
+            renderOptions(selL, validL, valL, "Tất cả Lĩnh vực");
+        }
+        
+        renderOptions(selC, validC, valC, "Tất cả Chủ đề");
+        renderOptions(selM, validM, valM, "Tất cả Mục");
+
+        // Đồng bộ lại value thực tế cho thẻ select
+        selL.value = valL;
+        selC.value = valC;
+        selM.value = valM;
+
+        // 6. Gọi lệnh lọc dữ liệu Bảng bên dưới
+        applyFilters();
+    }
+    // Hàm 2: Xử lý hiển thị dữ liệu khi người dùng chọn Bộ lọc hoặc gõ Tìm kiếm
+    function applyFilters() {
+        const textSearch = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+        const fLinhVuc = document.getElementById('filterLinhVuc').value;
+        const fChuDe = document.getElementById('filterChuDe').value;
+        const fMuc = document.getElementById('filterMuc').value;
+        const fBoPhan = document.getElementById('filterBoPhan').value;
+        const fMucDo = document.getElementById('filterMucDo').value;
+        const fLoaiVB = document.getElementById('filterLoaiVB').value;
+
+        // Tiến hành lọc dữ liệu
+        const filteredData = currentRecords.filter(row => {
+            const textMatch = !textSearch || 
+                              String(row['Số hiệu'] || '').toLowerCase().includes(textSearch) || 
+                              String(row['Tên văn bản'] || '').toLowerCase().includes(textSearch);
+            
+            const matchLinhVuc = !fLinhVuc || row['Lĩnh vực'] === fLinhVuc;
+            const matchChuDe = !fChuDe || row['Chủ đề'] === fChuDe;
+            const matchMuc = !fMuc || row['Mục'] === fMuc;
+            const matchBoPhan = !fBoPhan || row['Bộ phận chủ trì'] === fBoPhan;
+            const matchMucDo = !fMucDo || row['Mức độ tác động'] === fMucDo;
+            const matchLoaiVB = !fLoaiVB || row['Loại văn bản'] === fLoaiVB;
+
+            return textMatch && matchLinhVuc && matchChuDe && matchMuc && matchBoPhan && matchMucDo && matchLoaiVB;
+        });
+
+        // Vẽ lại bảng với dữ liệu đã lọc
+        renderTable(filteredData);
+        
+        // Cập nhật số đếm văn bản
+        const countEle = document.getElementById('recordCount');
+        if (countEle) countEle.innerText = `${filteredData.length} văn bản`;
+    }
+    async function toggleAuth() {
+        const isAdmin = localStorage.getItem('isAdminAccess');
+        
+        if (isAdmin) {
+            if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+                localStorage.removeItem('isAdminAccess');
+                checkAuthStatus();
+            }
+        } else {
+            const pass = prompt("Hệ thống xử lý nội bộ.\nVui lòng nhập mật khẩu Quản trị viên:");
+            if (!pass) return;
+
+            document.getElementById('authText').innerText = "Đang xác thực...";
+
+            try {
+                // Gọi lên Google Apps Script để hỏi mật khẩu
+                const response = await fetch(WEBAPP_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        token: TOKEN, 
+                        action: "verify_admin", 
+                        payload: { password: pass } 
+                    })
+                });
+                const result = await response.json();
+
+                if (result.ok) {
+                    // Lưu SessionToken vào trình duyệt, KHÔNG lưu mật khẩu
+                    localStorage.setItem('isAdminAccess', 'true');
+                    alert("Xác thực thành công!");
+                } else {
+                    alert("Sai thông tin đăng nhập!");
+                }
+            } catch (e) {
+                alert("Máy chủ bận, vui lòng thử lại sau!");
+            }
+            checkAuthStatus();
+        }
+    }
+
+    function checkAuthStatus() {
+        // Chỉ hiện tab nếu có trạng thái đăng nhập được lưu
+        const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
+        const adminElements = document.querySelectorAll('.admin-only');
+        
+        if (isAdmin) {
+            adminElements.forEach(el => el.classList.remove('locked'));
+            document.getElementById('authText').innerText = 'Đăng xuất';
+            document.getElementById('authIcon').className = 'fa-solid fa-sign-out-alt';
+        } else {
+            adminElements.forEach(el => el.classList.add('locked'));
+            document.getElementById('authText').innerText = 'Đăng nhập';
+            document.getElementById('authIcon').className = 'fa-solid fa-user-lock';
         }
     }
 </script>
