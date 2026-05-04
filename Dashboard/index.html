@@ -447,11 +447,11 @@
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
-                    <label>Chủ đề <span style="font-weight: normal; color: var(--text-muted);">(Không B/B)</span></label>
+                    <label>Chủ đề <span style="font-weight: normal; color: var(--text-muted);"></span></label>
                     <input type="text" id="editChuDe" placeholder="Nhập chủ đề...">
                 </div>
                 <div class="form-group">
-                    <label>Mục <span style="font-weight: normal; color: var(--text-muted);">(Không B/B)</span></label>
+                    <label>Mục <span style="font-weight: normal; color: var(--text-muted);"></span></label>
                     <input type="text" id="editMuc" placeholder="Nhập mục...">
                 </div>
             </div>
@@ -811,10 +811,8 @@
 
                 actionsHtml = `
                     ${rejectButtonHtml}
-                    <button class="btn-edit" onclick="openModal(${rId})" title="Sửa thông tin">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button class="btn-transfer" id="btn-${rId}" onclick="transferRow(${rId}, '${rawSoHieu}')" title="Chuyển dữ liệu">
+                    <!-- Đã sửa onclick để gọi Popup thay vì chuyển thẳng -->
+                    <button class="btn-transfer" id="btn-${rId}" onclick="openModal(${rId}, true)" title="Cập nhật và Chuyển dữ liệu">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
                 `;
@@ -917,7 +915,35 @@
             firstRow.style.backgroundColor = '#ffecb3';
             setTimeout(() => { firstRow.style.backgroundColor = ''; }, 2500);
         }
-    }
+    // Thêm biến này ở ngay trên hàm openModal
+    let isTransferMode = false;
+
+    // Sửa lại khai báo hàm openModal
+    function openModal(rowNum, isTransfer = false) {
+        isTransferMode = isTransfer; // Ghi nhớ hành động
+        const rowData = currentRecords.find(r => r._rowNumber === rowNum);
+        if (!rowData) return;
+
+        // Đã bỏ chữ "Dòng #..." theo yêu cầu
+        document.getElementById('modalTitle').innerText = `Cập nhật ${rowData['Số hiệu']}`;
+        document.getElementById('editRowNumber').value = rowNum;
+        
+        document.getElementById('editLinhVuc').value = rowData['Lĩnh vực'] || '';
+        document.getElementById('editChuDe').value = rowData['Chủ đề'] || '';
+        document.getElementById('editMuc').value = rowData['Mục'] || '';
+        document.getElementById('editMucDo').value = rowData['Mức độ tác động'] || '';
+        document.getElementById('editBoPhan').value = rowData['Bộ phận chủ trì'] || '';
+
+        // Đổi tên nút bấm trong Popup cho phù hợp
+        const btnSave = document.getElementById('btnSaveEdit');
+        if (isTransferMode) {
+            btnSave.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển`;
+        } else {
+            btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
+        }
+
+        document.getElementById('editModal').classList.add('show');
+    }}
 
     function openModal(rowNum) {
         const rowData = currentRecords.find(r => r._rowNumber === rowNum);
@@ -963,20 +989,33 @@
             });
 
             const result = await response.json();
-            btnSave.disabled = false;
-            btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
 
             if (result.ok) {
-                showToast("Thành công!", "Đã cập nhật thông tin.", "success");
-                closeModal('editModal');
+                // Cập nhật dữ liệu ở giao diện
                 const rowIdx = currentRecords.findIndex(r => r._rowNumber == rowNum);
                 if (rowIdx > -1) Object.assign(currentRecords[rowIdx], updates);
+
+                // KIỂM TRA CHẾ ĐỘ: Nếu là Cập nhật & Chuyển
+                if (isTransferMode) {
+                    closeModal('editModal'); // Đóng popup
+                    const rowData = currentRecords[rowIdx];
+                    // Tự động kích hoạt luồng chuyển dữ liệu
+                    await transferRow(rowNum, rowData['Số hiệu']); 
+                } else {
+                    // Nếu chỉ là Sửa bình thường
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
+                    showToast("Thành công!", "Đã cập nhật thông tin.", "success");
+                    closeModal('editModal');
+                }
             } else {
+                btnSave.disabled = false;
+                btnSave.innerHTML = isTransferMode ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển` : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
                 showToast("Lỗi lưu", result.message, "error");
             }
         } catch (error) {
             btnSave.disabled = false;
-            btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
+            btnSave.innerHTML = isTransferMode ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển` : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
             showToast("Lỗi Mạng", "Vui lòng kiểm tra lại Web App URL.", "error");
         }
     }
