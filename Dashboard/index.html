@@ -287,18 +287,20 @@
         <h2>Hệ thống VBQPPL</h2>
     </div>
     <ul class="nav-links">
+        <li id="nav-item-all">
+            <a onclick="switchTab('all')">
+                <i class="fa-solid fa-list"></i> Danh sách tổng hợp</a>
+        </li>
         <li class="active" id="nav-item-pending">
-            <a onclick="switchTab('pending')"><i class="fa-solid fa-chart-pie"></i> Bảng điều khiển</a>
+            <a onclick="switchTab('pending')"><i class="fa-solid fa-chart-pie"></i> Văn bản cần xử lý</a>
         </li>
         <li id="nav-item-irrelevant">
             <a onclick="switchTab('irrelevant')">
-                <i class="fa-solid fa-ban"></i> Không liên quan
-            </a>
+                <i class="fa-solid fa-ban"></i> Văn bản không liên quan</a>
         </li>
         <li id="nav-item-expired">
             <a onclick="switchTab('expired')">
-                <i class="fa-solid fa-clock-rotate-left"></i> Hết hiệu lực
-            </a>
+                <i class="fa-solid fa-clock-rotate-left"></i> Văn bản hết hiệu lực</a>
         </li>
     </ul>
 </aside>
@@ -506,14 +508,14 @@
 
 <script>
     // --- CẤU HÌNH KẾT NỐI ---
-    // Sử dụng Link thật của dự án đã được cấp
     const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDES8M8mTjzpeIZJ78QqZYz1cDo5ODNzU2DGMbZDSRVzH-yXLh7ashwHh8CeDQwXnwww/exec"; 
     const TOKEN = "T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0";
 
     let currentRecords = [];
+    let globalTotalCount = '--'; 
     let globalTransferredCount = '--'; 
     let hasShownWelcome = false;
-    let currentTab = 'pending'; // Biến theo dõi tab hiện tại
+    let currentTab = 'pending'; 
 
     const table = document.getElementById('dataTable');
     const tableBody = document.getElementById('tableBody');
@@ -536,17 +538,12 @@
 
     function updateTime() {
         const now = new Date();
-        
-        // Lấy Giờ:Phút
         const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        
-        // Lấy Ngày/Tháng/Năm định dạng dd/MM/yyyy
         const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+        const mm = String(now.getMonth() + 1).padStart(2, '0'); 
         const yyyy = now.getFullYear();
         const dateStr = `${dd}/${mm}/${yyyy}`;
 
-        // Ghép nối và hiển thị (Giờ chữ to, Ngày chữ nhỏ mờ hơn ở ngay bên dưới)
         document.getElementById('stat-time').innerHTML = `
             <div style="line-height: 1.2;">
                 <span>${timeStr}</span>
@@ -583,7 +580,6 @@
         }
     }
 
-    // Đóng Modal chung
     function closeModal(modalId) { 
         document.getElementById(modalId).classList.remove('show'); 
     }
@@ -593,17 +589,18 @@
         scrollToNextAction();
     }
 
-    // --- HÀM CHUYỂN TAB ---
     function switchTab(tabId) {
         currentTab = tabId;
         
-        // Cập nhật UI Sidebar
+        // Cập nhật UI Sidebar (Thêm dòng tắt active của tab all)
         document.getElementById('nav-item-pending').classList.remove('active');
         document.getElementById('nav-item-irrelevant').classList.remove('active');
         document.getElementById('nav-item-expired').classList.remove('active');
+        const navAll = document.getElementById('nav-item-all');
+        if (navAll) navAll.classList.remove('active');
+
         document.getElementById(`nav-item-${tabId}`).classList.add('active');
 
-        // Cập nhật Tiêu đề & Ẩn/Hiện Thống kê
         if (tabId === 'pending') {
             document.getElementById('pageTitle').innerText = 'Trung tâm Xử lý VBQPPL';
             document.getElementById('statsGrid').style.display = 'grid';
@@ -631,64 +628,20 @@
                 <h3>Trống!</h3>
                 <p>Chưa có văn bản nào được nhận diện là hết hiệu lực.</p>
             `;
+        } else if (tabId === 'all') {
+            document.getElementById('pageTitle').innerText = 'Kho lưu trữ Tổng hợp VBQPPL';
+            document.getElementById('statsGrid').style.display = 'none';
+            document.getElementById('headerActions').style.display = 'none';
+            document.getElementById('emptyState').innerHTML = `
+                <i class="fa-solid fa-folder-open"></i>
+                <h3>Trống!</h3>
+                <p>Kho dữ liệu hiện chưa có văn bản nào.</p>
+            `;
         }
         
-        // Tải dữ liệu theo tab tương ứng
         loadData();
     }
-
-    // --- HÀM TÍNH TOÁN VÀ CẬP NHẬT THỐNG KÊ ---
-    function updateStatsUI() {
-        const targetStatuses = ['Cần quét căn cứ', 'Chờ kiểm tra tự động', 'Có thể chuyển', 'Lỗi đọc dữ liệu', 'Cần kiểm tra thủ công'];
-        const pendingCount = currentRecords.filter(r => targetStatuses.includes(String(r['Trạng thái xử lý'] || '').trim())).length;
-        document.getElementById('stat-pending').innerText = pendingCount;
-
-        const duplicateCount = currentRecords.filter(r => String(r['Trạng thái xử lý'] || '').trim() === 'Trùng số hiệu').length;
-        document.getElementById('stat-transferred').innerText = globalTransferredCount;
-        
-        if (typeof globalTransferredCount === 'number') {
-            document.getElementById('stat-total').innerText = globalTransferredCount + duplicateCount;
-        } else {
-            document.getElementById('stat-total').innerText = '--';
-        }
-
-        if (!hasShownWelcome && pendingCount > 0) {
-            document.getElementById('popupPendingCount').innerText = pendingCount;
-            document.getElementById('welcomeModal').classList.add('show');
-            hasShownWelcome = true;
-        }
-    }
-
-    // --- HÀM SẮP XẾP DANH SÁCH ---
-    function applySort() {
-        if (!currentRecords || currentRecords.length === 0) {
-            document.getElementById('recordCount').innerText = "0 văn bản";
-            return;
-        }
-        
-        const sortType = document.getElementById('sortSelect').value;
-
-        if (sortType === 'row_desc') {
-            currentRecords.sort((a, b) => b._rowNumber - a._rowNumber);
-        } else if (sortType === 'row_asc') {
-            currentRecords.sort((a, b) => a._rowNumber - b._rowNumber);
-        } else if (sortType === 'priority') {
-            const priorityOrder = ['Có thể chuyển', 'Chờ kiểm tra tự động', 'Cần kiểm tra thủ công', 'Cần quét căn cứ', 'Lỗi đọc dữ liệu', 'Trùng số hiệu', 'Chưa gán'];
-            currentRecords.sort((a, b) => {
-                let idxA = priorityOrder.indexOf(String(a['Trạng thái xử lý'] || 'Chưa gán').trim());
-                let idxB = priorityOrder.indexOf(String(b['Trạng thái xử lý'] || 'Chưa gán').trim());
-                if (idxA === -1) idxA = 999;
-                if (idxB === -1) idxB = 999;
-                if (idxA !== idxB) return idxA - idxB;
-                return b._rowNumber - a._rowNumber;
-            });
-        }
-        
-        document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
-        tableBody.innerHTML = '';
-        renderTable(currentRecords);
-    }
-
+    // --- HÀM TẢI DỮ LIỆU ĐÃ ĐƯỢC LÀM SẠCH ---
     async function loadData() {
         table.style.display = 'none';
         emptyState.style.display = 'none';
@@ -696,16 +649,15 @@
         tableBody.innerHTML = '';
         currentRecords = [];
 
-        // Gọi đúng API dựa trên Tab đang được chọn
         let actionName = "get_pending_records";
         if (currentTab === 'irrelevant') actionName = "get_irrelevant_records";
         if (currentTab === 'expired') actionName = "get_expired_records";
+        if (currentTab === 'all') actionName = "get_all_records"; // DÒNG BỔ SUNG MỚI
 
         try {
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                redirect: "follow",
                 body: JSON.stringify({ token: TOKEN, action: actionName })
             });
 
@@ -716,14 +668,12 @@
             if (result.ok) {
                 currentRecords = result.data || []; 
                 
-                // Chỉ cập nhật bảng thống kê trên cùng nếu đang ở Tab Bảng Điều Khiển
                 if (currentTab === 'pending') {
-                    if (result.stats && result.stats.transferred !== undefined) {
-                        globalTransferredCount = result.stats.transferred;
-                    }
+                    // Lấy chính xác con số từ máy chủ gửi về
+                    globalTotalCount = result.total || 0;
+                    globalTransferredCount = result.transferred || 0;
                     updateStatsUI();
                 } else {
-                    // Nếu ở tab Không liên quan, chỉ đếm số bản ghi trong danh sách
                     document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
                 }
                 
@@ -737,6 +687,63 @@
         }
     }
 
+    // --- HÀM CẬP NHẬT GIAO DIỆN THỐNG KÊ MỚI ---
+    // --- HÀM CẬP NHẬT GIAO DIỆN THỐNG KÊ ---
+    function updateStatsUI() {
+        if (currentTab !== 'pending') return;
+
+        // BỘ LỌC KÉP: Chỉ đếm văn bản có Trạng thái duyệt là "Chờ kiểm tra" hoặc "Cần kiểm tra"
+        const pendingDocs = currentRecords.filter(row => {
+            const status = String(row['Trạng thái duyệt'] || '').trim().toLowerCase();
+            return status === 'chờ kiểm tra' || status === 'cần kiểm tra';
+        });
+
+        const exactPendingCount = pendingDocs.length;
+
+        document.getElementById('stat-total').innerText = globalTotalCount;
+        document.getElementById('stat-transferred').innerText = globalTransferredCount;
+        document.getElementById('stat-pending').innerText = exactPendingCount;
+
+        // Bật popup chào mừng với số lượng chuẩn xác
+        if (!hasShownWelcome && exactPendingCount > 0) {
+            document.getElementById('popupPendingCount').innerText = exactPendingCount;
+            document.getElementById('welcomeModal').classList.add('show');
+            hasShownWelcome = true;
+        }
+    }
+    function applySort() {
+        if (!currentRecords || currentRecords.length === 0) {
+            document.getElementById('recordCount').innerText = "0 văn bản";
+            tableBody.innerHTML = '';
+            return;
+        }
+        
+        let displayRecords = [...currentRecords];
+
+        // LỌC DỮ LIỆU BẢNG: Chỉ giữ lại các dòng đúng mục tiêu
+        if (currentTab === 'pending') {
+            displayRecords = displayRecords.filter(row => {
+                const status = String(row['Trạng thái duyệt'] || '').trim().toLowerCase();
+                return status === 'chờ kiểm tra' || status === 'cần kiểm tra';
+            });
+        }
+        
+        const sortType = document.getElementById('sortSelect').value;
+
+        if (sortType === 'row_desc') {
+            displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
+        } else if (sortType === 'row_asc') {
+            displayRecords.sort((a, b) => a._rowNumber - b._rowNumber);
+        } else if (sortType === 'priority') {
+            displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
+        }
+        
+        document.getElementById('recordCount').innerText = displayRecords.length + " văn bản";
+        tableBody.innerHTML = '';
+        renderTable(displayRecords);
+    }
+
+    // --- HÀM VẼ BẢNG DỮ LIỆU ĐÃ ĐƯỢC TÍCH HỢP ĐẦY ĐỦ 4 CỘT ---
     function renderTable(data) {
         if (!data || data.length === 0) {
             emptyState.style.display = 'block';
@@ -748,10 +755,7 @@
 
         data.forEach(row => {
             const rId = row._rowNumber;
-            
             const linkVanBan = row['Link Văn bản'] ? String(row['Link Văn bản']).trim() : '';
-            
-            // Phân loại dữ liệu hiển thị theo tab
             const rawSoHieu = isExpired ? (row['Số hiệu bị xử lý'] || '-') : (row['Số hiệu'] || '-');
             const rawTenVanBan = isExpired ? (row['Tên văn bản bị xử lý'] || 'Chưa bóc tách được (Hệ thống tự quét)') : (row['Tên văn bản'] || '-');
             const rawLoai = isExpired ? (row['Trạng thái xử lý'] || '-') : (row['Loại văn bản'] || '-');
@@ -760,15 +764,11 @@
                 ? `<a href="${linkVanBan}" target="_blank" class="doc-link" title="Mở văn bản gốc">${rawSoHieu}</a>`
                 : `<span style="font-weight:600;">${rawSoHieu}</span>`;
 
-            // Thay đổi Nút bấm dựa trên Tab
             let actionsHtml = '';
             if (currentTab === 'pending') {
-                // Lấy Trạng thái duyệt của dòng hiện tại
                 const trangThaiDuyet = String(row['Trạng thái duyệt'] || '').trim();
-                
-                // Chỉ tạo nút Bỏ qua nếu Trạng thái duyệt là "Chờ kiểm tra"
                 let rejectButtonHtml = '';
-                if (trangThaiDuyet === 'Chờ kiểm tra') {
+                if (trangThaiDuyet === 'Chờ kiểm tra' || trangThaiDuyet === 'Cần kiểm tra') {
                     rejectButtonHtml = `
                         <button class="btn-reject" id="btn-reject-${rId}" onclick="rejectRow(${rId}, '${rawSoHieu}')" title="Đánh dấu không liên quan">
                             <i class="fa-solid fa-ban"></i> Bỏ qua
@@ -796,6 +796,12 @@
                     <button class="btn-outline-primary" onclick="alert('Bản ghi này do hệ thống tự động kiểm soát dựa trên ngày hết hiệu lực.')" title="Tự động">
                         <i class="fa-solid fa-robot"></i> Tự động
                     </button>
+                `;
+            } else if (currentTab === 'all') {
+                actionsHtml = `
+                    <span style="color: var(--success); font-weight: 500; font-size: 13px;">
+                        <i class="fa-solid fa-box-archive"></i> Đã lưu trữ
+                    </span>
                 `;
             }
 
@@ -829,33 +835,26 @@
                         <div class="details-content">
                             <div class="detail-item">
                                 <div class="detail-label"><i class="fa-solid fa-calendar-xmark" style="color: var(--danger);"></i> Ngày áp dụng xóa</div>
-                                <div class="detail-value"><strong style="color: var(--danger); font-size: 14px;">${row['Ngày hết hiệu lực áp dụng'] || 'Chưa xác định (Cần xem thủ công)'}</strong></div>
+                                <div class="detail-value"><strong style="color: var(--danger); font-size: 14px;">${row['Ngày hết hiệu lực áp dụng'] || 'Chưa xác định'}</strong></div>
                             </div>
                             <div class="detail-item">
                                 <div class="detail-label"><i class="fa-solid fa-magnifying-glass" style="color: var(--has-teal);"></i> Lý do nhận diện</div>
                                 <div class="detail-value">${row['Lý do nhận diện'] || '-'}</div>
                             </div>
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-file-invoice" style="color: #9334e6;"></i> Bị thay thế/bãi bỏ bởi</div>
-                                <div class="detail-value">[${row['Số hiệu văn bản mới'] || ''}] ${row['Tên văn bản mới'] || ''}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-quote-left" style="color: var(--has-orange);"></i> Câu nguồn đối chiếu</div>
-                                <div class="detail-value"><i>"${row['Câu nguồn'] || '-'}"</i></div>
-                            </div>
                         </div>
                     </td>
                 `;
             } else {
+                // ĐOẠN NÀY ĐẢM BẢO HIỆN ĐỦ 4 CỘT CHO TẤT CẢ CÁC TAB (NGOẠI TRỪ TAB HẾT HIỆU LỰC)
                 trDetail.innerHTML = `
                     <td colspan="6" style="padding: 0;">
                         <div class="details-content">
                             <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-book" style="color: #1a73e8;"></i> Văn bản căn cứ</div>
+                                <div class="detail-label"><i class="fa-solid fa-book" style="color: #1a73e8;"></i> Căn cứ pháp lý</div>
                                 <div class="detail-value">${row['Căn cứ pháp lý'] || 'Không có'}</div>
                             </div>
                             <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-file-lines" style="color: #1e8e3e;"></i> Văn bản hướng dẫn</div>
+                                <div class="detail-label"><i class="fa-solid fa-file-lines" style="color: #1e8e3e;"></i> Hướng dẫn thực hiện</div>
                                 <div class="detail-value">${row['Hướng dẫn thực hiện'] || 'Không có'}</div>
                             </div>
                             <div class="detail-item">
@@ -876,33 +875,17 @@
         });
     }
 
-    // --- LOGIC TÌM DÒNG CẦN XỬ LÝ ---
     function scrollToNextAction() {
-        if (!currentRecords || currentRecords.length === 0) return;
-
-        const priority = ['Có thể chuyển', 'Chờ kiểm tra tự động', 'Cần kiểm tra thủ công', 'Cần quét căn cứ', 'Lỗi đọc dữ liệu'];
-        let targetRecord = null;
-
-        for (const statusToFind of priority) {
-            targetRecord = currentRecords.find(r => String(r['Trạng thái xử lý'] || 'Chưa gán').trim() === statusToFind);
-            if (targetRecord) break;
-        }
-
-        if (!targetRecord) {
-            showToast("Tuyệt vời", "Bạn không còn văn bản nào cần thao tác khẩn cấp.", "success");
-            return;
-        }
-
-        const targetElement = document.getElementById(`row-${targetRecord._rowNumber}`);
-        if (targetElement) {
+        // Tìm thẳng dòng dữ liệu đầu tiên đang được hiển thị trên bảng
+        const firstRow = document.querySelector('.main-row');
+        if (firstRow) {
             const scrollArea = document.getElementById('scrollArea');
-            scrollArea.scrollTo({ top: targetElement.offsetTop - scrollArea.offsetTop - 45, behavior: 'smooth' });
-            targetElement.style.backgroundColor = '#ffecb3';
-            setTimeout(() => { targetElement.style.backgroundColor = ''; }, 2500);
+            scrollArea.scrollTo({ top: firstRow.offsetTop - scrollArea.offsetTop - 45, behavior: 'smooth' });
+            firstRow.style.backgroundColor = '#ffecb3';
+            setTimeout(() => { firstRow.style.backgroundColor = ''; }, 2500);
         }
     }
 
-    // --- LOGIC MODAL & EDIT ---
     function openModal(rowNum) {
         const rowData = currentRecords.find(r => r._rowNumber === rowNum);
         if (!rowData) return;
@@ -943,7 +926,6 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                redirect: "follow",
                 body: JSON.stringify({ token: TOKEN, action: "update_record", payload: { row_number: rowNum, updates: updates } })
             });
 
@@ -966,15 +948,12 @@
         }
     }
 
-    // --- LOGIC XÁC NHẬN BỎ QUA Ở GIỮA MÀN HÌNH ---
     let confirmActionCallback = null;
 
     function rejectRow(rowNumber, soHieu) {
         const msg = `Bạn có chắc chắn muốn đánh dấu văn bản <br><strong style="color: var(--has-navy); font-size: 16px;">[${soHieu}]</strong><br> là <b>KHÔNG LIÊN QUAN</b>?`;
         document.getElementById('confirmMessage').innerHTML = msg;
-        
         confirmActionCallback = () => { executeRejectRow(rowNumber, soHieu); };
-        
         document.getElementById('confirmModal').classList.add('show');
     }
 
@@ -985,99 +964,59 @@
 
     async function executeRejectRow(rowNumber, soHieu) {
         const btn = document.getElementById(`btn-reject-${rowNumber}`);
-        if(btn) {
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-        }
+        if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                redirect: "follow",
                 body: JSON.stringify({ 
-                    token: TOKEN, 
-                    action: "update_record", 
-                    payload: { 
-                        row_number: rowNumber, 
-                        updates: { 
-                            "Trạng thái duyệt": "Không liên quan" 
-                        } 
-                    } 
+                    token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: { "Trạng thái duyệt": "Không liên quan" } } 
                 })
             });
 
             const result = await response.json();
-
             if (result.ok) {
                 showToast("Đã loại bỏ!", `Đã đánh dấu ${soHieu} là Không liên quan.`, "success");
                 removeRowFromUI(rowNumber);
             } else {
-                if(btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-ban"></i> Bỏ qua`;
-                }
+                if(btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-ban"></i> Bỏ qua`; }
                 showToast(`Lỗi dòng ${rowNumber}`, result.message, "error");
             }
         } catch (error) {
-            if(btn) {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-ban"></i> Bỏ qua`;
-            }
-            showToast("Lỗi Mạng", "Không kết nối được máy chủ. Vui lòng bấm Deploy Bản mới bên Apps Script.", "error");
+            if(btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-ban"></i> Bỏ qua`; }
+            showToast("Lỗi Mạng", "Không kết nối được máy chủ.", "error");
         }
     }
 
-    // --- LOGIC KHÔI PHỤC TỪ TAB KHÔNG LIÊN QUAN ---
     async function restoreRow(rowNumber, soHieu) {
         if(!confirm(`Bạn có muốn khôi phục văn bản [${soHieu}] về danh sách chờ xử lý không?`)) return;
-        
         const btn = document.getElementById(`btn-restore-${rowNumber}`);
-        if(btn) {
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-        }
+        if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                redirect: "follow",
                 body: JSON.stringify({ 
-                    token: TOKEN, 
-                    action: "update_record", 
-                    payload: { 
-                        row_number: rowNumber, 
-                        updates: { 
-                            "Trạng thái duyệt": "Nháp",
-                            "Trạng thái xử lý": "Cần kiểm tra thủ công" 
-                        } 
-                    } 
+                    token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: { "Trạng thái duyệt": "Chờ kiểm tra" } } 
                 })
             });
 
             const result = await response.json();
-
             if (result.ok) {
                 showToast("Đã khôi phục!", `Văn bản ${soHieu} đã được đưa về danh sách chờ xử lý.`, "success");
                 removeRowFromUI(rowNumber);
             } else {
-                if(btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`;
-                }
+                if(btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
                 showToast(`Lỗi dòng ${rowNumber}`, result.message, "error");
             }
         } catch (error) {
-            if(btn) {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`;
-            }
+            if(btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
             showToast("Lỗi Mạng", "Không kết nối được máy chủ.", "error");
         }
     }
 
-    // --- LOGIC CHUYỂN DỮ LIỆU ---
     async function transferRow(rowNumber, soHieu) {
         const btn = document.getElementById(`btn-${rowNumber}`);
         btn.disabled = true;
@@ -1087,15 +1026,13 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                redirect: "follow",
                 body: JSON.stringify({ token: TOKEN, action: "transfer_record", payload: { row_number: rowNumber } })
             });
 
             const result = await response.json();
-
             if (result.ok) {
                 showToast("Thành công!", `Đã chuyển văn bản ${soHieu}.`, "success");
-                if (typeof globalTransferredCount === 'number') globalTransferredCount++; // Tăng Đã chuyển
+                if (typeof globalTransferredCount === 'number') globalTransferredCount++; 
                 removeRowFromUI(rowNumber);
             } else {
                 btn.disabled = false;
@@ -1107,11 +1044,10 @@
         } catch (error) {
             btn.disabled = false;
             btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
-            showToast("Lỗi Mạng", "Không kết nối được máy chủ. Vui lòng bấm Deploy Bản mới bên Apps Script.", "error");
+            showToast("Lỗi Mạng", "Không kết nối được máy chủ.", "error");
         }
     }
 
-    // Hàm phụ trợ gỡ bỏ Dòng khỏi bảng và cập nhật thống kê (Dùng chung)
     function removeRowFromUI(rowNumber) {
         const rowMain = document.getElementById(`row-${rowNumber}`);
         const rowDetail = document.getElementById(`details-${rowNumber}`);
@@ -1128,8 +1064,7 @@
                 
                 currentRecords = currentRecords.filter(r => r._rowNumber != rowNumber);
                 
-                // Chỉ cập nhật khối Dashboard nếu đang ở Tab pending
-                if(currentTab === 'pending'){
+                if(currentTab === 'pending') {
                     updateStatsUI();
                 }
                 
