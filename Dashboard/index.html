@@ -220,6 +220,7 @@
         .badge-green { background: #e6f4ea; color: #1e8e3e; }
         .badge-orange { background: #feefe6; color: var(--has-orange); }
         .badge-gray { background: #f1f3f4; color: #5f6368; }
+        .badge-pink { background: #fde0dc; color: #b00020; }
 
         .doc-title { font-weight: 500; line-height: 1.5; color: var(--text-main); white-space: normal; word-wrap: break-word; max-width: 500px; }
         .doc-link { color: var(--has-teal); text-decoration: none; font-weight: 600; }
@@ -362,6 +363,8 @@
 
         <!-- TABLE AREA -->
         <div class="table-wrapper">
+            <!-- TABLE AREA -->
+        <div class="table-wrapper">
             <div class="table-toolbar">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-filter"></i> Sắp xếp danh sách:
@@ -371,6 +374,15 @@
                         <option value="priority">Mức độ ưu tiên xử lý</option>
                     </select>
                 </div>
+                
+                <!-- Ô TÌM KIẾM MỚI BỔ SUNG -->
+                <div style="margin-left: 24px; display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: white;">
+                    <span style="background: #1a73e8; color: white; padding: 6px 12px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Tra cứu
+                    </span>
+                    <input type="text" id="searchInput" oninput="applySort()" placeholder="Nhập số hiệu hoặc tên văn bản..." style="border: none; padding: 6px 12px; outline: none; width: 260px; font-size: 13px; font-family: inherit; color: var(--text-main);">
+                </div>
+
                 <div style="margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500;" id="recordCount">
                     -- văn bản
                 </div>
@@ -528,11 +540,9 @@
 
     function getBadgeClass(type) {
         const t = String(type || '').toLowerCase();
-        if (t.includes('thông tư')) return 'badge-blue';
-        if (t.includes('nghị định')) return 'badge-purple';
-        if (t.includes('quyết định')) return 'badge-green';
-        if (t.includes('công văn')) return 'badge-orange';
-        if (t.includes('luật')) return 'badge-purple';
+        if (t.includes('thông tư')) return 'badge-green';
+        if (t.includes('nghị định')) return 'badge-orange';
+        if (t.includes('bộ luật, luật')) return 'badge-pink';
         return 'badge-gray';
     }
 
@@ -639,6 +649,10 @@
             `;
         }
         
+        loadData()// Xóa nội dung tìm kiếm khi chuyển qua lại giữa các tab
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = '';
+
         loadData();
     }
     // --- HÀM TẢI DỮ LIỆU ĐÃ ĐƯỢC LÀM SẠCH ---
@@ -720,7 +734,7 @@
         
         let displayRecords = [...currentRecords];
 
-        // LỌC DỮ LIỆU BẢNG: Chỉ giữ lại các dòng đúng mục tiêu
+        // 1. Lọc theo Tab Cần xử lý
         if (currentTab === 'pending') {
             displayRecords = displayRecords.filter(row => {
                 const status = String(row['Trạng thái duyệt'] || '').trim().toLowerCase();
@@ -728,8 +742,22 @@
             });
         }
         
+        // 2. BỘ LỌC TRA CỨU (TÌM KIẾM THÔNG MINH)
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            const query = searchInput.value.toLowerCase().trim();
+            if (query !== '') {
+                displayRecords = displayRecords.filter(row => {
+                    const soHieu = String(row['Số hiệu'] || '').toLowerCase();
+                    const tenVB = String(row['Tên văn bản'] || '').toLowerCase();
+                    // So sánh xem từ khóa có nằm trong Số hiệu hoặc Tên VB hay không
+                    return soHieu.includes(query) || tenVB.includes(query);
+                });
+            }
+        }
+        
+        // 3. Sắp xếp danh sách
         const sortType = document.getElementById('sortSelect').value;
-
         if (sortType === 'row_desc') {
             displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
         } else if (sortType === 'row_asc') {
@@ -738,6 +766,7 @@
             displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
         }
         
+        // Hiển thị lại số lượng theo kết quả tìm kiếm
         document.getElementById('recordCount').innerText = displayRecords.length + " văn bản";
         tableBody.innerHTML = '';
         renderTable(displayRecords);
