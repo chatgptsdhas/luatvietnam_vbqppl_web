@@ -90,9 +90,48 @@ def normalize_text(value: str) -> str:
     return value.strip()
 
 
+import re
+
+import re
+
 def normalize_so_hieu(value: str) -> str:
-    # Dùng IN HOA để thuận tiện đối chiếu với cột "Số hiệu" / dropdown trên Google Sheet.
-    return normalize_text(value).upper()
+    """
+    Chuẩn hóa số hiệu văn bản để phục vụ chống trùng.
+    Nguyên tắc:
+    - Chỉ nắn các mẫu chắc chắn/khá chắc chắn.
+    - Mẫu lạ thì giữ nguyên để người dùng kiểm tra tay.
+    """
+    text = normalize_text(value).upper()
+
+    # Chuẩn hóa khoảng trắng quanh / và -
+    text = re.sub(r"\s*/\s*", "/", text)
+    text = re.sub(r"\s*-\s*", "-", text)
+
+    # 1. Chỉ nắn các biến thể gần chắc chắn của Thông tư Bộ GDĐT
+    bgddt_variants = {
+        "TT-BGDĐT",
+        "TT-BGĐT",
+        "TT-BGDDT",
+        "TT-BGDT",
+        "TT-GDĐT",
+        "TT-GDDT",
+        "TT-BGD",
+    }
+
+    parts = text.split("/")
+    if len(parts) >= 3:
+        suffix = parts[-1]
+        if suffix in bgddt_variants:
+            parts[-1] = "TT-BGDĐT"
+            text = "/".join(parts)
+
+    # 2. Chuẩn hóa Nghị định
+    text = re.sub(r"/N[DĐ][- ]*CP$", "/NĐ-CP", text)
+
+    # 3. Chuẩn hóa Luật / Bộ luật
+    text = re.sub(r"/QH\s*(\d+)$", r"/QH\1", text)
+
+    return text
 
 
 def format_vb_id(number: int) -> str:
