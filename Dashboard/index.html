@@ -398,7 +398,7 @@
 <aside class="sidebar">
     <div class="sidebar-header">
         <img src="logo.png" alt="H.A.S" style="height: 32px; width: auto; background: white; padding: 4px; border-radius: 4px;">
-        <h2>Hệ thống VBQPPL</h2>
+        <h2>H.A.S EDU</h2>
     </div>
     <ul class="sidebar" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px;">
             
@@ -545,12 +545,11 @@
                 <table id="dataTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th width="3%"></th>
-                            <th width="7%">Dòng</th>
-                            <th width="15%">Số hiệu</th>
+                            <th width="5%"></th> <!-- Đã nới nhẹ nút sổ xuống -->
+                            <th width="15%" style="text-align: center;">Số hiệu</th>
                             <th width="15%" style="text-align: center;">Loại văn bản</th>
-                            <th width="40%">Tên văn bản</th>
-                            <th width="20%" style="text-align: right;">Thao tác</th>
+                            <th width="60%" style="text-align: center;">Tên văn bản</th> <!-- Bù phần trống vào tên văn bản -->
+                            <th width="5%" style="text-align: center;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -708,7 +707,7 @@
     const emptyState = document.getElementById('emptyState');
 
     window.onload = () => {
-        loadData();
+        switchTab('all'); // Gọi hàm switchTab để đồng bộ toàn bộ giao diện và dữ liệu
     };
 
     function getBadgeClass(type) {
@@ -827,7 +826,7 @@
                 <p>Chưa có văn bản nào được nhận diện là hết hiệu lực.</p>
             `;
         } else if (tabId === 'all') {
-            document.getElementById('pageTitle').innerText = 'Kho lưu trữ Tổng hợp VBQPPL';
+            document.getElementById('pageTitle').innerText = 'CỔNG TRA CỨU PHÁP LÝ - DANH SÁCH TỔNG HỢP';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
             if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
             if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
@@ -1040,7 +1039,6 @@
                         <i id="icon-${rId}" class="fa-solid fa-chevron-down"></i>
                     </button>
                 </td>
-                <td style="color: var(--text-muted);">#${rId}</td>
                 <td>${soHieuHtml}</td>
                 <td style="text-align: center;">
                     <span class="badge ${isExpired ? (rawLoai.includes('Chờ xóa') ? 'badge-orange' : 'badge-gray') : getBadgeClass(rawLoai)}">${rawLoai}</span>
