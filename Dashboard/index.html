@@ -320,7 +320,39 @@
         /* Modal Xác nhận (Popup thay thế confirm mặc định) */
         #confirmModal .modal-content { width: 420px; text-align: center; padding: 32px 24px; border-radius: 16px; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .modal-overlay.show #confirmModal .modal-content { transform: scale(1); }
-
+        /* --- GIAO DIỆN MULTI-SELECT --- */
+        .multi-select-container {
+            width: 100%; min-height: 40px; padding: 6px 30px 6px 10px; 
+            border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; 
+            background: white; cursor: pointer; position: relative;
+            display: flex; align-items: center;
+        }
+        .selected-badges {
+            display: flex; flex-wrap: wrap; gap: 6px; width: 100%;
+        }
+        .bo-phan-badge {
+            padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 500; 
+            display: flex; align-items: center; gap: 6px; color: #333; 
+            border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .badge-close {
+            cursor: pointer; font-weight: bold; opacity: 0.5; font-size: 14px;
+        }
+        .badge-close:hover { opacity: 1; color: red; }
+        .bo-phan-dropdown {
+            position: absolute; top: 100%; left: 0; width: 100%; max-height: 220px; overflow-y: auto; 
+            background: white; border: 1px solid #cbd5e0; border-radius: 6px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; margin-top: 4px;
+        }
+        .bo-phan-option {
+            padding: 10px 12px; display: flex; align-items: center; gap: 10px; 
+            cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0;
+        }
+        .bo-phan-option:hover { background: #f7fafc; }
+        .color-dot {
+            width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1);
+        }
+        .placeholder { color: #a0aec0; font-size: 14px; }
         /* --- TOAST --- */
         #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
         .toast { min-width: 300px; background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: flex-start; gap: 12px; transform: translateX(120%); transition: transform 0.3s ease; border-left: 4px solid var(--has-navy); }
@@ -333,8 +365,31 @@
         .toast-content { flex: 1; }
         .toast-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text-main); }
         .toast-message { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+        /* Đổi tên thành login-modal-overlay */
+        .login-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5); 
+            z-index: 9999; 
+        }
 
-        
+        /* Đổi tên thành login-modal-box */
+        .login-modal-box {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            width: 350px;
+            max-width: 90%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }        
     </style>
 </head>
 <body>
@@ -523,28 +578,31 @@
         <div class="modal-body">
             <input type="hidden" id="editRowNumber">
             
-            <div class="form-group">
-                <label>Lĩnh vực <span class="req">*</span></label>
-                <input type="text" id="editLinhVuc" list="listLinhVuc" placeholder="Chọn hoặc nhập lĩnh vực...">
-                <datalist id="listLinhVuc">
-                    <option value="Giáo dục">
-                    <option value="Sở hữu trí tuệ">
-                    <option value="Quảng cáo">
-                    <option value="Doanh nghiệp - Thương mại">
-                </datalist>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                    <label>Chủ đề <span style="font-weight: normal; color: var(--text-muted);"></span></label>
-                    <input type="text" id="editChuDe" placeholder="Nhập chủ đề...">
-                </div>
-                <div class="form-group">
-                    <label>Mục <span style="font-weight: normal; color: var(--text-muted);"></span></label>
-                    <input type="text" id="editMuc" placeholder="Nhập mục...">
-                </div>
+        <!-- CỘT LĨNH VỰC -->
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; display: block;">Lĩnh vực <span style="color: red;">*</span></label>
+            <select id="editLinhVuc" onchange="xuLyDoiLinhVuc()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-family: inherit;">
+                <option value="">-- Chọn lĩnh vực --</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <!-- CỘT CHỦ ĐỀ -->
+            <div class="form-group" style="flex: 1;">
+                <label style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; display: block;">Chủ đề</label>
+                <select id="editChuDe" onchange="xuLyDoiChuDe()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-family: inherit;">
+                    <option value="">-- Chọn chủ đề --</option>
+                </select>
             </div>
 
+            <!-- CỘT MỤC -->
+            <div class="form-group" style="flex: 1;">
+                <label style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; display: block;">Mục</label>
+                <select id="editMuc" onchange="xuLyDoiMuc()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-family: inherit;">
+                    <option value="">-- Chọn mục --</option>
+                </select>
+            </div>
+        </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
                     <label>Mức độ tác động <span class="req">*</span></label>
@@ -555,18 +613,26 @@
                         <option value="L">Thấp (L)</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Bộ phận chủ trì <span class="req">*</span></label>
-                    <select id="editBoPhan">
-                        <option value="">-- Chọn --</option>
-                        <option value="HO">HO</option>
-                        <option value="HR">HR</option>
-                        <option value="FAD">FAD</option>
-                        <option value="ITD">ITD</option>
-                        <option value="SOD">SOD</option>
-                        <option value="EDU">EDU</option>
-                        <option value="CREM">CREM</option>
-                    </select>
+                <div class="form-group" style="flex: 1; position: relative;">
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; display: block;">Bộ phận chủ trì <span style="color: red;">*</span></label>
+                    <input type="hidden" id="editBoPhan" value="">
+                    <!-- 2. Khung hiển thị các nhãn màu -->
+                    <div id="multiSelectContainer" class="multi-select-container" onclick="toggleBoPhanDropdown()">
+                        <div id="selectedBadges" class="selected-badges">
+                            <span class="placeholder">-- Chọn bộ phận --</span>
+                        </div>
+                        <!-- Icon mũi tên (nếu bạn dùng FontAwesome, nếu không có thể thay bằng chữ '▼') -->
+                        <i class="fa-solid fa-chevron-down dropdown-icon" style="position: absolute; right: 10px; color: #a0aec0;"></i>
+                    </div>
+                    <div id="boPhanDropdown" class="bo-phan-dropdown" style="display: none;">
+                        <div class="bo-phan-option" onclick="toggleBoPhan('HO')">HO</div>
+                        <div class="bo-phan-option" onclick="toggleBoPhan('HR')">HR</div>
+                        <div class="bo-phan-option" onclick="toggleBoPhan('FAD')">FAD</div>
+                        <div class="bo-phan-option" onclick="toggleBoPhan('ITD')">ITD</div>
+                        <div class="bo-phan-option" onclick="toggleBoPhan('SOD')">SOD</div>
+                        <div class="bo-phan-option" onclick="toggleBoPhan('EDU')">EDU</div>
+                        <div class="bo-phan-option" onclick="toggleBoPhan('CREM')">CREM</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1479,62 +1545,418 @@
         const countEle = document.getElementById('recordCount');
         if (countEle) countEle.innerText = `${filteredData.length} văn bản`;
     }
-    async function toggleAuth() {
-        const isAdmin = localStorage.getItem('isAdminAccess');
-        
-        if (isAdmin) {
-            if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                localStorage.removeItem('isAdminAccess');
-                checkAuthStatus();
-            }
-        } else {
-            const pass = prompt("Hệ thống xử lý nội bộ.\nVui lòng nhập mật khẩu Quản trị viên:");
-            if (!pass) return;
+    // 1. Hàm Toggle
+function toggleAuth() {
+    console.log("Bước 1: Đã bấm nút Đăng nhập ở menu");
 
-            document.getElementById('authText').innerText = "Đang xác thực...";
+    const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
 
-            try {
-                // Gọi lên Google Apps Script để hỏi mật khẩu
-                const response = await fetch(WEBAPP_URL, {
-                    method: "POST",
-                    body: JSON.stringify({ 
-                        token: TOKEN, 
-                        action: "verify_admin", 
-                        payload: { password: pass } 
-                    })
-                });
-                const result = await response.json();
-
-                if (result.ok) {
-                    // Lưu SessionToken vào trình duyệt, KHÔNG lưu mật khẩu
-                    localStorage.setItem('isAdminAccess', 'true');
-                    alert("Xác thực thành công!");
-                } else {
-                    alert("Sai thông tin đăng nhập!");
-                }
-            } catch (e) {
-                alert("Máy chủ bận, vui lòng thử lại sau!");
-            }
+    if (isAdmin) {
+        if (confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+            localStorage.removeItem('isAdminAccess');
+            localStorage.removeItem('adminSessionToken');
             checkAuthStatus();
+            switchTab('all');
+        }
+        return;
+    }
+
+    openLoginModal();
+}
+
+function openLoginModal() {
+    const modal = document.getElementById('loginModal');
+    const input = document.getElementById('adminPasswordInput');
+
+    if (!modal || !input) {
+        alert("Không tìm thấy khung đăng nhập.");
+        return;
+    }
+
+    modal.style.display = 'flex';
+    input.value = '';
+    setTimeout(() => input.focus(), 50);
+}
+
+function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    const input = document.getElementById('adminPasswordInput');
+
+    if (modal) modal.style.display = 'none';
+    if (input) input.value = '';
+
+    checkAuthStatus();
+}
+
+async function submitLogin() {
+    console.log("Bước 3: Đã bấm OK trong bảng đăng nhập");
+
+    const input = document.getElementById('adminPasswordInput');
+    const authText = document.getElementById('authText');
+
+    if (!input) {
+        alert("Không tìm thấy ô nhập mật khẩu.");
+        return;
+    }
+
+    const inputPass = input.value.trim();
+
+    if (!inputPass) {
+        alert("Vui lòng nhập mật khẩu!");
+        input.focus();
+        return;
+    }
+
+    if (authText) authText.innerText = "Đang xác thực...";
+
+    try {
+        const response = await fetch(WEBAPP_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify({
+                token: TOKEN,
+                action: "verify_admin",
+                payload: {
+                    password: inputPass
+                }
+            })
+        });
+
+        const result = await response.json();
+        console.log("Kết quả xác thực:", result);
+
+        if (result.ok) {
+            localStorage.setItem('isAdminAccess', 'true');
+
+            if (result.sessionToken) {
+                localStorage.setItem('adminSessionToken', result.sessionToken);
+            }
+
+            closeLoginModal();
+            checkAuthStatus();
+
+            showToast("Đăng nhập thành công", "Bạn đã mở quyền quản trị viên.", "success");
+
+            // Sau khi đăng nhập, tự chuyển sang tab cần xử lý
+            switchTab('pending');
+            return;
+        }
+
+        alert("Sai mật khẩu quản trị viên.");
+        input.value = '';
+        input.focus();
+
+    } catch (e) {
+        console.error("Lỗi xác thực:", e);
+        alert("Có lỗi kết nối khi xác thực. Hãy xem Console để kiểm tra chi tiết.");
+    } finally {
+        checkAuthStatus();
+    }
+}
+
+function checkAuthStatus() {
+    const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
+    const adminElements = document.querySelectorAll('.admin-only');
+    const authText = document.getElementById('authText');
+    const authIcon = document.getElementById('authIcon');
+
+    if (isAdmin) {
+        adminElements.forEach(el => el.classList.remove('locked'));
+
+        if (authText) authText.innerText = 'Đăng xuất';
+        if (authIcon) authIcon.className = 'fa-solid fa-sign-out-alt';
+    } else {
+        adminElements.forEach(el => el.classList.add('locked'));
+
+        if (authText) authText.innerText = 'Đăng nhập';
+        if (authIcon) authIcon.className = 'fa-solid fa-user-lock';
+    }
+}
+// 1. TỪ ĐIỂN PHÂN LOẠI (Bạn có thể tự do thêm/sửa danh mục ở đây)
+    const danhMucVBQPPL = {
+        "Doanh nghiệp - Thương mại": {
+            "Dân sự": [],
+            "Giao dịch thương mại": [],
+            "Nội bộ doanh nghiệp": []
+        },
+        "Đầu tư - Đấu thầu - Quy hoạch": {
+            "Đầu tư": [],
+            "Đấu thầu và quy hoạch": [],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Kế toán - Tài chính": {
+            "Kế toán": [],
+            "Giá dịch vụ trong lĩnh vực giáo dục": [],
+            "Hóa đơn": [],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Thuế - Phí và Lệ phí": {
+            "Quy định chung về sửa đổi, bổ sung, hướng dẫn": [],
+            "Thuế thu nhập cá nhân": [],
+            "Quản lý thuế":[],
+            "Thuế giá trị gia tăng":[],
+            "Thuế thu nhập doanh nghiệp":[],
+            "Phí và lệ phí": [],
+            "Chung": ["Chung", "Khác"]
+        },
+        "An ninh - An toàn": {
+            "An toàn thực phẩm": ["Thể thức văn bản", "Quản lý con dấu"],
+            "Bảo vệ dữ liệu cá nhân":[],
+            "Phòng cháy chữa cháy": [],
+            "An toàn cơ sở hoạt động kinh doanh": ["An toàn hoạt động kinh doanh","An toàn trường học","An toàn lao động"],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Lao động - Bảo hiểm - Công đoàn": {
+            "Nhân sự": [],
+            "Nhà giáo": [],
+            "Việc làm và bảo hiểm thất nghiệp": [],
+            "Công đoàn": [],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Cơ sở vật chất - Xây dựng": {
+            "Xây dựng": [],
+            "Cơ sở vật chất": [],
+            "Thư viện": [],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Bảo hiểm xã hội": {
+            "Bảo hiểm y tế": [],
+            "Bảo hiểm xã hội": [],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Giáo dục": {
+            "Quản trị nhà trường và hành chính": ["Quản trị Nhà trường", "Điều lệ và quy chế hoạt động","Dạy học","Kiểm định chất lượng","Sách giáo khoa","Cha mẹ học sinh và người giám hộ"],
+            "Công tác quản lý học sinh": ["Quy định chung về quản lý học sinh", "Tuyển sinh","Đánh giá - Tốt nghiệp","Tư vấn học đường"],
+            "Chuyên môn và đào tạo":["Chương trình giáo dục","An ninh quốc phòng","Giáo dục ngoại khóa","Thể chất"],
+            "Chung": ["Chung", "Khác"]
+        },
+        "Sở hữu trí tuệ": {
+            "Chung": ["Chung", "Khác"]
+        },
+        "Quảng cáo": {
+            "Chung": ["Chung", "Khác"]
+        }
+    };
+
+    function capNhatSelect(id, danhSach, giaTriChon = "") {
+    const select = document.getElementById(id);
+    const textMacDinh = select.options[0].text; 
+    select.innerHTML = `<option value="">${textMacDinh}</option>`;
+    danhSach.forEach(item => {
+        select.innerHTML += `<option value="${item}" ${item === giaTriChon ? 'selected' : ''}>${item}</option>`;
+    });
+}
+
+    // 2. Hàm khởi tạo hệ thống: Gộp và đổ tất cả lựa chọn vào 3 ô ngay từ đầu
+    function khoiTaoToanBoDropdown() {
+        let tatCaLinhVuc = Object.keys(danhMucVBQPPL);
+        let tatCaChuDe = new Set();
+        let tatCaMuc = new Set();
+
+        tatCaLinhVuc.forEach(lv => {
+            Object.keys(danhMucVBQPPL[lv]).forEach(cd => {
+                tatCaChuDe.add(cd);
+                danhMucVBQPPL[lv][cd].forEach(m => tatCaMuc.add(m));
+            });
+        });
+
+        capNhatSelect("editLinhVuc", tatCaLinhVuc);
+        capNhatSelect("editChuDe", Array.from(tatCaChuDe));
+        capNhatSelect("editMuc", Array.from(tatCaMuc));
+    }
+
+    // 3. Xử lý khi người dùng chọn LĨNH VỰC (Lọc xuôi)
+    function xuLyDoiLinhVuc() {
+        const lv = document.getElementById("editLinhVuc").value;
+        if (!lv) {
+            khoiTaoToanBoDropdown(); // Bỏ chọn thì hiển thị lại tất cả
+            return;
+        }
+
+        let danhSachChuDe = Object.keys(danhMucVBQPPL[lv]);
+        capNhatSelect("editChuDe", danhSachChuDe); // Lọc Chủ đề
+
+        let danhSachMuc = [];
+        danhSachChuDe.forEach(cd => {
+            danhSachMuc = danhSachMuc.concat(danhMucVBQPPL[lv][cd]);
+        });
+        capNhatSelect("editMuc", danhSachMuc); // Lọc Mục
+    }
+
+    // 4. Xử lý khi người dùng chọn CHỦ ĐỀ (Suy luận ngược lên Lĩnh vực)
+    function xuLyDoiChuDe() {
+        const cd = document.getElementById("editChuDe").value;
+        if (!cd) {
+            xuLyDoiLinhVuc(); 
+            return;
+        }
+
+        let lvTimThay = null;
+        for (const lv in danhMucVBQPPL) {
+            if (danhMucVBQPPL[lv].hasOwnProperty(cd)) {
+                lvTimThay = lv;
+                break;
+            }
+        }
+
+        if (lvTimThay) {
+            document.getElementById("editLinhVuc").value = lvTimThay; // Tự động điền Lĩnh vực
+            let danhSachMuc = danhMucVBQPPL[lvTimThay][cd];
+            capNhatSelect("editMuc", danhSachMuc); // Lọc lại Mục ở dưới
         }
     }
 
-    function checkAuthStatus() {
-        // Chỉ hiện tab nếu có trạng thái đăng nhập được lưu
-        const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
-        const adminElements = document.querySelectorAll('.admin-only');
-        
-        if (isAdmin) {
-            adminElements.forEach(el => el.classList.remove('locked'));
-            document.getElementById('authText').innerText = 'Đăng xuất';
-            document.getElementById('authIcon').className = 'fa-solid fa-sign-out-alt';
-        } else {
-            adminElements.forEach(el => el.classList.add('locked'));
-            document.getElementById('authText').innerText = 'Đăng nhập';
-            document.getElementById('authIcon').className = 'fa-solid fa-user-lock';
+    // 5. Xử lý khi người dùng chọn MỤC (Suy luận ngược lên cả Chủ đề và Lĩnh vực)
+    function xuLyDoiMuc() {
+        const muc = document.getElementById("editMuc").value;
+        if (!muc) return;
+
+        let lvTimThay = null;
+        let cdTimThay = null;
+
+        for (const lv in danhMucVBQPPL) {
+            for (const cd in danhMucVBQPPL[lv]) {
+                if (danhMucVBQPPL[lv][cd].includes(muc)) {
+                    lvTimThay = lv;
+                    cdTimThay = cd;
+                    break;
+                }
+            }
+            if (lvTimThay) break;
         }
+
+        if (lvTimThay && cdTimThay) {
+            document.getElementById("editLinhVuc").value = lvTimThay; // Tự động điền Lĩnh vực
+            
+            let danhSachChuDe = Object.keys(danhMucVBQPPL[lvTimThay]);
+            capNhatSelect("editChuDe", danhSachChuDe, cdTimThay); // Tự động điền Chủ đề
+
+            let danhSachMuc = danhMucVBQPPL[lvTimThay][cdTimThay];
+            capNhatSelect("editMuc", danhSachMuc, muc); // Khóa lại danh sách Mục và giữ nguyên giá trị vừa chọn
+        }
+    }
+
+    // 6. Tự động chạy hàm khởi tạo ngay khi trang web tải xong
+    window.addEventListener('DOMContentLoaded', (event) => {
+        khoiTaoToanBoDropdown();
+    })
+    // 1. Khai báo Bảng màu tương ứng với hình ảnh của bạn
+    const mauBoPhan = {
+        "HO": "#fcdbd9",     // Hồng
+        "HR": "#fbe0c4",     // Cam
+        "FAD": "#fdf4c6",    // Vàng
+        "ITD": "#dcf1d4",    // Xanh lá mạ
+        "SOD": "#d5eaf8",    // Xanh dương nhạt
+        "EDU": "#d5e3e3",    // Xanh xám
+        "CREM": "#ebdff2"    // Tím nhạt
+    };
+
+    let danhSachBoPhanDaChon = []; // Mảng lưu các bộ phận được chọn
+
+    // 2. Hàm mở/đóng danh sách
+    function toggleBoPhanDropdown() {
+        const dropdown = document.getElementById('boPhanDropdown');
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // 3. Hàm xử lý khi click chọn 1 bộ phận
+    function toggleBoPhan(boPhan) {
+        // Nếu đã chọn rồi thì bỏ ra, nếu chưa chọn thì thêm vào mảng
+        const viTri = danhSachBoPhanDaChon.indexOf(boPhan);
+        if (viTri > -1) {
+            danhSachBoPhanDaChon.splice(viTri, 1); 
+        } else {
+            danhSachBoPhanDaChon.push(boPhan); 
+        }
+        capNhatGiaoDienBoPhan();
+    }
+
+    // 4. Hàm xóa bộ phận khi bấm dấu X trên nhãn
+    function xoaBoPhan(event, boPhan) {
+        event.stopPropagation(); // Ngăn không cho mở dropdown khi bấm dấu X
+        const viTri = danhSachBoPhanDaChon.indexOf(boPhan);
+        if (viTri > -1) {
+            danhSachBoPhanDaChon.splice(viTri, 1);
+            capNhatGiaoDienBoPhan();
+        }
+    }
+
+    // 5. Hàm vẽ các nhãn màu ra màn hình
+    function capNhatGiaoDienBoPhan() {
+        const container = document.getElementById('selectedBadges');
+        const inputAn = document.getElementById('editBoPhan');
+        
+        // Ghi dữ liệu vào thẻ input ẩn (Ví dụ: "HO, HR, EDU") để code cũ của bạn lấy được dữ liệu đi lưu
+        inputAn.value = danhSachBoPhanDaChon.join(', ');
+
+        if (danhSachBoPhanDaChon.length === 0) {
+            container.innerHTML = '<span class="placeholder">-- Chọn bộ phận --</span>';
+            return;
+        }
+
+        container.innerHTML = '';
+        danhSachBoPhanDaChon.forEach(bp => {
+            const mauNen = mauBoPhan[bp] || '#edf2f7';
+            container.innerHTML += `
+                <div class="bo-phan-badge" style="background-color: ${mauNen};">
+                    ${bp} <span class="badge-close" onclick="xoaBoPhan(event, '${bp}')">×</span>
+                </div>
+            `;
+        });
+    }
+
+    // 6. Cài đặt đóng dropdown khi click ra ngoài vùng trống
+    document.addEventListener('click', function(event) {
+        const khungChon = document.getElementById('multiSelectContainer');
+        const danhSach = document.getElementById('boPhanDropdown');
+        if (khungChon && danhSach && !khungChon.contains(event.target) && !danhSach.contains(event.target)) {
+            danhSach.style.display = 'none';
+        }
+    });
+
+    // 7. [QUAN TRỌNG] Hàm dùng để load dữ liệu cũ lên Modal khi bấm Cập nhật
+    function loadDuLieuBoPhanCu(chuoiBoPhan) {
+        if (!chuoiBoPhan || chuoiBoPhan.trim() === "") {
+            danhSachBoPhanDaChon = [];
+        } else {
+            // Tách chuỗi "HO, EDU" thành mảng và xóa khoảng trắng thừa
+            danhSachBoPhanDaChon = chuoiBoPhan.split(',').map(item => item.trim());
+        }
+        capNhatGiaoDienBoPhan();
     }
 </script>
+<!-- KHUNG ĐĂNG NHẬP CHUẨN (Tuyệt đối không đụng hàng) -->
+<style>
+    .login-modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: rgba(0, 0, 0, 0.6); 
+        z-index: 9999; 
+        display: flex; justify-content: center; align-items: center; 
+    }
+    .login-modal-box {
+        background: white; padding: 24px; border-radius: 8px; 
+        width: 350px; max-width: 90%; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
 
+<div id="loginModal" class="login-modal-overlay" style="display: none;">
+    <div class="login-modal-box">
+        <h3 style="margin-top: 0; color: #1a202c;">Hệ thống xử lý nội bộ</h3>
+        <p style="font-size: 14px; color: #4a5568; margin-bottom: 15px;">Vui lòng nhập mật khẩu Quản trị viên:</p>
+        
+        <!-- Ô nhập mật khẩu (Nhận diện phím Enter) -->
+        <input type="password" id="adminPasswordInput" placeholder="Nhập mật khẩu..." 
+               onkeypress="if(event.key === 'Enter') submitLogin()"
+               style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-family: inherit;">
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button onclick="closeLoginModal()" style="padding: 8px 16px; border: 1px solid #cbd5e0; background: white; border-radius: 6px; cursor: pointer;">Hủy</button>
+            <button onclick="submitLogin()" style="padding: 8px 16px; border: none; background: #1a73e8; color: white; border-radius: 6px; cursor: pointer; font-weight: 500;">OK</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
