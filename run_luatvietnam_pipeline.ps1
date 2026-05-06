@@ -14,6 +14,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
 $null = chcp 65001
+$env:PLAYWRIGHT_BROWSERS_PATH = "C:\playwright-browsers"
 
 New-Item -ItemType Directory -Path ".\output" -Force | Out-Null
 New-Item -ItemType Directory -Path ".\logs" -Force | Out-Null
