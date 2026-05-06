@@ -545,11 +545,10 @@
                 <table id="dataTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th width="5%"></th> <!-- Đã nới nhẹ nút sổ xuống -->
                             <th width="15%" style="text-align: center;">Số hiệu</th>
                             <th width="15%" style="text-align: center;">Loại văn bản</th>
                             <th width="60%" style="text-align: center;">Tên văn bản</th> <!-- Bù phần trống vào tên văn bản -->
-                            <th width="5%" style="text-align: center;">Thao tác</th>
+                            <th width="10%" style="text-align: center;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -1034,11 +1033,6 @@
             trMain.id = `row-${rId}`;
             trMain.className = 'main-row data-row';
             trMain.innerHTML = `
-                <td style="text-align:center;">
-                    <button class="expand-btn" onclick="toggleDetails(${rId})">
-                        <i id="icon-${rId}" class="fa-solid fa-chevron-down"></i>
-                    </button>
-                </td>
                 <td>${soHieuHtml}</td>
                 <td style="text-align: center;">
                     <span class="badge ${isExpired ? (rawLoai.includes('Chờ xóa') ? 'badge-orange' : 'badge-gray') : getBadgeClass(rawLoai)}">${rawLoai}</span>
@@ -1048,54 +1042,7 @@
                     ${actionsHtml}
                 </td>
             `;
-
-            const trDetail = document.createElement('tr');
-            trDetail.id = `details-${rId}`;
-            trDetail.className = 'details-row';
-            
-            if (isExpired) {
-                trDetail.innerHTML = `
-                    <td colspan="6" style="padding: 0;">
-                        <div class="details-content">
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-calendar-xmark" style="color: var(--danger);"></i> Ngày áp dụng xóa</div>
-                                <div class="detail-value"><strong style="color: var(--danger); font-size: 14px;">${row['Ngày hết hiệu lực áp dụng'] || 'Chưa xác định'}</strong></div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-magnifying-glass" style="color: var(--has-teal);"></i> Lý do nhận diện</div>
-                                <div class="detail-value">${row['Lý do nhận diện'] || '-'}</div>
-                            </div>
-                        </div>
-                    </td>
-                `;
-            } else {
-                // ĐOẠN NÀY ĐẢM BẢO HIỆN ĐỦ 4 CỘT CHO TẤT CẢ CÁC TAB (NGOẠI TRỪ TAB HẾT HIỆU LỰC)
-                trDetail.innerHTML = `
-                    <td colspan="6" style="padding: 0;">
-                        <div class="details-content">
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-book" style="color: #1a73e8;"></i> Căn cứ pháp lý</div>
-                                <div class="detail-value">${row['Căn cứ pháp lý'] || 'Không có'}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-file-lines" style="color: #1e8e3e;"></i> Hướng dẫn thực hiện</div>
-                                <div class="detail-value">${row['Hướng dẫn thực hiện'] || 'Không có'}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-layer-group" style="color: var(--has-orange);"></i> Sửa đổi, bổ sung cho</div>
-                                <div class="detail-value">${row['Sửa đổi, bổ sung cho'] || 'Không có'}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label"><i class="fa-solid fa-pen-to-square" style="color: #9334e6;"></i> Sửa đổi, bổ sung bởi</div>
-                                <div class="detail-value">${row['Sửa đổi, bổ sung bởi'] || 'Không có'}</div>
-                            </div>
-                        </div>
-                    </td>
-                `;
-            }
-
             tableBody.appendChild(trMain);
-            tableBody.appendChild(trDetail);
         });
     }
 
