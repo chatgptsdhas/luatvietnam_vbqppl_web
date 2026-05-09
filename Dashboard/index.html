@@ -143,6 +143,12 @@
             overflow: hidden;
         }
 
+        .main-content.report-mode {
+            overflow-x: hidden;
+            overflow-y: auto;
+            --report-kpi-sticky-top: 112px;
+        }
+
         .container {
             max-width: 100%;
             margin: 0;
@@ -151,6 +157,12 @@
             flex: 1;
             overflow: hidden;
             gap: 16px;
+        }
+
+        .container.report-mode {
+            flex: 0 0 auto;
+            min-height: 100%;
+            overflow: visible;
         }
 
         /* --- HEADER --- */
@@ -178,6 +190,27 @@
         .title-group p { margin: 0; font-size: 13px; color: var(--text-muted); }
 
         .header-actions { display: flex; gap: 12px; }
+
+        .report-header-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .report-updated-at {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .main-content.report-mode .top-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
 
         /* --- BUTTONS --- */
         button {
@@ -286,6 +319,316 @@
         .loading-state, .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
         .loading-state i { font-size: 32px; color: var(--has-teal); margin-bottom: 16px; }
         .empty-state i { font-size: 48px; color: var(--success); margin-bottom: 16px; opacity: 0.5; }
+
+        /* --- WORK REPORTS --- */
+        .report-panel {
+            display: none;
+            flex: none;
+            min-height: auto;
+            flex-direction: column;
+            gap: 16px;
+            overflow: visible;
+        }
+
+        .report-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(140px, 1fr));
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .main-content.report-mode .report-kpi-grid {
+            position: sticky;
+            top: var(--report-kpi-sticky-top);
+            z-index: 45;
+            padding: 0 0 8px 0;
+            background: var(--bg-body);
+        }
+
+        .report-kpi {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.04);
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .report-kpi:hover {
+            border-color: var(--has-teal);
+            box-shadow: 0 4px 12px rgba(27, 42, 89, 0.10);
+            transform: translateY(-1px);
+        }
+
+        .report-kpi-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .report-kpi-top i { color: var(--has-teal); }
+        .report-kpi-value { color: var(--has-navy); font-size: 26px; font-weight: 800; line-height: 1; }
+        .report-kpi-note { color: var(--text-muted); font-size: 12px; line-height: 1.35; min-height: 16px; }
+
+        .report-content-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            flex: none;
+            min-height: auto;
+            overflow: visible;
+        }
+
+        .report-section {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            min-height: auto;
+            overflow: visible;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.04);
+        }
+
+        .report-section.large {
+            grid-column: span 2;
+        }
+
+        .report-section-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--has-navy);
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .report-section-body {
+            padding: 14px 16px;
+            overflow: visible;
+            min-height: auto;
+        }
+
+        .report-bars {
+            display: grid;
+            gap: 14px;
+        }
+
+        .report-bar-row {
+            display: grid;
+            gap: 6px;
+        }
+
+        .report-bar-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .report-bar-label {
+            color: var(--text-main);
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .report-bar-track {
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: #eef2f7;
+            overflow: hidden;
+        }
+
+        .report-bar-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: var(--has-teal);
+        }
+
+        .report-chart-empty {
+            padding: 32px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .timeline-chart {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+            gap: 10px;
+            align-items: end;
+            min-height: 260px;
+            padding-top: 8px;
+        }
+
+        .timeline-day {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .timeline-bars {
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 5px;
+            height: 205px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .timeline-bar {
+            width: 16px;
+            min-height: 3px;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .timeline-bar.received { background: var(--has-teal); }
+        .timeline-bar.confirmed { background: var(--success); }
+
+        .timeline-label {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 12px;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .donut-layout {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 20px;
+            align-items: center;
+            min-height: 260px;
+        }
+
+        .donut-chart {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .donut-chart::after {
+            content: "";
+            position: absolute;
+            width: 108px;
+            height: 108px;
+            border-radius: 50%;
+            background: var(--surface);
+        }
+
+        .donut-center {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .donut-value {
+            color: var(--has-navy);
+            font-size: 30px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .donut-label {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .report-export-panel {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.04);
+        }
+
+        .report-export-title {
+            color: var(--has-navy);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .report-export-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .export-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fbfcfe;
+        }
+
+        .export-option input { margin: 0; }
+
+        .report-empty { padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+        @media (max-width: 1200px) {
+            .report-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .report-content-grid { grid-template-columns: 1fr; }
+            .report-section.large { grid-column: span 1; }
+            .donut-layout { grid-template-columns: 1fr; justify-items: center; }
+            .report-export-panel { align-items: flex-start; flex-direction: column; }
+        }
 
         /* --- MODALS CHUNG --- */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(27,42,89,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.2s; backdrop-filter: blur(2px);}
@@ -409,6 +752,10 @@
             <li id="tab-pending" onclick="switchTab('pending')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-clock"></i> Văn bản cần xử lý
             </li>
+
+            <li id="tab-transferred" onclick="switchTab('transferred')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-paper-plane"></i> Văn bản đã chuyển
+            </li>
     
             <li id="tab-irrelevant" onclick="switchTab('irrelevant')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-ban"></i> Văn bản không liên quan
@@ -416,6 +763,10 @@
             
             <li id="tab-expired" onclick="switchTab('expired')" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-clock-rotate-left"></i> Văn bản hết hiệu lực
+            </li>
+
+            <li id="tab-reports" onclick="switchTab('reports')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-chart-column"></i> Báo cáo công việc
             </li>
 
         </ul>
@@ -488,10 +839,68 @@
             </div>
         </div>
 
+        <!-- WORK REPORTS -->
+        <section id="reportPanel" class="report-panel">
+            <div class="report-kpi-grid" id="reportKpiGrid"></div>
+
+            <div class="report-content-grid">
+                <div class="report-section large">
+                    <div class="report-section-header">
+                        <span><i class="fa-solid fa-chart-simple"></i> Tiếp nhận và xác nhận theo ngày</span>
+                        <span id="reportTimelineCaption" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">--</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div id="reportTimelineChart" class="timeline-chart"></div>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="legend-dot" style="background: var(--has-teal);"></span> Tiếp nhận</span>
+                            <span class="legend-item"><span class="legend-dot" style="background: var(--success);"></span> Đã xác nhận</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <div class="report-section-header">
+                        <span><i class="fa-solid fa-circle-check"></i> Tỷ lệ xác nhận</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div id="reportConfirmationChart"></div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <div class="report-section-header">
+                        <span><i class="fa-solid fa-layer-group"></i> Phân bổ xử lý</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div class="report-bars" id="reportDistribution"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="report-export-panel" data-export-exclude>
+                <div>
+                    <div class="report-export-title">Xuất dữ liệu</div>
+                    <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Chọn một định dạng để tải báo cáo về máy.</div>
+                </div>
+                <div class="report-export-actions">
+                    <label class="export-option">
+                        <input type="radio" name="reportExportFormat" value="png" checked>
+                        PNG
+                    </label>
+                    <label class="export-option">
+                        <input type="radio" name="reportExportFormat" value="pdf">
+                        PDF
+                    </label>
+                    <button class="btn-primary" onclick="exportReportData()" id="btnExportReport">
+                        <i class="fa-solid fa-download"></i> Xuất dữ liệu
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- TABLE AREA -->
-        <div class="table-wrapper">
-            <!-- TABLE AREA -->
-        <div class="table-wrapper">
+        <div class="table-wrapper" id="recordsPanel">
             <div class="table-toolbar">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-filter"></i> Sắp xếp danh sách:
@@ -695,15 +1104,23 @@
     const TOKEN = "T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0";
 
     let currentRecords = [];
+    let reportRecords = [];
     let globalTotalCount = '--'; 
     let globalTransferredCount = '--'; 
     let hasShownWelcome = false;
     let currentTab = 'all';
+    let latestReport = null;
 
     const table = document.getElementById('dataTable');
     const tableBody = document.getElementById('tableBody');
     const loadingDiv = document.getElementById('loading');
     const emptyState = document.getElementById('emptyState');
+    const recordsPanel = document.getElementById('recordsPanel');
+    const reportPanel = document.getElementById('reportPanel');
+    const mainContent = document.querySelector('.main-content');
+    const appContainer = document.querySelector('.container');
+    const headerActions = document.getElementById('headerActions');
+    const defaultHeaderActionsHtml = headerActions ? headerActions.innerHTML : '';
 
     window.onload = () => {
         checkAuthStatus(); // Khôi phục trạng thái đăng nhập sau khi reload trang
@@ -771,17 +1188,859 @@
         scrollToNextAction();
     }
 
+    function renderHeaderActions(mode) {
+        if (!headerActions) return;
+
+        if (mode === 'report') {
+            headerActions.style.display = 'flex';
+            headerActions.innerHTML = `
+                <div class="report-header-actions">
+                    <span id="reportUpdatedAt" class="report-updated-at">--</span>
+                    <button class="btn-outline-primary" onclick="loadReportData()" data-export-exclude>
+                        <i class="fa-solid fa-arrows-rotate"></i> Làm mới báo cáo
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        headerActions.innerHTML = defaultHeaderActionsHtml;
+        headerActions.style.display = mode === 'pending' ? 'flex' : 'none';
+    }
+
+    function syncReportStickyOffset() {
+        if (!mainContent || !mainContent.classList.contains('report-mode')) return;
+        const header = document.querySelector('.top-header');
+        const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 96;
+        mainContent.style.setProperty('--report-kpi-sticky-top', `${headerHeight + 16}px`);
+    }
+
+    window.addEventListener('resize', syncReportStickyOffset);
+
+    async function postWebAppAction(actionName, payload = {}) {
+        const bodyData = { token: TOKEN, action: actionName };
+        if (payload && Object.keys(payload).length > 0) bodyData.payload = payload;
+
+        const response = await fetch(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(bodyData)
+        });
+
+        const result = await response.json();
+        if (!result.ok) {
+            throw new Error(result.message || `Action ${actionName} không thành công.`);
+        }
+        return result;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function normalizeReportText(value) {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd');
+    }
+
+    function getRecordKey(row) {
+        return String(row?._rowNumber || row?.['ID VĂN BẢN'] || row?.['Số hiệu'] || row?.['Số hiệu bị xử lý'] || Math.random());
+    }
+
+    function parseReportDate(value) {
+        if (!value) return null;
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+        const raw = String(value).trim();
+        const viMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (viMatch) {
+            const [, dd, mm, yyyy, hh = '0', min = '0', ss = '0'] = viMatch;
+            return new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), Number(ss));
+        }
+
+        const parsed = new Date(raw);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function getReportDateInfo(row) {
+        const fields = ['Ngày cập nhật', 'Ngày chuyển xử lý', 'Ngày xử lý', 'Ngày Python quét', 'Ngày hiệu lực', 'created_at'];
+        for (const field of fields) {
+            const rawValue = row?.[field];
+            const dateValue = parseReportDate(rawValue);
+            if (dateValue) {
+                return {
+                    value: dateValue,
+                    label: dateValue.toLocaleString('vi-VN', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })
+                };
+            }
+        }
+        return { value: null, label: '--' };
+    }
+
+    function getReceivedDateInfo(row) {
+        const fields = ['Ngày tiếp nhận', 'Ngày Python quét', 'Ngày cập nhật', 'created_at', 'Ngày hiệu lực'];
+        for (const field of fields) {
+            const rawValue = row?.[field];
+            const dateValue = parseReportDate(rawValue);
+            if (dateValue) {
+                return {
+                    value: dateValue,
+                    label: dateValue.toLocaleString('vi-VN', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })
+                };
+            }
+        }
+        return { value: null, label: '--' };
+    }
+
+    function formatReportDay(dateValue) {
+        if (!dateValue) return '';
+        const dd = String(dateValue.getDate()).padStart(2, '0');
+        const mm = String(dateValue.getMonth() + 1).padStart(2, '0');
+        return `${dd}/${mm}`;
+    }
+
+    function classifyWorkStatus(row) {
+        const approval = normalizeReportText(row?.['Trạng thái duyệt']);
+        const process = normalizeReportText(row?.['Trạng thái xử lý']);
+        const sources = row?._reportSources || [];
+
+        if (sources.includes('expired') || process.includes('het hieu luc') || process.includes('cho xoa') || row?.['Số hiệu bị xử lý']) {
+            return { key: 'expired', label: 'Hết hiệu lực', badge: 'badge-orange' };
+        }
+        if (sources.includes('irrelevant') || approval.includes('khong lien quan')) {
+            return { key: 'irrelevant', label: 'Không liên quan', badge: 'badge-gray' };
+        }
+        if (approval.includes('da chuyen') || process.includes('da chuyen') || process.includes('da xu ly')) {
+            return { key: 'transferred', label: 'Đã chuyển', badge: 'badge-green' };
+        }
+        if (approval.includes('cho kiem tra') || approval.includes('can kiem tra') || process.includes('cho kiem tra')) {
+            return { key: 'pending', label: 'Chờ xử lý', badge: 'badge-orange' };
+        }
+        return { key: 'other', label: 'Khác', badge: 'badge-blue' };
+    }
+
+    function isTransferredRecord(row) {
+        return classifyWorkStatus(row).key === 'transferred';
+    }
+
+    function mergeReportRows(datasets) {
+        const mergedMap = new Map();
+
+        datasets.forEach(({ source, rows }) => {
+            (rows || []).forEach(row => {
+                const key = getRecordKey(row);
+                const existing = mergedMap.get(key) || {};
+                const existingSources = existing._reportSources || [];
+                const nextSources = existingSources.includes(source) ? existingSources : [...existingSources, source];
+                mergedMap.set(key, { ...existing, ...row, _reportSources: nextSources });
+            });
+        });
+
+        return Array.from(mergedMap.values());
+    }
+
+    function countBy(records, selector) {
+        return records.reduce((acc, row) => {
+            const key = selector(row) || 'Chưa phân loại';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+    }
+
+    function toSortedEntries(counts) {
+        return Object.entries(counts)
+            .map(([label, count]) => ({ label, count }))
+            .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'vi'));
+    }
+
+    function buildWorkReport(records) {
+        const classifiedRows = records.map(row => {
+            const status = classifyWorkStatus(row);
+            const dateInfo = getReportDateInfo(row);
+            const receivedDateInfo = getReceivedDateInfo(row);
+            return { ...row, _reportStatus: status, _reportDateInfo: dateInfo, _receivedDateInfo: receivedDateInfo };
+        });
+
+        const pendingCount = classifiedRows.filter(row => row._reportStatus.key === 'pending').length;
+        const transferredCount = classifiedRows.filter(row => row._reportStatus.key === 'transferred').length;
+        const irrelevantCount = classifiedRows.filter(row => row._reportStatus.key === 'irrelevant').length;
+        const expiredCount = classifiedRows.filter(row => row._reportStatus.key === 'expired').length;
+        const confirmedCount = transferredCount + irrelevantCount;
+        const needClassificationCount = classifiedRows.filter(row => {
+            const statusKey = row._reportStatus.key;
+            if (statusKey === 'expired' || statusKey === 'irrelevant') return false;
+            return !row['Lĩnh vực'] || !row['Mức độ tác động'] || !row['Bộ phận chủ trì'];
+        }).length;
+
+        const recentRows = [...classifiedRows].sort((a, b) => {
+            const dateA = a._reportDateInfo.value ? a._reportDateInfo.value.getTime() : 0;
+            const dateB = b._reportDateInfo.value ? b._reportDateInfo.value.getTime() : 0;
+            return dateB - dateA;
+        });
+
+        const timelineMap = new Map();
+        classifiedRows.forEach(row => {
+            const receivedDate = row._receivedDateInfo.value;
+            if (receivedDate) {
+                const key = formatReportDay(receivedDate);
+                const bucket = timelineMap.get(key) || { label: key, received: 0, confirmed: 0, sortTime: receivedDate.getTime() };
+                bucket.received += 1;
+                bucket.sortTime = Math.min(bucket.sortTime, receivedDate.getTime());
+                timelineMap.set(key, bucket);
+            }
+
+            if (row._reportStatus.key === 'transferred' || row._reportStatus.key === 'irrelevant') {
+                const confirmedDate = row._reportDateInfo.value || row._receivedDateInfo.value;
+                if (confirmedDate) {
+                    const key = formatReportDay(confirmedDate);
+                    const bucket = timelineMap.get(key) || { label: key, received: 0, confirmed: 0, sortTime: confirmedDate.getTime() };
+                    bucket.confirmed += 1;
+                    bucket.sortTime = Math.min(bucket.sortTime, confirmedDate.getTime());
+                    timelineMap.set(key, bucket);
+                }
+            }
+        });
+
+        const timelineEntries = Array.from(timelineMap.values())
+            .sort((a, b) => a.sortTime - b.sortTime)
+            .slice(-10);
+
+        return {
+            total: classifiedRows.length,
+            pendingCount,
+            transferredCount,
+            irrelevantCount,
+            expiredCount,
+            confirmedCount,
+            needClassificationCount,
+            statusEntries: toSortedEntries(countBy(classifiedRows, row => row._reportStatus.label)),
+            departmentEntries: toSortedEntries(countBy(classifiedRows, row => row['Bộ phận chủ trì'] || 'Chưa phân công')).slice(0, 8),
+            recentRows,
+            timelineEntries
+        };
+    }
+
+    function renderReportKpis(report) {
+        const cards = [
+            { label: 'Tổng ghi nhận', value: report.total, icon: 'fa-database', note: 'Mở danh sách tổng hợp', target: 'all' },
+            { label: 'Đã chuyển xử lý', value: report.transferredCount, icon: 'fa-paper-plane', note: 'Mở danh sách đã chuyển', target: 'transferred' },
+            { label: 'Chờ xử lý', value: report.pendingCount, icon: 'fa-circle-exclamation', note: `${report.needClassificationCount} văn bản thiếu phân loại`, target: 'pending' },
+            { label: 'Không liên quan', value: report.irrelevantCount, icon: 'fa-ban', note: 'Mở danh sách không liên quan', target: 'irrelevant' },
+            { label: 'Hết hiệu lực', value: report.expiredCount, icon: 'fa-clock-rotate-left', note: 'Mở danh sách hết hiệu lực', target: 'expired' }
+        ];
+
+        document.getElementById('reportKpiGrid').innerHTML = cards.map(card => `
+            <div class="report-kpi" role="button" tabindex="0" onclick="openReportLinkedList('${card.target}')" onkeydown="if(event.key === 'Enter') openReportLinkedList('${card.target}')">
+                <div class="report-kpi-top">
+                    <span>${escapeHtml(card.label)}</span>
+                    <i class="fa-solid ${card.icon}"></i>
+                </div>
+                <div class="report-kpi-value">${card.value}</div>
+                <div class="report-kpi-note">${escapeHtml(card.note)}</div>
+            </div>
+        `).join('');
+    }
+
+    function openReportLinkedList(targetTab) {
+        switchTab(targetTab);
+    }
+
+    function renderReportBarsSection(title, entries, total) {
+        if (!entries.length) {
+            return `<div class="report-empty">Chưa có dữ liệu ${escapeHtml(title.toLowerCase())}.</div>`;
+        }
+
+        return `
+            <div style="font-size: 12px; font-weight: 700; color: var(--has-navy); margin-bottom: 10px;">${escapeHtml(title)}</div>
+            ${entries.map(item => {
+                const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                return `
+                    <div class="report-bar-row">
+                        <div class="report-bar-meta">
+                            <span class="report-bar-label" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
+                            <span>${item.count} (${pct}%)</span>
+                        </div>
+                        <div class="report-bar-track"><div class="report-bar-fill" style="width: ${pct}%;"></div></div>
+                    </div>
+                `;
+            }).join('')}
+        `;
+    }
+
+    function renderReportDistribution(report) {
+        document.getElementById('reportDistribution').innerHTML = `
+            <div>${renderReportBarsSection('Theo trạng thái', report.statusEntries, report.total)}</div>
+            <div style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>
+            <div>${renderReportBarsSection('Theo bộ phận chủ trì', report.departmentEntries, report.total)}</div>
+        `;
+    }
+
+    function renderReportTimeline(report) {
+        const container = document.getElementById('reportTimelineChart');
+        const caption = document.getElementById('reportTimelineCaption');
+        const entries = report.timelineEntries || [];
+        const maxValue = Math.max(1, ...entries.map(item => Math.max(item.received, item.confirmed)));
+
+        caption.innerText = entries.length ? `${entries.length} mốc gần nhất` : '--';
+
+        if (!entries.length) {
+            container.innerHTML = '<div class="report-chart-empty">Chưa có dữ liệu ngày tiếp nhận hoặc ngày xác nhận.</div>';
+            return;
+        }
+
+        container.innerHTML = entries.map(item => {
+            const receivedHeight = Math.max(3, Math.round((item.received / maxValue) * 195));
+            const confirmedHeight = Math.max(3, Math.round((item.confirmed / maxValue) * 195));
+            return `
+                <div class="timeline-day" title="${escapeHtml(item.label)}: tiếp nhận ${item.received}, xác nhận ${item.confirmed}">
+                    <div class="timeline-bars">
+                        <div class="timeline-bar received" style="height: ${receivedHeight}px;"></div>
+                        <div class="timeline-bar confirmed" style="height: ${confirmedHeight}px;"></div>
+                    </div>
+                    <div class="timeline-label">${escapeHtml(item.label)}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderConfirmationChart(report) {
+        const container = document.getElementById('reportConfirmationChart');
+        const rate = report.total > 0 ? Math.round((report.confirmedCount / report.total) * 100) : 0;
+        const pendingRate = report.total > 0 ? Math.round((report.pendingCount / report.total) * 100) : 0;
+            const otherCount = Math.max(0, report.total - report.confirmedCount - report.pendingCount);
+
+        container.innerHTML = `
+            <div class="donut-layout">
+                <div class="donut-chart" style="background: conic-gradient(var(--success) 0 ${rate}%, var(--has-orange) ${rate}% ${rate + pendingRate}%, #dfe5ee ${rate + pendingRate}% 100%);">
+                    <div class="donut-center">
+                        <div class="donut-value">${rate}%</div>
+                        <div class="donut-label">đã xác nhận</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="chart-legend" style="margin-top: 0;">
+                        <span class="legend-item"><span class="legend-dot" style="background: var(--success);"></span> Đã xác nhận: ${report.confirmedCount}</span>
+                        <span class="legend-item"><span class="legend-dot" style="background: var(--has-orange);"></span> Chờ xác nhận: ${report.pendingCount}</span>
+                        <span class="legend-item"><span class="legend-dot" style="background: #dfe5ee;"></span> Khác: ${otherCount}</span>
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 12px; line-height: 1.5; margin-top: 14px;">
+                        Đã xác nhận gồm văn bản đã chuyển xử lý và văn bản được xác nhận không liên quan.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderWorkReport(report) {
+        latestReport = report;
+        renderReportKpis(report);
+        renderReportTimeline(report);
+        renderConfirmationChart(report);
+        renderReportDistribution(report);
+        const now = new Date();
+        const updatedAt = document.getElementById('reportUpdatedAt');
+        if (updatedAt) {
+            updatedAt.innerText = `Cập nhật lúc ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ngày ${now.toLocaleDateString('vi-VN')}`;
+        }
+        syncReportStickyOffset();
+    }
+
+    function setReportLoading() {
+        document.getElementById('reportKpiGrid').innerHTML = `
+            <div class="report-kpi"><div class="report-kpi-top"><span>Đang tải</span><i class="fa-solid fa-spinner fa-spin"></i></div><div class="report-kpi-value">--</div><div class="report-kpi-note">Đang tổng hợp dữ liệu</div></div>
+        `;
+        document.getElementById('reportDistribution').innerHTML = '<div class="report-empty">Đang tải dữ liệu báo cáo...</div>';
+        document.getElementById('reportTimelineChart').innerHTML = '<div class="report-chart-empty">Đang tải biểu đồ...</div>';
+        document.getElementById('reportConfirmationChart').innerHTML = '<div class="report-chart-empty">Đang tải biểu đồ...</div>';
+        document.getElementById('reportTimelineCaption').innerText = '--';
+    }
+
+    function makeExportFileName(format) {
+        const now = new Date();
+        const stamp = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, '0'),
+            String(now.getDate()).padStart(2, '0'),
+            String(now.getHours()).padStart(2, '0'),
+            String(now.getMinutes()).padStart(2, '0')
+        ].join('');
+        return `bao-cao-cong-viec-${stamp}.${format}`;
+    }
+
+    function stringToBytes(value) {
+        const bytes = new Uint8Array(value.length);
+        for (let i = 0; i < value.length; i++) bytes[i] = value.charCodeAt(i) & 0xff;
+        return bytes;
+    }
+
+    function concatBytes(parts) {
+        const total = parts.reduce((sum, part) => sum + part.length, 0);
+        const output = new Uint8Array(total);
+        let offset = 0;
+        parts.forEach(part => {
+            output.set(part, offset);
+            offset += part.length;
+        });
+        return output;
+    }
+
+    function makePdfBlobFromCanvas(canvas) {
+        const jpegData = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+        const binary = atob(jpegData);
+        const imageBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) imageBytes[i] = binary.charCodeAt(i);
+
+        const pageWidth = Math.round(canvas.width * 0.75);
+        const pageHeight = Math.round(canvas.height * 0.75);
+        const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ`;
+        const objects = [
+            `<< /Type /Catalog /Pages 2 0 R >>`,
+            `<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,
+            `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`,
+            {
+                prefix: `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
+                body: imageBytes,
+                suffix: `\nendstream`
+            },
+            `<< /Length ${content.length} >>\nstream\n${content}\nendstream`
+        ];
+
+        const chunks = [];
+        const offsets = [0];
+        let length = 0;
+        const add = part => {
+            const bytes = typeof part === 'string' ? stringToBytes(part) : part;
+            chunks.push(bytes);
+            length += bytes.length;
+        };
+
+        add('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n');
+        objects.forEach((object, index) => {
+            offsets[index + 1] = length;
+            add(`${index + 1} 0 obj\n`);
+            if (typeof object === 'string') {
+                add(object);
+            } else {
+                add(object.prefix);
+                add(object.body);
+                add(object.suffix);
+            }
+            add('\nendobj\n');
+        });
+
+        const xrefOffset = length;
+        add(`xref\n0 ${objects.length + 1}\n`);
+        add('0000000000 65535 f \n');
+        for (let i = 1; i <= objects.length; i++) {
+            add(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+        }
+        add(`trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+
+        return new Blob([concatBytes(chunks)], { type: 'application/pdf' });
+    }
+
+    async function saveBlob(blob, fileName, mimeType) {
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{ description: fileName.toUpperCase(), accept: { [mimeType]: [`.${fileName.split('.').pop()}`] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return true;
+            } catch (error) {
+                if (error && error.name === 'AbortError') return false;
+            }
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return true;
+    }
+
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+    }
+
+    function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+        const words = String(text || '').split(/\s+/).filter(Boolean);
+        const lines = [];
+        let line = '';
+
+        words.forEach(word => {
+            const next = line ? `${line} ${word}` : word;
+            if (ctx.measureText(next).width > maxWidth && line) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = next;
+            }
+        });
+        if (line) lines.push(line);
+
+        lines.slice(0, maxLines).forEach((item, index) => {
+            const suffix = index === maxLines - 1 && lines.length > maxLines ? '...' : '';
+            ctx.fillText(item + suffix, x, y + index * lineHeight);
+        });
+        return Math.min(lines.length, maxLines) * lineHeight;
+    }
+
+    function buildReportExportCanvas(report) {
+        if (!report) throw new Error('Chưa có dữ liệu báo cáo để xuất.');
+
+        const width = 1400;
+        const height = 1120;
+        const scale = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        const navy = '#1b2a59';
+        const teal = '#00949a';
+        const green = '#0f9d58';
+        const orange = '#f57025';
+        const gray = '#dfe5ee';
+        const muted = '#5f6368';
+        const border = '#e1e6ef';
+
+        ctx.fillStyle = '#f4f6f9';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#ffffff';
+        drawRoundRect(ctx, 32, 28, width - 64, 92, 14);
+        ctx.fill();
+        ctx.fillStyle = navy;
+        ctx.font = '700 30px Segoe UI, Arial, sans-serif';
+        ctx.fillText('BÁO CÁO CÔNG VIỆC', 58, 74);
+        ctx.fillStyle = muted;
+        ctx.font = '500 14px Segoe UI, Arial, sans-serif';
+        const updatedAt = document.getElementById('reportUpdatedAt')?.innerText || '';
+        ctx.fillText(updatedAt, 58, 100);
+
+        const cards = [
+            ['Tổng ghi nhận', report.total, 'Tất cả bản ghi hiện có'],
+            ['Đã chuyển xử lý', report.transferredCount, 'Hoàn tất trên webapp'],
+            ['Chờ xử lý', report.pendingCount, `${report.needClassificationCount} văn bản thiếu phân loại`],
+            ['Không liên quan', report.irrelevantCount, 'Đã loại khỏi luồng xử lý'],
+            ['Hết hiệu lực', report.expiredCount, 'Theo dữ liệu rà soát']
+        ];
+        const cardGap = 14;
+        const cardWidth = (width - 64 - cardGap * 4) / 5;
+        cards.forEach((card, index) => {
+            const x = 32 + index * (cardWidth + cardGap);
+            const y = 144;
+            ctx.fillStyle = '#ffffff';
+            drawRoundRect(ctx, x, y, cardWidth, 114, 10);
+            ctx.fill();
+            ctx.strokeStyle = border;
+            ctx.stroke();
+            ctx.fillStyle = muted;
+            ctx.font = '600 14px Segoe UI, Arial, sans-serif';
+            ctx.fillText(card[0], x + 16, y + 30);
+            ctx.fillStyle = navy;
+            ctx.font = '800 30px Segoe UI, Arial, sans-serif';
+            ctx.fillText(String(card[1]), x + 16, y + 66);
+            ctx.fillStyle = muted;
+            ctx.font = '500 13px Segoe UI, Arial, sans-serif';
+            drawWrappedText(ctx, card[2], x + 16, y + 94, cardWidth - 32, 17, 1);
+        });
+
+        const timelineX = 32;
+        const timelineY = 286;
+        const timelineW = width - 64;
+        const timelineH = 310;
+        ctx.fillStyle = '#ffffff';
+        drawRoundRect(ctx, timelineX, timelineY, timelineW, timelineH, 12);
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.stroke();
+        ctx.fillStyle = navy;
+        ctx.font = '700 18px Segoe UI, Arial, sans-serif';
+        ctx.fillText('Tiếp nhận và xác nhận theo ngày', timelineX + 20, timelineY + 36);
+
+        const entries = report.timelineEntries || [];
+        const maxValue = Math.max(1, ...entries.map(item => Math.max(item.received, item.confirmed)));
+        const chartX = timelineX + 36;
+        const chartY = timelineY + 70;
+        const chartW = timelineW - 72;
+        const chartH = 185;
+        ctx.strokeStyle = border;
+        ctx.beginPath();
+        ctx.moveTo(chartX, chartY + chartH);
+        ctx.lineTo(chartX + chartW, chartY + chartH);
+        ctx.stroke();
+        const slot = entries.length ? chartW / entries.length : chartW;
+        entries.forEach((item, index) => {
+            const center = chartX + slot * index + slot / 2;
+            const receivedH = Math.max(3, (item.received / maxValue) * (chartH - 18));
+            const confirmedH = Math.max(3, (item.confirmed / maxValue) * (chartH - 18));
+            ctx.fillStyle = teal;
+            drawRoundRect(ctx, center - 15, chartY + chartH - receivedH, 12, receivedH, 4);
+            ctx.fill();
+            ctx.fillStyle = green;
+            drawRoundRect(ctx, center + 3, chartY + chartH - confirmedH, 12, confirmedH, 4);
+            ctx.fill();
+            ctx.fillStyle = muted;
+            ctx.font = '500 11px Segoe UI, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(item.label, center, chartY + chartH + 22);
+            ctx.textAlign = 'left';
+        });
+        ctx.fillStyle = teal;
+        ctx.beginPath();
+        ctx.arc(timelineX + 22, timelineY + timelineH - 28, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = muted;
+        ctx.font = '500 13px Segoe UI, Arial, sans-serif';
+        ctx.fillText('Tiếp nhận', timelineX + 34, timelineY + timelineH - 24);
+        ctx.fillStyle = green;
+        ctx.beginPath();
+        ctx.arc(timelineX + 124, timelineY + timelineH - 28, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = muted;
+        ctx.fillText('Đã xác nhận', timelineX + 136, timelineY + timelineH - 24);
+
+        const panelY = 620;
+        const panelW = (width - 80) / 2;
+        const panelH = 430;
+        ctx.fillStyle = '#ffffff';
+        drawRoundRect(ctx, 32, panelY, panelW, panelH, 12);
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.stroke();
+        drawRoundRect(ctx, 48 + panelW, panelY, panelW, panelH, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = navy;
+        ctx.font = '700 18px Segoe UI, Arial, sans-serif';
+        ctx.fillText('Tỷ lệ xác nhận', 54, panelY + 38);
+        const rate = report.total > 0 ? Math.round((report.confirmedCount / report.total) * 100) : 0;
+        const pendingRate = report.total > 0 ? Math.round((report.pendingCount / report.total) * 100) : 0;
+        const otherRate = Math.max(0, 100 - rate - pendingRate);
+        const cx = 190;
+        const cy = panelY + 230;
+        const radius = 95;
+        let start = -Math.PI / 2;
+        [[rate, green], [pendingRate, orange], [otherRate, gray]].forEach(segment => {
+            const angle = (segment[0] / 100) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, start, start + angle);
+            ctx.strokeStyle = segment[1];
+            ctx.lineWidth = 34;
+            ctx.stroke();
+            start += angle;
+        });
+        ctx.fillStyle = navy;
+        ctx.font = '800 34px Segoe UI, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${rate}%`, cx, cy + 6);
+        ctx.fillStyle = muted;
+        ctx.font = '500 13px Segoe UI, Arial, sans-serif';
+        ctx.fillText('đã xác nhận', cx, cy + 30);
+        ctx.textAlign = 'left';
+
+        const legendX = 330;
+        const legendY = panelY + 155;
+        [
+            ['Đã xác nhận', report.confirmedCount, green],
+            ['Chờ xác nhận', report.pendingCount, orange],
+            ['Khác', Math.max(0, report.total - report.confirmedCount - report.pendingCount), gray]
+        ].forEach((item, index) => {
+            const y = legendY + index * 38;
+            ctx.fillStyle = item[2];
+            ctx.beginPath();
+            ctx.arc(legendX, y - 4, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = muted;
+            ctx.font = '600 14px Segoe UI, Arial, sans-serif';
+            ctx.fillText(`${item[0]}: ${item[1]}`, legendX + 16, y);
+        });
+
+        const distX = 68 + panelW;
+        ctx.fillStyle = navy;
+        ctx.font = '700 18px Segoe UI, Arial, sans-serif';
+        ctx.fillText('Phân bổ xử lý', distX, panelY + 38);
+        const statusEntries = (report.statusEntries || []).slice(0, 5);
+        statusEntries.forEach((item, index) => {
+            const y = panelY + 84 + index * 48;
+            const pct = report.total > 0 ? Math.round((item.count / report.total) * 100) : 0;
+            ctx.fillStyle = '#202124';
+            ctx.font = '600 13px Segoe UI, Arial, sans-serif';
+            ctx.fillText(item.label, distX, y);
+            ctx.fillStyle = muted;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${item.count} (${pct}%)`, width - 58, y);
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#eef2f7';
+            drawRoundRect(ctx, distX, y + 12, panelW - 68, 9, 5);
+            ctx.fill();
+            ctx.fillStyle = teal;
+            drawRoundRect(ctx, distX, y + 12, Math.max(4, (panelW - 68) * pct / 100), 9, 5);
+            ctx.fill();
+        });
+
+        const deptStartY = panelY + 330;
+        ctx.fillStyle = navy;
+        ctx.font = '700 14px Segoe UI, Arial, sans-serif';
+        ctx.fillText('Theo bộ phận chủ trì', distX, deptStartY);
+        (report.departmentEntries || []).slice(0, 3).forEach((item, index) => {
+            ctx.fillStyle = muted;
+            ctx.font = '600 13px Segoe UI, Arial, sans-serif';
+            ctx.fillText(`${item.label}: ${item.count}`, distX, deptStartY + 28 + index * 24);
+        });
+
+        return canvas;
+    }
+
+    async function exportReportData() {
+        if (currentTab !== 'reports') {
+            showToast('Chưa ở trang báo cáo', 'Hãy mở Báo cáo công việc trước khi xuất dữ liệu.', 'error');
+            return;
+        }
+
+        const selected = document.querySelector('input[name="reportExportFormat"]:checked');
+        const format = selected ? selected.value : 'png';
+        const btn = document.getElementById('btnExportReport');
+        const originalHtml = btn ? btn.innerHTML : '';
+
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất...';
+            }
+
+            const report = latestReport || buildWorkReport(reportRecords);
+            const canvas = buildReportExportCanvas(report);
+            const fileName = makeExportFileName(format);
+            let blob;
+            let mimeType;
+
+            if (format === 'pdf') {
+                blob = makePdfBlobFromCanvas(canvas);
+                mimeType = 'application/pdf';
+            } else {
+                blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                mimeType = 'image/png';
+            }
+
+            if (!blob) throw new Error('Không tạo được file xuất.');
+            const saved = await saveBlob(blob, fileName, mimeType);
+            if (saved) showToast('Đã xuất dữ liệu', `File ${fileName} đã được tạo.`, 'success');
+        } catch (error) {
+            console.error('Export report error:', error);
+            showToast('Lỗi xuất dữ liệu', error.message || 'Không thể xuất báo cáo.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+    }
+
+    async function loadReportData() {
+        if (localStorage.getItem('isAdminAccess') !== 'true') return;
+
+        setReportLoading();
+
+        const requests = [
+            { source: 'all', action: 'get_all_records' },
+            { source: 'pending', action: 'get_pending_records' },
+            { source: 'irrelevant', action: 'get_irrelevant_records' },
+            { source: 'expired', action: 'get_expired_records' }
+        ];
+
+        try {
+            const settled = await Promise.allSettled(
+                requests.map(item => postWebAppAction(item.action).then(result => ({
+                    ...item,
+                    rows: result.data || [],
+                    transferred: Number(result.transferred) || 0
+                })))
+            );
+
+            const datasets = settled
+                .filter(item => item.status === 'fulfilled')
+                .map(item => ({ source: item.value.source, rows: item.value.rows }));
+            const failedCount = settled.filter(item => item.status === 'rejected').length;
+
+            if (!datasets.length) {
+                throw new Error("Không tải được dữ liệu từ Google Sheet.");
+            }
+
+            reportRecords = mergeReportRows(datasets);
+            const report = buildWorkReport(reportRecords);
+            const transferredFromServer = Math.max(
+                0,
+                ...settled
+                    .filter(item => item.status === 'fulfilled')
+                    .map(item => item.value.transferred || 0)
+            );
+            if (transferredFromServer > report.transferredCount) {
+                report.transferredCount = transferredFromServer;
+                report.confirmedCount = report.transferredCount + report.irrelevantCount;
+            }
+            renderWorkReport(report);
+
+            if (failedCount > 0) {
+                showToast("Báo cáo chưa đầy đủ", "Một phần dữ liệu báo cáo chưa tải được.", "error");
+            }
+        } catch (error) {
+            document.getElementById('reportTimelineChart').innerHTML = '<div class="report-chart-empty">Không tải được dữ liệu báo cáo.</div>';
+            document.getElementById('reportConfirmationChart').innerHTML = '<div class="report-chart-empty">Không tải được dữ liệu báo cáo.</div>';
+            showToast("Lỗi báo cáo", error.message || "Không thể tổng hợp báo cáo.", "error");
+        }
+    }
+
     function switchTab(tabId) {
         // 1. Kiểm tra bảo mật
         const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
-        if ((tabId === 'pending' || tabId === 'irrelevant') && !isAdmin) {
+        if ((tabId === 'pending' || tabId === 'irrelevant' || tabId === 'reports' || tabId === 'transferred') && !isAdmin) {
             return; 
         }
         
         currentTab = tabId;
 
         // 2. Tắt sáng toàn bộ các tab (Dùng mảng ID để quét, KHÔNG bao giờ lỗi null)
-        const allTabIds = ['tab-all', 'tab-pending', 'tab-irrelevant', 'tab-expired'];
+        const allTabIds = ['tab-all', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports'];
         allTabIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -797,11 +2056,18 @@
             activeEl.style.background = 'rgba(255,255,255,0.1)'; // Bôi nền sáng
         }
 
+        const isReportTab = tabId === 'reports';
+        if (reportPanel) reportPanel.style.display = isReportTab ? 'flex' : 'none';
+        if (recordsPanel) recordsPanel.style.display = isReportTab ? 'none' : 'flex';
+        if (mainContent) mainContent.classList.toggle('report-mode', isReportTab);
+        if (appContainer) appContainer.classList.toggle('report-mode', isReportTab);
+        renderHeaderActions(isReportTab ? 'report' : (tabId === 'pending' ? 'pending' : 'hidden'));
+        setTimeout(syncReportStickyOffset, 0);
+
         // 4. Các dữ liệu giao diện tĩnh của bạn
         if (tabId === 'pending') {
             document.getElementById('pageTitle').innerText = 'Cổng tra cứu pháp lý';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'grid';
-            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'flex';
             if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-regular fa-circle-check"></i>
                 <h3>Tuyệt vời!</h3>
@@ -810,7 +2076,6 @@
         } else if (tabId === 'irrelevant') {
             document.getElementById('pageTitle').innerText = 'Danh sách Không liên quan';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
-            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
             if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-solid fa-box-open"></i>
                 <h3>Trống!</h3>
@@ -819,7 +2084,6 @@
         } else if (tabId === 'expired') {
             document.getElementById('pageTitle').innerText = 'Danh sách Hết hiệu lực (Chờ xử lý)';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
-            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
             if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-solid fa-clock"></i>
                 <h3>Trống!</h3>
@@ -828,17 +2092,32 @@
         } else if (tabId === 'all') {
             document.getElementById('pageTitle').innerText = 'CỔNG TRA CỨU PHÁP LÝ - DANH SÁCH TỔNG HỢP';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
-            if(document.getElementById('headerActions')) document.getElementById('headerActions').style.display = 'none';
             if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
                 <i class="fa-solid fa-folder-open"></i>
                 <h3>Trống!</h3>
                 <p>Kho dữ liệu hiện chưa có văn bản nào.</p>
             `;
+        } else if (tabId === 'transferred') {
+            document.getElementById('pageTitle').innerText = 'Danh sách Đã chuyển xử lý';
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
+                <i class="fa-solid fa-paper-plane"></i>
+                <h3>Trống!</h3>
+                <p>Chưa có văn bản nào đã chuyển xử lý.</p>
+            `;
+        } else if (tabId === 'reports') {
+            document.getElementById('pageTitle').innerText = 'BÁO CÁO CÔNG VIỆC';
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
         }
         
         // 5. Xóa khung tìm kiếm & Tải lại dữ liệu
         const searchInput = document.getElementById('searchInput');
         if (searchInput) searchInput.value = '';
+
+        if (tabId === 'reports') {
+            loadReportData();
+            return;
+        }
 
         loadData(); 
     }
@@ -854,6 +2133,7 @@
         if (currentTab === 'irrelevant') actionName = "get_irrelevant_records";
         if (currentTab === 'expired') actionName = "get_expired_records";
         if (currentTab === 'all') actionName = "get_all_records"; // DÒNG BỔ SUNG MỚI
+        if (currentTab === 'transferred') actionName = "get_all_records";
 
         try {
             const response = await fetch(WEBAPP_URL, {
@@ -867,7 +2147,10 @@
             updateTime();
 
             if (result.ok) {
-                currentRecords = result.data || []; 
+                currentRecords = result.data || [];
+                if (currentTab === 'transferred') {
+                    currentRecords = currentRecords.filter(isTransferredRecord);
+                }
                 populateFilters();
                 if (currentTab === 'pending') {
                     // Lấy chính xác con số từ máy chủ gửi về
@@ -1022,7 +2305,7 @@
                         <i class="fa-solid fa-robot"></i> Tự động
                     </button>
                 `;
-            } else if (currentTab === 'all') {
+            } else if (currentTab === 'all' || currentTab === 'transferred') {
                 actionsHtml = `
                     <button class="btn-detail" onclick="viewDetail(${rId})" title="Xem chi tiết văn bản">
                         <i class="fa-solid fa-eye"></i> Xem
