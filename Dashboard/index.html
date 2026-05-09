@@ -706,6 +706,7 @@
     const emptyState = document.getElementById('emptyState');
 
     window.onload = () => {
+        checkAuthStatus(); // Khôi phục trạng thái đăng nhập sau khi reload trang
         switchTab('all'); // Gọi hàm switchTab để đồng bộ toàn bộ giao diện và dữ liệu
     };
 
@@ -1871,6 +1872,8 @@ function checkAuthStatus() {
         }
         capNhatGiaoDienBoPhan();
     }
+    // Khôi phục trạng thái đăng nhập ngay khi script chạy xong
+    checkAuthStatus();
 </script>
 <!-- KHUNG ĐĂNG NHẬP CHUẨN (Tuyệt đối không đụng hàng) -->
 <style>

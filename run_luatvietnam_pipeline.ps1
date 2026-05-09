@@ -23,6 +23,12 @@ $TimeStamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $LogFile = ".\logs\pipeline_$TimeStamp.log"
 $LockFile = ".\logs\pipeline.lock"
 
+# Xóa log cũ, chỉ giữ 5 pipeline gần nhất (log hiện tại chưa tồn tại → luôn an toàn)
+Get-ChildItem -Path ".\logs" -Filter "pipeline_*.log" |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -Skip 5 |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
 function Write-Log {
     param (
         [string]$Message
