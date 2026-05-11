@@ -4,6 +4,9 @@ import os
 import re
 import hashlib
 import sys
+import socket
+import ssl
+import time
 from datetime import datetime
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -720,6 +723,64 @@ def should_skip_payload(payload: dict, config: dict) -> tuple[bool, str]:
 
 
 
+def get_positive_int(config: dict, key: str, default: int, minimum: int = 1) -> int:
+    try:
+        value = int(config.get(key, default) or default)
+    except Exception:
+        value = default
+    return max(minimum, value)
+
+
+def get_positive_float(config: dict, key: str, default: float, minimum: float = 0.0) -> float:
+    try:
+        value = float(config.get(key, default) or default)
+    except Exception:
+        value = default
+    return max(minimum, value)
+
+
+def is_retryable_apps_script_error(exc: Exception) -> bool:
+    if isinstance(exc, HTTPError):
+        return exc.code in {408, 409, 425, 429, 500, 502, 503, 504}
+
+    if isinstance(exc, URLError):
+        reason = getattr(exc, "reason", exc)
+        return is_retryable_apps_script_error(reason) if isinstance(reason, Exception) else is_retryable_error_text(reason)
+
+    if isinstance(exc, (TimeoutError, socket.timeout, ConnectionResetError, ConnectionAbortedError, BrokenPipeError, ssl.SSLError)):
+        return True
+
+    if isinstance(exc, OSError) and getattr(exc, "winerror", None) in {10053, 10054, 10060}:
+        return True
+
+    return is_retryable_error_text(exc)
+
+
+def is_retryable_error_text(value) -> bool:
+    text = str(value or "").lower()
+    retryable_markers = [
+        "timed out",
+        "timeout",
+        "connection reset",
+        "connection aborted",
+        "connection refused",
+        "forcibly closed",
+        "remote end closed",
+        "temporarily unavailable",
+        "too many requests",
+        "service unavailable",
+        "bad gateway",
+        "gateway timeout",
+    ]
+    return any(marker in text for marker in retryable_markers)
+
+
+def sleep_before_apps_script_retry(attempt: int, base_delay_seconds: float, max_delay_seconds: float) -> None:
+    delay = min(max_delay_seconds, base_delay_seconds * (2 ** max(0, attempt - 1)))
+    if delay > 0:
+        time.sleep(delay)
+
+
 def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_save_request_body: bool = False) -> dict:
     url = normalize_text(config.get("APPS_SCRIPT_WEBAPP_URL", "") or os.getenv("APPS_SCRIPT_WEBAPP_URL", ""))
     token = resolve_apps_script_token(config)
@@ -727,6 +788,10 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
         return {"ok": False, "error": "Thiếu APPS_SCRIPT_WEBAPP_URL"}
     if not token:
         return {"ok": False, "error": "Thiếu APPS_SCRIPT_TOKEN"}
+    max_attempts = get_positive_int(config, "apps_script_send_max_attempts", 3, minimum=1)
+    timeout_seconds = get_positive_int(config, "apps_script_timeout_seconds", 60, minimum=10)
+    base_delay_seconds = get_positive_float(config, "apps_script_retry_base_delay_seconds", 2.0, minimum=0.0)
+    max_delay_seconds = get_positive_float(config, "apps_script_retry_max_delay_seconds", 12.0, minimum=0.0)
 
     options = {
         # Cho phép người dùng vẫn sửa tay trên Google Sheet mà không bị ghi đè.
@@ -757,42 +822,56 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
         "options": options,
     }
 
-    req = Request(
-        url,
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urlopen(req, timeout=60) as res:
-            content = res.read().decode("utf-8", errors="replace")
-        parsed = {}
+    request_bytes = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    failed_attempts = []
+
+    for attempt in range(1, max_attempts + 1):
         try:
-            parsed = json.loads(content)
-        except Exception:
-            parsed = {"raw": content}
-        out = {"ok": True, "result": parsed}
-        if debug_save_request_body:
-            out["request_body"] = body
-        return out
-    except HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace") if hasattr(exc, "read") else ""
-        detail = f"HTTPError {exc.code}: {exc.reason}. Body: {body[:500]}"
-        out = {"ok": False, "error": detail}
-        if debug_save_request_body:
-            out["request_body"] = body
-        return out
-    except URLError as exc:
-        out = {"ok": False, "error": f"URLError: {exc.reason}"}
-        if debug_save_request_body:
-            out["request_body"] = body
-        return out
-    except Exception as exc:
-        msg = str(exc) if str(exc) else repr(exc)
-        out = {"ok": False, "error": f"Unknown error: {msg}"}
-        if debug_save_request_body:
-            out["request_body"] = body
-        return out
+            req = Request(
+                url,
+                data=request_bytes,
+                headers={"Content-Type": "application/json", "Connection": "close"},
+                method="POST",
+            )
+            with urlopen(req, timeout=timeout_seconds) as res:
+                content = res.read().decode("utf-8", errors="replace")
+            parsed = {}
+            try:
+                parsed = json.loads(content)
+            except Exception:
+                parsed = {"raw": content}
+            out = {"ok": True, "result": parsed, "attempt": attempt}
+            if failed_attempts:
+                out["retry_errors"] = failed_attempts
+            if debug_save_request_body:
+                out["request_body"] = body
+            return out
+        except HTTPError as exc:
+            response_body = exc.read().decode("utf-8", errors="replace") if hasattr(exc, "read") else ""
+            detail = f"HTTPError {exc.code}: {exc.reason}. Body: {response_body[:500]}"
+            retryable = is_retryable_apps_script_error(exc)
+        except URLError as exc:
+            detail = f"URLError: {exc.reason}"
+            retryable = is_retryable_apps_script_error(exc)
+        except Exception as exc:
+            msg = str(exc) if str(exc) else repr(exc)
+            detail = f"{exc.__class__.__name__}: {msg}"
+            retryable = is_retryable_apps_script_error(exc)
+
+        failed_attempts.append({"attempt": attempt, "error": detail, "retryable": retryable})
+        if (not retryable) or attempt >= max_attempts:
+            prefix = f"Apps Script send failed after {attempt}/{max_attempts} attempt(s)"
+            out = {"ok": False, "error": f"{prefix}: {detail}", "attempt": attempt, "retry_errors": failed_attempts}
+            if debug_save_request_body:
+                out["request_body"] = body
+            return out
+
+        sleep_before_apps_script_retry(attempt, base_delay_seconds, max_delay_seconds)
+
+    out = {"ok": False, "error": "Apps Script send failed without a captured exception", "retry_errors": failed_attempts}
+    if debug_save_request_body:
+        out["request_body"] = body
+    return out
 
 
 
@@ -917,17 +996,32 @@ def main():
             luoc_do_payload = processed.get("luoc_do_payload", {"quan_he_phap_ly_theo_luoc_do": {}})
             sent = send_to_apps_script(payload, luoc_do_payload, config, debug_save_request_body=debug_save_request_body)
             if debug_save_request_body:
-                request_debug_rows.append(
+                debug_row = {
+                    "url": url,
+                    "request_body": sent.get("request_body", {}),
+                    "attempt": sent.get("attempt", 1),
+                    "response": sent.get("result", {}) if sent.get("ok") else {"ok": False, "error": sent.get("error", "")},
+                }
+                if sent.get("retry_errors"):
+                    debug_row["retry_errors"] = sent.get("retry_errors")
+                request_debug_rows.append(debug_row)
+            if sent.get("ok"):
+                result_row = {"url": url, "status": "sent", "result": sent.get("result", {})}
+                if sent.get("attempt", 1) > 1:
+                    result_row["send_attempt"] = sent.get("attempt", 1)
+                    result_row["send_retry_errors"] = sent.get("retry_errors", [])
+                    print(f"Gửi Apps Script thành công sau {sent.get('attempt', 1)} lần thử.")
+                results.append(result_row)
+            else:
+                results.append(
                     {
                         "url": url,
-                        "request_body": sent.get("request_body", {}),
-                        "response": sent.get("result", {}) if sent.get("ok") else {"ok": False, "error": sent.get("error", "")},
+                        "status": "error",
+                        "message": sent.get("error", ""),
+                        "send_attempt": sent.get("attempt", 1),
+                        "send_retry_errors": sent.get("retry_errors", []),
                     }
                 )
-            if sent.get("ok"):
-                results.append({"url": url, "status": "sent", "result": sent.get("result", {})})
-            else:
-                results.append({"url": url, "status": "error", "message": sent.get("error", "")})
                 print(f"Lỗi gửi Apps Script: {sent.get('error', '')}")
 
         browser.close()
