@@ -3,6 +3,8 @@
 Chạy 1 lần, tự động refresh trong 90 ngày.
 
     python auth_init.py
+
+Tenant has.edu.vn chặn Device Code flow → dùng Interactive flow (mở browser).
 """
 
 import os, sys
@@ -16,6 +18,7 @@ load_dotenv()
 CLIENT_ID        = os.getenv("CLIENT_ID", "de8bc8b5-d9f9-48b1-a8ad-b748da725064")
 TENANT_ID        = os.getenv("TENANT_ID")
 TOKEN_CACHE_PATH = Path(os.getenv("TOKEN_CACHE_PATH", "config/token_cache.json"))
+LEGAL_EMAIL      = os.getenv("LEGAL_PIC_EMAIL", "legal@has.edu.vn")
 
 SCOPES = [
     "https://graph.microsoft.com/Tasks.ReadWrite",
@@ -47,19 +50,15 @@ def main():
             print(f"Token còn hợp lệ: {accounts[0]['username']}")
             return
 
-    # Device Code flow - chờ user login trong cùng 1 lần chạy
-    flow = app.initiate_device_flow(scopes=SCOPES)
-    if "user_code" not in flow:
-        sys.exit(f"Lỗi: {flow.get('error_description')}")
+    print(f"\nMở browser để đăng nhập {LEGAL_EMAIL}...")
+    print("Hoàn tất OTP trên browser, script sẽ tự tiếp tục.\n")
 
-    print("\n" + "=" * 60)
-    print(flow["message"])
-    print("=" * 60)
-    print("\nSau khi nhập code và xác nhận OTP, ĐỪNG đóng cửa sổ này.")
-    print("Script sẽ tự tiếp tục...\n")
-
-    # Blocking call - chờ user hoàn tất trên browser, KHÔNG chạy lại
-    result = app.acquire_token_by_device_flow(flow)
+    # Interactive flow - mở browser, không cần device code
+    # Cùng cơ chế với Graph Explorer trên browser
+    result = app.acquire_token_interactive(
+        scopes=SCOPES,
+        login_hint=LEGAL_EMAIL,
+    )
 
     if "error" in result:
         sys.exit(f"Thất bại: {result.get('error_description')}")
