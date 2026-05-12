@@ -1,25 +1,19 @@
 """
 Module tạo và quản lý task trong Microsoft Teams Planner.
-Sử dụng token cache từ ms_auth_init.py, tự động refresh khi hết hạn.
+Lấy token tự động qua Playwright browser session (get_token_browser.py).
 """
 
 import logging
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
 
-import msal
 import requests
 from dotenv import load_dotenv
+from get_token_browser import get_token
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-CLIENT_ID        = os.getenv("CLIENT_ID")
-TENANT_ID        = os.getenv("TENANT_ID")
-TOKEN_CACHE_PATH = Path(os.getenv("TOKEN_CACHE_PATH", "config/token_cache.json"))
-
 PLAN_ID          = os.getenv("PLANNER_PLAN_ID")
 BUCKET_PHAP_CHE  = os.getenv("PLANNER_BUCKET_ID_PHAP_CHE")
 LEGAL_EMAIL      = os.getenv("LEGAL_PIC_EMAIL")
@@ -28,51 +22,10 @@ DEFAULT_DUE_DAYS = int(os.getenv("LEGAL_DEFAULT_DUE_DAYS", "5"))
 
 GRAPH_URL = "https://graph.microsoft.com/v1.0"
 
-SCOPES = [
-    "https://graph.microsoft.com/Tasks.ReadWrite",
-    "https://graph.microsoft.com/Group.Read.All",
-    "offline_access",
-]
-
-
-def _get_token() -> str:
-    if not TOKEN_CACHE_PATH.exists():
-        raise FileNotFoundError(
-            f"Chưa có token cache tại '{TOKEN_CACHE_PATH}'. "
-            "Hãy chạy ms_auth_init.py trước."
-        )
-
-    cache = msal.SerializableTokenCache()
-    cache.deserialize(TOKEN_CACHE_PATH.read_text(encoding="utf-8"))
-
-    app = msal.PublicClientApplication(
-        CLIENT_ID,
-        authority=f"https://login.microsoftonline.com/{TENANT_ID}",
-        token_cache=cache,
-    )
-
-    accounts = app.get_accounts()
-    if not accounts:
-        raise RuntimeError(
-            "Token cache hết hạn (>90 ngày). Hãy chạy lại ms_auth_init.py."
-        )
-
-    result = app.acquire_token_silent(SCOPES, account=accounts[0])
-    if not result or "access_token" not in result:
-        raise RuntimeError(
-            f"Không thể refresh token: {result.get('error_description', 'unknown')}. "
-            "Hãy chạy lại ms_auth_init.py."
-        )
-
-    if cache.has_state_changed:
-        TOKEN_CACHE_PATH.write_text(cache.serialize(), encoding="utf-8")
-
-    return result["access_token"]
-
 
 def _headers() -> dict:
     return {
-        "Authorization": f"Bearer {_get_token()}",
+        "Authorization": f"Bearer {get_token()}",
         "Content-Type": "application/json",
     }
 

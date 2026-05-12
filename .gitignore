@@ -5,3 +5,4 @@ credentials/
 __pycache__/
 *.pyc
 config/token_cache.json
+config/browser_session.json
