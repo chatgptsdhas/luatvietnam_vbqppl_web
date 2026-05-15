@@ -144,9 +144,11 @@
         }
 
         .main-content.report-mode {
+            padding: 12px 14px;
             overflow-x: hidden;
-            overflow-y: auto;
+            overflow-y: hidden;
             --report-kpi-sticky-top: 112px;
+            --report-scroll-offset: 248px;
         }
 
         .container {
@@ -160,9 +162,10 @@
         }
 
         .container.report-mode {
-            flex: 0 0 auto;
-            min-height: 100%;
-            overflow: visible;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            gap: 10px;
         }
 
         /* --- HEADER --- */
@@ -210,6 +213,88 @@
             position: sticky;
             top: 0;
             z-index: 50;
+            border-radius: 10px;
+            padding: 10px 18px;
+        }
+
+        .main-content.report-mode .logo {
+            height: 38px;
+        }
+
+        .main-content.report-mode .title-group h1 {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        .main-content.report-mode .title-group p {
+            font-size: 12px;
+        }
+
+        .report-resizable-target {
+            position: relative;
+        }
+
+        .report-resize-handle {
+            align-items: center;
+            background: var(--has-teal);
+            border: 2px solid #ffffff;
+            border-radius: 8px 0 8px 0;
+            bottom: 0;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.18);
+            color: #ffffff;
+            cursor: nwse-resize;
+            display: none;
+            height: 18px;
+            justify-content: center;
+            position: absolute;
+            right: 0;
+            width: 18px;
+            z-index: 70;
+        }
+
+        .report-resize-handle::before {
+            content: "";
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            height: 7px;
+            width: 7px;
+        }
+
+        .report-customize-mode .report-resizable-target {
+            outline: 1px dashed rgba(0, 148, 154, 0.75);
+            outline-offset: -2px;
+        }
+
+        .report-customize-mode .report-resizable-target:hover {
+            outline-style: solid;
+        }
+
+        .report-customize-mode .report-resize-handle {
+            display: flex;
+        }
+
+        .report-customize-bar {
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid rgba(0, 148, 154, 0.28);
+            border-radius: 10px;
+            box-shadow: 0 8px 22px rgba(27, 42, 89, 0.12);
+            color: var(--text-main);
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px 10px;
+        }
+
+        .report-customize-mode .report-customize-bar {
+            display: flex;
+        }
+
+        .report-customize-status {
+            color: var(--has-navy);
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: auto;
         }
 
         /* --- BUTTONS --- */
@@ -323,36 +408,256 @@
         /* --- WORK REPORTS --- */
         .report-panel {
             display: none;
-            flex: none;
-            min-height: auto;
+            flex: 1;
+            min-height: 0;
             flex-direction: column;
-            gap: 16px;
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .report-top-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+            min-width: 0;
             overflow: visible;
         }
 
-        .report-kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(140px, 1fr));
+        .main-content.report-mode .report-top-row {
+            position: relative;
+            z-index: 1;
+            padding: 0;
+            background: transparent;
+        }
+
+        .report-filter-toolbar {
+            background: var(--surface);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(27, 42, 89, 0.06);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
             gap: 12px;
+            min-width: 0;
+            overflow: visible;
+            padding: 8px 12px;
+        }
+
+        .report-filter-left,
+        .report-filter-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .report-filter-left {
+            flex: 1 1 450px;
+        }
+
+        .report-filter-actions {
+            flex: 0 1 auto;
+            flex-shrink: 0;
+            justify-content: flex-end;
+        }
+
+        .report-filter-control-wrap {
+            min-width: 0;
+            position: relative;
+        }
+
+        .report-compact-control {
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            color: var(--text-main);
+            cursor: pointer;
+            display: inline-flex;
+            font-size: 12.5px;
+            font-weight: 600;
+            gap: 12px;
+            height: 36px;
+            justify-content: space-between;
+            line-height: 1;
+            min-width: 220px;
+            padding: 0 12px;
+            white-space: nowrap;
+        }
+
+        .report-compact-control:hover {
+            border-color: #9ca3af;
+            background: #fbfcfe;
+        }
+
+        .report-compact-control:focus-visible {
+            outline: 3px solid rgba(26, 115, 232, 0.18);
+            outline-offset: 2px;
+        }
+
+        .report-compact-control i {
+            color: var(--text-muted);
             flex-shrink: 0;
         }
 
-        .main-content.report-mode .report-kpi-grid {
-            position: sticky;
-            top: var(--report-kpi-sticky-top);
-            z-index: 45;
-            padding: 0 0 8px 0;
-            background: var(--bg-body);
+        .report-range-control {
+            min-width: 250px;
+        }
+
+        .report-dept-control {
+            min-width: 190px;
+        }
+
+        .report-person-control {
+            min-width: 190px;
+        }
+
+        #reportDateRangeDisplay,
+        #reportSelectedDepts,
+        #reportSelectedPeople {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .report-date-popover {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(27, 42, 89, 0.16);
+            display: none;
+            gap: 10px;
+            left: 0;
+            padding: 12px;
+            position: absolute;
+            top: calc(100% + 6px);
+            width: 304px;
+            z-index: 1060;
+        }
+
+        .report-date-popover.open {
+            display: grid;
+        }
+
+        .report-date-popover label {
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            font-size: 11px;
+            font-weight: 700;
+            gap: 5px;
+        }
+
+        .report-date-popover input {
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 12px;
+            padding: 8px 10px;
+        }
+
+        .report-date-popover-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .report-clear-btn {
+            background: #f1f3f4;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 7px 10px;
+            white-space: nowrap;
+        }
+
+        .report-clear-btn:hover { background: #e8eaed; }
+
+        .report-dept-dropdown {
+            min-width: 190px;
+            top: calc(100% + 6px);
+            width: 100%;
+            z-index: 1060;
+        }
+
+        .report-person-dropdown {
+            min-width: 190px;
+            top: calc(100% + 6px);
+            width: 100%;
+            z-index: 1060;
+        }
+
+        .report-dept-option {
+            gap: 10px;
+            min-height: 38px;
+        }
+
+        .report-dept-check {
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            color: #ffffff;
+            display: inline-flex;
+            flex-shrink: 0;
+            font-size: 10px;
+            height: 16px;
+            justify-content: center;
+            width: 16px;
+        }
+
+        .report-dept-option.selected .report-dept-check {
+            background: var(--has-teal);
+            border-color: var(--has-teal);
+        }
+
+        .report-toolbar-btn {
+            background: #ffffff;
+            border: 1px solid currentColor;
+            border-radius: 8px;
+            font-size: 12.5px;
+            height: 36px;
+            justify-content: center;
+            padding: 0 12px;
+            white-space: nowrap;
+        }
+
+        .report-toolbar-btn--refresh { color: #1a73e8; }
+        .report-toolbar-btn--png { color: #0f9d58; }
+        .report-toolbar-btn--pdf { color: #d93025; }
+        .report-toolbar-btn--settings { color: var(--has-navy); }
+
+        .report-toolbar-btn--refresh:hover { background: #eef5ff; }
+        .report-toolbar-btn--png:hover { background: #edf7f1; }
+        .report-toolbar-btn--pdf:hover { background: #fff1f0; }
+        .report-toolbar-btn--settings:hover { background: #f3f6fb; }
+
+        .report-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(140px, 1fr));
+            gap: 8px;
+            min-width: 0;
+            min-height: var(--report-kpi-height, auto);
         }
 
         .report-kpi {
             background: var(--surface);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 14px;
+            border-radius: 9px;
+            padding: 8px 10px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 3px;
             min-width: 0;
             box-shadow: 0 2px 8px rgba(27, 42, 89, 0.04);
             cursor: pointer;
@@ -361,8 +666,14 @@
 
         .report-kpi:hover {
             border-color: var(--has-teal);
-            box-shadow: 0 4px 12px rgba(27, 42, 89, 0.10);
-            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(27, 42, 89, 0.14);
+            cursor: pointer;
+            transform: translateY(-2px);
+        }
+
+        .report-kpi:focus-visible {
+            outline: 3px solid rgba(0, 148, 154, 0.22);
+            outline-offset: 2px;
         }
 
         .report-kpi-top {
@@ -376,50 +687,85 @@
         }
 
         .report-kpi-top i { color: var(--has-teal); }
-        .report-kpi-value { color: var(--has-navy); font-size: 26px; font-weight: 800; line-height: 1; }
-        .report-kpi-note { color: var(--text-muted); font-size: 12px; line-height: 1.35; min-height: 16px; }
+        .report-kpi-value { color: var(--has-navy); font-size: 22px; font-weight: 800; line-height: 1; }
+        .report-kpi-note { color: var(--text-muted); font-size: 10.5px; line-height: 1.2; min-height: 0; }
 
         .report-content-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-            flex: none;
-            min-height: auto;
-            overflow: visible;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-auto-rows: minmax(180px, auto);
+            gap: 8px;
+            align-items: stretch;
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
         }
 
         .report-section {
+            --report-block-height: 240px;
+            --report-block-width: 100%;
             background: var(--surface);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
-            min-height: auto;
-            overflow: visible;
-            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.04);
+            grid-column: span 2;
+            height: var(--report-block-height);
+            justify-self: stretch;
+            min-height: 0;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(27, 42, 89, 0.05);
+            scroll-margin-top: var(--report-scroll-offset);
+            width: var(--report-block-width);
         }
 
         .report-section.large {
-            grid-column: span 2;
+            grid-column: auto;
+        }
+
+        .report-section--overdue .report-section-body {
+            min-height: 0;
         }
 
         .report-section-header {
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 7px 10px;
+            border-bottom: 1px solid #e5e7eb;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            color: var(--has-navy);
-            font-size: 14px;
+            gap: 8px;
+            color: #1b2a59;
+            font-size: 12.5px;
             font-weight: 700;
             flex-shrink: 0;
         }
 
+        .report-section-header-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .report-section-header-title i {
+            color: #1b2a59;
+            flex-shrink: 0;
+        }
+
+        #reportBlockOverdue .report-section-header-title,
+        #reportBlockOverdue .report-section-header-title i { color: var(--danger); }
+        #reportBlockDepartments .report-section-header-title,
+        #reportBlockDepartments .report-section-header-title i { color: var(--has-orange); }
+        #reportBlockPeople .report-section-header-title,
+        #reportBlockPeople .report-section-header-title i { color: #9334e6; }
+        #reportBlockChecklist .report-section-header-title,
+        #reportBlockChecklist .report-section-header-title i { color: var(--success); }
+
         .report-section-body {
-            padding: 14px 16px;
-            overflow: visible;
-            min-height: auto;
+            padding: 7px 10px 9px;
+            overflow: auto;
+            min-height: 0;
+            flex: 1;
         }
 
         .report-bars {
@@ -537,7 +883,7 @@
             grid-template-columns: 180px 1fr;
             gap: 20px;
             align-items: center;
-            min-height: 260px;
+            min-height: 180px;
         }
 
         .donut-chart {
@@ -620,14 +966,823 @@
 
         .export-option input { margin: 0; }
 
-        .report-empty { padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        .report-empty {
+            align-items: center;
+            color: var(--text-muted);
+            display: flex;
+            font-size: 13px;
+            justify-content: center;
+            min-height: 90px;
+            padding: 16px 12px;
+            text-align: center;
+        }
+
+        /* --- KPI CARD COLOR VARIANTS --- */
+        .report-kpi--red  { background: #fff5f5; border-color: #feb2b2; }
+        .report-kpi--red .report-kpi-value { color: #d93025; }
+        .report-kpi--red .report-kpi-icon  { background: #fed7d7; color: #d93025; }
+
+        .report-kpi--orange { background: #fffaf5; border-color: #fbd38d; }
+        .report-kpi--orange .report-kpi-value { color: #f57025; }
+        .report-kpi--orange .report-kpi-icon  { background: #feebc8; color: #f57025; }
+
+        .report-kpi--purple { background: #faf5ff; border-color: #d6bcfa; }
+        .report-kpi--purple .report-kpi-value { color: #9334e6; }
+        .report-kpi--purple .report-kpi-icon  { background: #e9d8fd; color: #9334e6; }
+
+        .report-kpi--green { background: #f0fff4; border-color: #9ae6b4; }
+        .report-kpi--green .report-kpi-value { color: #0f9d58; }
+        .report-kpi--green .report-kpi-icon  { background: #c6f6d5; color: #0f9d58; }
+
+        .report-kpi-icon {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .report-kpi-header {
+            display: flex; align-items: center;
+            justify-content: space-between; gap: 8px;
+        }
+        .report-kpi-main {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 0;
+        }
+        .report-kpi-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+            flex: 1;
+        }
+        .report-kpi-sparkline {
+            flex-shrink: 0;
+            opacity: 0.75;
+            align-self: flex-end;
+        }
+
+        /* --- REPORT TABLES (rpt-table) --- */
+        .rpt-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .rpt-table th {
+            background: #f9fafb; color: var(--has-navy); font-weight: 700;
+            padding: 10px 12px; text-align: left;
+            border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+        }
+        .rpt-table td { padding: 9px 12px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+        .rpt-table tbody tr:hover td { background: #f9fafb; }
+        .rpt-table .overdue-val { color: var(--danger); font-weight: 700; }
+        .rpt-table .text-muted-cell { color: var(--text-muted); }
+        .rpt-table .text-center { text-align: center; }
+        .rpt-table-wrap { overflow-x: auto; }
+        /* Báo cáo 2: department table — allow header text to wrap */
+        .rpt-table-department { table-layout: auto; }
+        .rpt-table-department th {
+            white-space: normal;
+            line-height: 1.3;
+            vertical-align: bottom;
+            padding: 8px 10px;
+            font-size: 11.5px;
+        }
+        .rpt-table-department td { white-space: normal; }
+        /* Báo cáo 3: people table */
+        .rpt-table-people th { white-space: nowrap; }
+        /* Báo cáo 4: no outer scrollbar on checklist block */
+        #reportBlockChecklist .report-section-body { overflow: hidden; }
+        /* Scroll helpers */
+        .report-section-body--scrollable { overflow-y: auto; }
+        .report-section-body--no-scroll { overflow: hidden; }
+        .planner-task-link {
+            color: #1a73e8;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .planner-task-link:hover { text-decoration: underline; }
+
+        .report-completion-grid {
+            align-items: start;
+            display: grid;
+            gap: 28px;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .report-completion-grid.single {
+            grid-template-columns: 1fr;
+        }
+
+        /* --- PROGRESS BAR (report 4) --- */
+        .prog-bar-track {
+            width: 100%; height: 14px; border-radius: 999px;
+            background: #e5e9f0; overflow: hidden; margin: 10px 0;
+        }
+        .prog-bar-fill { height: 100%; border-radius: inherit; transition: width 0.5s ease; }
+
+        /* --- DEPT HORIZONTAL BARS (report 4 dept breakdown) --- */
+        .dept-bar-row { display: grid; gap: 4px; margin-bottom: 12px; }
+        .dept-bar-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+        .dept-bar-label { font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dept-bar-track { width: 100%; height: 8px; border-radius: 999px; background: #e5e9f0; overflow: hidden; }
+        .dept-bar-fill  { height: 100%; border-radius: inherit; }
+
+        .main-content.report-mode .report-export-panel {
+            display: none;
+        }
+
+        .main-content.report-mode .rpt-table {
+            font-size: 10.2px;
+            table-layout: fixed;
+        }
+
+        .main-content.report-mode .rpt-table th,
+        .main-content.report-mode .rpt-table td {
+            padding: 5px 6px;
+        }
+
+        .main-content.report-mode .rpt-table td {
+            line-height: 1.25;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .main-content.report-mode .rpt-table-wrap {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .main-content.report-mode .rpt-table tbody tr:nth-child(n+9) {
+            display: none;
+        }
+
+        /* Báo cáo 2 in export mode: keep auto layout and allow wrapping */
+        .main-content.report-mode .rpt-table-department {
+            table-layout: auto;
+        }
+        .main-content.report-mode .rpt-table-department th,
+        .main-content.report-mode .rpt-table-department td {
+            overflow: visible;
+            white-space: normal;
+        }
+
+        .report-card-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(170px, 0.65fr);
+            gap: 10px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .report-card-grid .rpt-table-wrap {
+            min-width: 0;
+        }
+
+        .report-donut-panel {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            min-height: 0;
+            padding: 8px;
+        }
+
+        .report-mini-title {
+            color: var(--has-navy);
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 6px;
+        }
+
+        .report-donut-compact {
+            align-items: center;
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 96px minmax(0, 1fr);
+            min-height: 0;
+        }
+
+        .report-donut-small {
+            align-items: center;
+            border-radius: 50%;
+            display: flex;
+            height: 96px;
+            justify-content: center;
+            position: relative;
+            width: 96px;
+        }
+
+        .report-donut-small::after {
+            background: var(--surface);
+            border-radius: 50%;
+            content: "";
+            height: 50px;
+            position: absolute;
+            width: 50px;
+        }
+
+        .report-donut-total {
+            color: var(--has-navy);
+            font-size: 18px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+
+        .report-donut-legend {
+            display: grid;
+            gap: 5px;
+            min-width: 0;
+        }
+
+        .report-donut-legend-row {
+            align-items: center;
+            color: var(--text-muted);
+            display: grid;
+            font-size: 10.5px;
+            gap: 5px;
+            grid-template-columns: 8px minmax(0, 1fr) auto;
+        }
+
+        .report-donut-legend-dot {
+            border-radius: 50%;
+            height: 8px;
+            width: 8px;
+        }
+
+        .report-donut-legend-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .report-completion-dashboard {
+            align-items: stretch;
+            display: grid;
+            gap: 10px;
+            grid-template-columns: 150px minmax(0, 1fr);
+            height: 100%;
+            min-height: 0;
+        }
+
+        .report-completion-dashboard.single {
+            grid-template-columns: 1fr;
+        }
+
+        .completion-summary-grid {
+            display: grid;
+            gap: 6px;
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+            height: 100%;
+            min-height: 0;
+        }
+
+        .completion-summary-card {
+            background: #fbfcfe;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 0;
+            padding: 7px 9px;
+        }
+
+        .completion-summary-card--done { background: #f3fbf6; }
+        .completion-summary-card--pending { background: #fffaf2; }
+        .completion-summary-card--rate { background: #f2fbf5; }
+
+        .completion-summary-card strong {
+            color: var(--has-navy);
+            font-size: 16px;
+            line-height: 1;
+            margin-top: 4px;
+        }
+
+        .completion-summary-card span {
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .completion-summary-card.success strong { color: var(--success); }
+
+        .completion-dept-bars {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            min-height: 0;
+            padding: 8px;
+        }
+
+        .completion-chart {
+            align-content: start;
+            display: grid;
+            gap: 8px;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .completion-bar-row {
+            align-items: center;
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 54px minmax(0, 1fr) 36px;
+            min-width: 0;
+        }
+
+        .completion-bar-label {
+            color: var(--text-main);
+            font-size: 10.5px;
+            font-weight: 700;
+            overflow: hidden;
+            text-align: right;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .completion-bar-track {
+            background: linear-gradient(to right, rgba(27, 42, 89, 0.06) 1px, transparent 1px), #eef2f7;
+            background-size: 25% 100%;
+            border-radius: 999px;
+            height: 9px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .completion-bar-fill {
+            border-radius: inherit;
+            height: 100%;
+        }
+
+        .completion-bar-value {
+            color: var(--text-main);
+            font-size: 10.5px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .completion-axis {
+            align-items: center;
+            color: var(--text-muted);
+            display: grid;
+            font-size: 10px;
+            font-weight: 600;
+            gap: 8px;
+            grid-template-columns: 54px minmax(0, 1fr) 36px;
+            margin-top: 5px;
+        }
+
+        .completion-axis-scale {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            text-align: center;
+        }
+
+        /* === Báo cáo 4 – layout mới cl4-* === */
+        .cl4-layout {
+            display: grid;
+            grid-template-columns: 128px minmax(0, 1fr);
+            gap: 8px;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .cl4-layout--single { grid-template-columns: 1fr; }
+
+        .cl4-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .cl4-card {
+            background: #fbfcfe;
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 5px 8px;
+            flex: 1;
+            min-height: 46px;
+            overflow: hidden;
+        }
+        .cl4-card span {
+            color: var(--text-muted);
+            font-size: 9.5px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cl4-card strong {
+            color: var(--has-navy);
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-top: 2px;
+        }
+        .cl4-card--done    { background: #f3fbf6; }
+        .cl4-card--pending { background: #fffaf2; }
+        .cl4-card--rate    { background: #f2fbf5; }
+
+        .cl4-dept-panel {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 7px 9px 6px;
+            overflow: hidden;
+        }
+        .cl4-dept-title {
+            color: var(--has-navy);
+            font-size: 10.5px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cl4-dept-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .cl4-dept-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 60px 34px;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+        .cl4-dept-name {
+            color: var(--text-main);
+            font-size: 10.5px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .cl4-dept-sparkline { flex-shrink: 0; }
+        .cl4-dept-rate {
+            font-size: 10.5px;
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: right;
+        }
+        .cl4-chart-panel {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: stretch;
+            padding: 4px 6px 2px 2px;
+        }
+
+        .report-generic-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            min-height: 150px;
+            min-width: 0;
+        }
+
+        .report-generic-bars {
+            display: grid;
+            gap: 9px;
+            overflow: auto;
+        }
+
+        .report-generic-bar-row {
+            display: grid;
+            gap: 5px;
+            min-width: 0;
+        }
+
+        .report-generic-bar-meta {
+            align-items: center;
+            color: var(--text-muted);
+            display: flex;
+            font-size: 11.5px;
+            font-weight: 600;
+            gap: 10px;
+            justify-content: space-between;
+            min-width: 0;
+        }
+
+        .report-generic-bar-label {
+            color: var(--text-main);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .report-generic-bar-track {
+            background: #eef2f7;
+            border-radius: 999px;
+            height: 9px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .report-generic-bar-fill {
+            border-radius: inherit;
+            height: 100%;
+            min-width: 3px;
+        }
+
+        .report-generic-svg {
+            flex: 1;
+            min-height: 160px;
+            width: 100%;
+        }
+
+        .report-generic-donut-wrap {
+            align-items: center;
+            display: grid;
+            gap: 16px;
+            grid-template-columns: minmax(130px, 170px) minmax(0, 1fr);
+            min-height: 170px;
+        }
+
+        .report-generic-donut {
+            align-items: center;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            justify-self: center;
+            max-width: 170px;
+            position: relative;
+            width: 100%;
+        }
+
+        .report-generic-donut::after {
+            background: var(--surface);
+            border-radius: 50%;
+            content: "";
+            height: 58%;
+            position: absolute;
+            width: 58%;
+        }
+
+        .report-generic-donut-total {
+            color: var(--has-navy);
+            font-size: 24px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+
+        .report-generic-legend {
+            display: grid;
+            gap: 7px;
+            min-width: 0;
+        }
+
+        .report-generic-legend-row {
+            align-items: center;
+            display: grid;
+            gap: 7px;
+            grid-template-columns: 10px minmax(0, 1fr) auto;
+            color: var(--text-muted);
+            font-size: 11.5px;
+            min-width: 0;
+        }
+
+        .report-generic-legend-dot {
+            border-radius: 50%;
+            height: 10px;
+            width: 10px;
+        }
+
+        .report-config-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .report-config-section {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: grid;
+            gap: 12px;
+            padding: 14px;
+        }
+
+        .report-config-section h4 {
+            color: var(--has-navy);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .report-config-section-title {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+
+        .report-config-filter-grid {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            padding: 14px;
+        }
+
+        .report-config-filter-grid h4 {
+            color: var(--has-navy);
+            font-size: 13px;
+            grid-column: 1 / -1;
+            margin: 0;
+        }
+
+        .report-config-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .report-config-item {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: grid;
+            gap: 10px;
+            padding: 14px;
+        }
+
+        .report-config-item-title {
+            align-items: center;
+            color: var(--has-navy);
+            display: flex;
+            font-size: 13px;
+            font-weight: 800;
+            gap: 8px;
+        }
+
+        .report-config-fields {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .report-config-fields .form-group.wide {
+            grid-column: span 2;
+        }
+
+        .report-config-subtitle {
+            color: var(--text-muted);
+            font-size: 11.5px;
+            font-weight: 700;
+            margin: 2px 0 -2px;
+        }
+
+        .report-config-checks {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 20px;
+            padding: 4px 0;
+        }
+
+        .report-config-check {
+            align-items: center;
+            color: var(--text-main);
+            cursor: pointer;
+            display: inline-flex;
+            font-size: 12px;
+            font-weight: 600;
+            gap: 6px;
+            padding: 3px 0;
+        }
+
+        .report-config-check input {
+            cursor: pointer;
+            flex-shrink: 0;
+            margin: 0;
+        }
+
+        .report-config-check span {
+            white-space: nowrap;
+        }
+
+        #reportConfigModal .modal-content {
+            max-height: 88vh;
+            overflow: hidden;
+            width: min(1040px, calc(100vw - 32px));
+        }
+
+        #reportConfigModal .modal-body {
+            overflow: auto;
+        }
+
+        #reportConfigModal .modal-footer {
+            bottom: 0;
+            position: sticky;
+            z-index: 3;
+        }
 
         @media (max-width: 1200px) {
+            .main-content.report-mode { overflow-y: auto; }
+            .container.report-mode { overflow: visible; }
+            .report-panel { min-height: auto; overflow: visible; }
+            .report-content-grid { grid-template-rows: auto; overflow: visible; }
+            .main-content.report-mode .rpt-table-wrap { overflow-x: auto; }
             .report-kpi-grid { grid-template-columns: repeat(3, 1fr); }
-            .report-content-grid { grid-template-columns: 1fr; }
-            .report-section.large { grid-column: span 1; }
             .donut-layout { grid-template-columns: 1fr; justify-items: center; }
             .report-export-panel { align-items: flex-start; flex-direction: column; }
+        }
+
+        @media (max-width: 900px) {
+            .report-filter-toolbar {
+                align-items: stretch;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+            .report-filter-left,
+            .report-filter-actions {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                width: 100%;
+            }
+            .report-filter-control-wrap {
+                flex: 1 1 220px;
+            }
+            .report-compact-control {
+                min-width: 0;
+                width: 100%;
+            }
+            .report-toolbar-btn {
+                flex: 0 1 auto;
+            }
+            .report-content-grid { grid-template-columns: 1fr; }
+            .report-section {
+                grid-column: 1 / -1 !important;
+                width: 100% !important;
+            }
+            .report-section.large { grid-column: 1; }
+            .report-card-grid,
+            .report-completion-grid { grid-template-columns: 1fr; }
+            .report-completion-dashboard { grid-template-columns: 1fr; }
+            .report-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .report-section--overdue .report-section-body { min-height: 260px; }
+        }
+
+        @media (max-width: 520px) {
+            .report-filter-toolbar { padding: 12px; }
+            .report-filter-left,
+            .report-filter-actions {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .report-date-popover {
+                width: 100%;
+            }
+            .report-toolbar-btn {
+                width: 100%;
+            }
+            .report-kpi-grid { grid-template-columns: 1fr; }
+            .report-generic-donut-wrap,
+            .report-config-filter-grid,
+            .report-config-fields {
+                grid-template-columns: 1fr;
+            }
+            .report-config-fields .form-group.wide {
+                grid-column: auto;
+            }
+            .report-section-body { padding: 14px; }
+        }
+
+        @media (min-width: 1201px) and (max-height: 720px) {
+            .main-content.report-mode { padding: 12px; }
+            .main-content.report-mode .container { gap: 10px; }
+            .main-content.report-mode .top-header { padding: 10px 18px; }
+            .main-content.report-mode .logo { height: 36px; }
+            .main-content.report-mode .title-group h1 { font-size: 18px; }
+            .main-content.report-mode .title-group p { display: none; }
+            .main-content.report-mode .report-header-actions { gap: 8px; }
+            .main-content.report-mode .header-actions button { padding: 7px 10px; }
+            .main-content.report-mode .report-section-header { padding: 8px 10px; }
+            .main-content.report-mode .report-section-body { padding: 8px 10px 10px; }
+            .main-content.report-mode .rpt-table { font-size: 10px; }
+            .main-content.report-mode .rpt-table th,
+            .main-content.report-mode .rpt-table td { padding: 4px 6px; }
+            .completion-summary-card { padding: 6px 8px; }
+            .completion-summary-card strong { font-size: 16px; }
+            .completion-dept-bars .dept-bar-row { margin-bottom: 6px; }
         }
 
         /* --- MODALS CHUNG --- */
@@ -794,7 +1949,7 @@
                 
                 <div class="title-group">
                     <h1 id="pageTitle">Cổng tra cứu pháp lý</h1>
-                    <p>Theo dõi, phân loại và chuyển xử lý các văn bản pháp luật tác động đến hoạt động giáo dục</p>
+                    <p id="pageSubtitle">Theo dõi, phân loại và chuyển xử lý các văn bản pháp luật tác động đến hoạt động giáo dục</p>
                 </div>
             </div>
             <div class="header-actions" id="headerActions">
@@ -841,61 +1996,119 @@
 
         <!-- WORK REPORTS -->
         <section id="reportPanel" class="report-panel">
-            <div class="report-kpi-grid" id="reportKpiGrid"></div>
-
-            <div class="report-content-grid">
-                <div class="report-section large">
-                    <div class="report-section-header">
-                        <span><i class="fa-solid fa-chart-simple"></i> Tiếp nhận và xác nhận theo ngày</span>
-                        <span id="reportTimelineCaption" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">--</span>
-                    </div>
-                    <div class="report-section-body">
-                        <div id="reportTimelineChart" class="timeline-chart"></div>
-                        <div class="chart-legend">
-                            <span class="legend-item"><span class="legend-dot" style="background: var(--has-teal);"></span> Tiếp nhận</span>
-                            <span class="legend-item"><span class="legend-dot" style="background: var(--success);"></span> Đã xác nhận</span>
+            <div class="report-top-row">
+                <div class="report-filter-toolbar" data-export-exclude>
+                    <div class="report-filter-left">
+                        <div class="report-filter-control-wrap">
+                            <button type="button" id="reportDateRangeControl" class="report-compact-control report-range-control" onclick="toggleReportDateDropdown()">
+                                <span id="reportDateRangeDisplay">Tất cả thời gian</span>
+                                <i class="fa-regular fa-calendar"></i>
+                            </button>
+                            <div id="reportDateDropdown" class="report-date-popover">
+                                <label>
+                                    Ngày bắt đầu
+                                    <input type="date" id="reportStartDate" onchange="applyReportFilters()">
+                                </label>
+                                <label>
+                                    Ngày kết thúc
+                                    <input type="date" id="reportEndDate" onchange="applyReportFilters()">
+                                </label>
+                                <div class="report-date-popover-actions">
+                                    <button type="button" class="report-clear-btn" onclick="clearReportDateRange()">Xóa ngày</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="report-filter-control-wrap">
+                            <button type="button" id="reportDeptSelectContainer" class="report-compact-control report-dept-control" onclick="toggleReportDeptDropdown()">
+                                <span id="reportSelectedDepts">Tất cả bộ phận</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div id="reportDeptDropdown" class="bo-phan-dropdown report-dept-dropdown" style="display: none;">
+                                <!-- Dữ liệu bộ phận sẽ được đổ vào đây -->
+                            </div>
+                        </div>
+                        <div class="report-filter-control-wrap">
+                            <button type="button" id="reportPersonSelectContainer" class="report-compact-control report-person-control" onclick="toggleReportPersonDropdown()">
+                                <span id="reportSelectedPeople">Tất cả PIC</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div id="reportPersonDropdown" class="bo-phan-dropdown report-person-dropdown" style="display: none;">
+                                <!-- Dữ liệu PIC sẽ được đổ vào đây -->
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="report-section">
-                    <div class="report-section-header">
-                        <span><i class="fa-solid fa-circle-check"></i> Tỷ lệ xác nhận</span>
-                    </div>
-                    <div class="report-section-body">
-                        <div id="reportConfirmationChart"></div>
-                    </div>
-                </div>
-
-                <div class="report-section">
-                    <div class="report-section-header">
-                        <span><i class="fa-solid fa-layer-group"></i> Phân bổ xử lý</span>
-                    </div>
-                    <div class="report-section-body">
-                        <div class="report-bars" id="reportDistribution"></div>
+                    <div class="report-filter-actions">
+                        <button type="button" class="report-toolbar-btn report-toolbar-btn--settings" onclick="toggleReportCustomizeMode()" id="btnReportSettings">
+                            <i class="fa-solid fa-sliders"></i> Tùy chỉnh
+                        </button>
+                        <button type="button" class="report-toolbar-btn report-toolbar-btn--refresh" onclick="loadReportData()">
+                            <i class="fa-solid fa-rotate-right"></i> Làm mới báo cáo
+                        </button>
+                        <button type="button" class="report-toolbar-btn report-toolbar-btn--png" onclick="exportReportData('png')" id="btnExportPng">
+                            <i class="fa-regular fa-image"></i> Xuất PNG
+                        </button>
+                        <button type="button" class="report-toolbar-btn report-toolbar-btn--pdf" onclick="exportReportData('pdf')" id="btnExportPdf">
+                            <i class="fa-regular fa-file-pdf"></i> Xuất PDF
+                        </button>
                     </div>
                 </div>
-
+                <div class="report-kpi-grid" id="reportKpiGrid"></div>
             </div>
 
-            <div class="report-export-panel" data-export-exclude>
-                <div>
-                    <div class="report-export-title">Xuất dữ liệu</div>
-                    <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Chọn một định dạng để tải báo cáo về máy.</div>
+            <div class="report-customize-bar" id="reportCustomizeBar" data-export-exclude>
+                <span class="report-customize-status"><i class="fa-solid fa-up-down-left-right"></i> Đang bật kéo thả bố cục</span>
+                <button type="button" class="report-toolbar-btn report-toolbar-btn--settings" onclick="openReportConfigModal()">
+                    <i class="fa-solid fa-list-check"></i> Mở modal Tùy chỉnh
+                </button>
+                <button type="button" class="report-toolbar-btn report-toolbar-btn--refresh" onclick="saveCurrentReportLayoutConfig()">
+                    <i class="fa-regular fa-floppy-disk"></i> Lưu bố cục
+                </button>
+                <button type="button" class="report-toolbar-btn report-toolbar-btn--pdf" onclick="resetReportDashboardConfig()">
+                    <i class="fa-solid fa-rotate-left"></i> Khôi phục mặc định
+                </button>
+                <button type="button" class="report-toolbar-btn" onclick="toggleReportCustomizeMode(false)">
+                    <i class="fa-solid fa-xmark"></i> Tắt
+                </button>
+            </div>
+
+            <div class="report-content-grid">
+                <div id="reportBlockOverdue" class="report-section report-section--overdue">
+                    <div class="report-section-header">
+                        <span class="report-section-header-title"><i class="fa-solid fa-triangle-exclamation"></i> Báo cáo 1: Công việc quá hạn</span>
+                        <span id="reportOverdueCaption" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">--</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div id="reportOverdueTasks"></div>
+                    </div>
                 </div>
-                <div class="report-export-actions">
-                    <label class="export-option">
-                        <input type="radio" name="reportExportFormat" value="png" checked>
-                        PNG
-                    </label>
-                    <label class="export-option">
-                        <input type="radio" name="reportExportFormat" value="pdf">
-                        PDF
-                    </label>
-                    <button class="btn-primary" onclick="exportReportData()" id="btnExportReport">
-                        <i class="fa-solid fa-download"></i> Xuất dữ liệu
-                    </button>
+
+                <div id="reportBlockDepartments" class="report-section">
+                    <div class="report-section-header">
+                        <span class="report-section-header-title"><i class="fa-solid fa-building-user"></i> Báo cáo 2: Bộ phận chậm trả lời</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div class="report-bars" id="reportSlowDepartments"></div>
+                    </div>
                 </div>
+
+                <div id="reportBlockPeople" class="report-section">
+                    <div class="report-section-header">
+                        <span class="report-section-header-title"><i class="fa-solid fa-user-clock"></i> Báo cáo 3: Cá nhân chậm trả lời</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div class="report-bars" id="reportSlowPeople"></div>
+                    </div>
+                </div>
+
+                <div id="reportBlockChecklist" class="report-section">
+                    <div class="report-section-header">
+                        <span class="report-section-header-title"><i class="fa-solid fa-list-check"></i> Báo cáo 4: % Tỷ lệ hoàn thành checklist</span>
+                    </div>
+                    <div class="report-section-body">
+                        <div id="reportChecklistCompletion"></div>
+                    </div>
+                </div>
+
             </div>
         </section>
 
@@ -1096,6 +2309,43 @@
             </div>
         </div>
     </div>
+<div class="modal-overlay" id="reportConfigModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Tùy chỉnh dashboard báo cáo</h2>
+            <button class="close-btn" onclick="closeModal('reportConfigModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="report-config-grid">
+                <div class="report-config-filter-grid">
+                    <h4>Bộ lọc mặc định</h4>
+                    <div class="form-group">
+                        <label for="cfgDefaultStartDate">Ngày bắt đầu</label>
+                        <input type="date" id="cfgDefaultStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="cfgDefaultEndDate">Ngày kết thúc</label>
+                        <input type="date" id="cfgDefaultEndDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="cfgDefaultDepartments">Bộ phận</label>
+                        <input type="text" id="cfgDefaultDepartments" placeholder="Pháp chế, Nhân sự">
+                    </div>
+                    <div class="form-group">
+                        <label for="cfgDefaultPeople">Cá nhân phụ trách</label>
+                        <input type="text" id="cfgDefaultPeople" placeholder="Nguyễn Văn A, Trần Thị B">
+                    </div>
+                </div>
+                <div class="report-config-list" id="reportConfigList"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="resetReportDashboardConfig()">Khôi phục mặc định</button>
+            <button class="btn-cancel" onclick="closeModal('reportConfigModal')">Hủy</button>
+            <button class="btn-primary" onclick="saveReportDashboardConfig()">Lưu tùy chỉnh</button>
+        </div>
+    </div>
+</div>
 <div id="toast-container"></div>
 
 <script>
@@ -1110,6 +2360,157 @@
     let hasShownWelcome = false;
     let currentTab = 'all';
     let latestReport = null;
+    let reportDashboardConfig = null;
+    let reportDefaultsApplied = false;
+    let reportCustomizeMode = false;
+    let activeReportResize = null;
+
+    const REPORT_CONFIG_STORAGE_KEY = 'has_report_dashboard_config_v1';
+    const REPORT_TABLE_HEADER_DEFAULTS = {
+        departments: ['STT', 'Bộ phận', 'Tổng việc', 'Quá hạn', '% Quá hạn', '% Đúng hạn'],
+        people: ['STT', 'PIC', 'Tổng việc giao', 'Việc quá hạn', 'Tỷ lệ quá hạn', 'Số ngày trễ TB']
+    };
+    const REPORT_DEFAULT_CHROME = {
+        header: {
+            height: 58,
+            showLogo: true,
+            logoSize: 38,
+            title: 'BÁO CÁO CÔNG VIỆC',
+            description: 'Theo dõi tiến độ xử lý Planner theo thời gian, bộ phận và cá nhân phụ trách',
+            showUpdatedAt: true
+        },
+        toolbar: {
+            height: 52,
+            filters: { date: true, departments: true, people: true },
+            buttons: { settings: true, refresh: true, png: true, pdf: true }
+        },
+        kpi: {
+            height: 82,
+            columns: 4,
+            showDescriptions: true,
+            showSparklines: true,
+            items: {
+                overdue: { order: 1, title: 'Công việc quá hạn' },
+                departments: { order: 2, title: 'Bộ phận chậm trả lời' },
+                people: { order: 3, title: 'Cá nhân chậm trả lời' },
+                checklist: { order: 4, title: '% Tỷ lệ hoàn thành checklist' }
+            }
+        }
+    };
+    const REPORT_BLOCK_META = {
+        overdue: {
+            blockId: 'reportBlockOverdue',
+            bodyId: 'reportOverdueTasks',
+            icon: 'fa-triangle-exclamation',
+            defaultTitle: 'Báo cáo 1: Công việc quá hạn',
+            defaultColor: '#d93025',
+            defaultChartType: 'default',
+            defaultXField: 'soHieu',
+            defaultYField: 'daysOverdue',
+            defaultOrder: 1,
+            defaultColSpan: 2,
+            defaultWidthPercent: 100,
+            defaultHeight: 200
+        },
+        departments: {
+            blockId: 'reportBlockDepartments',
+            bodyId: 'reportSlowDepartments',
+            icon: 'fa-building-user',
+            defaultTitle: 'Báo cáo 2: Bộ phận chậm trả lời',
+            defaultColor: '#f57025',
+            defaultChartType: 'default',
+            defaultXField: 'label',
+            defaultYField: 'overdue',
+            defaultOrder: 2,
+            defaultColSpan: 2,
+            defaultWidthPercent: 100,
+            defaultHeight: 200
+        },
+        people: {
+            blockId: 'reportBlockPeople',
+            bodyId: 'reportSlowPeople',
+            icon: 'fa-user-clock',
+            defaultTitle: 'Báo cáo 3: Cá nhân chậm trả lời',
+            defaultColor: '#9334e6',
+            defaultChartType: 'default',
+            defaultXField: 'label',
+            defaultYField: 'overdue',
+            defaultOrder: 3,
+            defaultColSpan: 2,
+            defaultWidthPercent: 100,
+            defaultHeight: 360
+        },
+        checklist: {
+            blockId: 'reportBlockChecklist',
+            bodyId: 'reportChecklistCompletion',
+            icon: 'fa-list-check',
+            defaultTitle: 'Báo cáo 4: % Tỷ lệ hoàn thành checklist',
+            defaultColor: '#0f9d58',
+            defaultChartType: 'default',
+            defaultXField: 'dueDate',
+            defaultYField: 'completionRate',
+            defaultOrder: 4,
+            defaultColSpan: 2,
+            defaultWidthPercent: 100,
+            defaultHeight: 360
+        }
+    };
+    const REPORT_CHART_TYPES = [
+        { value: 'default', label: 'Mặc định' },
+        { value: 'table', label: 'Bảng' },
+        { value: 'bar', label: 'Cột ngang' },
+        { value: 'line', label: 'Đường' },
+        { value: 'donut', label: 'Donut' }
+    ];
+    const REPORT_FIELD_OPTIONS = {
+        overdue: {
+            x: [
+                { value: 'soHieu', label: 'Số hiệu VB' },
+                { value: 'department', label: 'Bộ phận' },
+                { value: 'pic', label: 'PIC' },
+                { value: 'nextDue', label: 'Hạn hoàn thành' },
+                { value: 'checkpoint', label: 'Checkpoint' }
+            ],
+            y: [
+                { value: 'daysOverdue', label: 'Số ngày quá hạn' },
+                { value: 'count', label: 'Số việc' }
+            ]
+        },
+        departments: {
+            x: [{ value: 'label', label: 'Bộ phận' }],
+            y: [
+                { value: 'total', label: 'Tổng việc' },
+                { value: 'overdue', label: 'Việc quá hạn' },
+                { value: 'rate', label: '% Quá hạn' },
+                { value: 'onTimeRate', label: '% Đúng hạn' },
+                { value: 'completionRate', label: '% Hoàn thành' }
+            ]
+        },
+        people: {
+            x: [{ value: 'label', label: 'PIC' }],
+            y: [
+                { value: 'total', label: 'Tổng việc' },
+                { value: 'overdue', label: 'Việc quá hạn' },
+                { value: 'rate', label: '% Quá hạn' },
+                { value: 'avgDaysOverdue', label: 'Ngày trễ TB' },
+                { value: 'completionRate', label: '% Hoàn thành' }
+            ]
+        },
+        checklist: {
+            x: [
+                { value: 'dueDate', label: 'Hạn hoàn thành' },
+                { value: 'department', label: 'Bộ phận' },
+                { value: 'pic', label: 'PIC' }
+            ],
+            y: [
+                { value: 'completionRate', label: '% Hoàn thành' },
+                { value: 'completed', label: 'Đã hoàn thành' },
+                { value: 'active', label: 'Chưa hoàn thành' },
+                { value: 'overdue', label: 'Quá hạn' },
+                { value: 'total', label: 'Tổng việc' }
+            ]
+        }
+    };
 
     const table = document.getElementById('dataTable');
     const tableBody = document.getElementById('tableBody');
@@ -1121,6 +2522,8 @@
     const appContainer = document.querySelector('.container');
     const headerActions = document.getElementById('headerActions');
     const defaultHeaderActionsHtml = headerActions ? headerActions.innerHTML : '';
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const defaultPageSubtitle = pageSubtitle ? pageSubtitle.textContent : '';
 
     window.onload = () => {
         checkAuthStatus(); // Khôi phục trạng thái đăng nhập sau khi reload trang
@@ -1196,9 +2599,6 @@
             headerActions.innerHTML = `
                 <div class="report-header-actions">
                     <span id="reportUpdatedAt" class="report-updated-at">--</span>
-                    <button class="btn-outline-primary" onclick="loadReportData()" data-export-exclude>
-                        <i class="fa-solid fa-arrows-rotate"></i> Làm mới báo cáo
-                    </button>
                 </div>
             `;
             return;
@@ -1212,7 +2612,10 @@
         if (!mainContent || !mainContent.classList.contains('report-mode')) return;
         const header = document.querySelector('.top-header');
         const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 96;
+        const topRow = document.querySelector('.report-top-row');
+        const topRowHeight = topRow ? Math.ceil(topRow.getBoundingClientRect().height) : 128;
         mainContent.style.setProperty('--report-kpi-sticky-top', `${headerHeight + 16}px`);
+        mainContent.style.setProperty('--report-scroll-offset', `${headerHeight + topRowHeight + 32}px`);
     }
 
     window.addEventListener('resize', syncReportStickyOffset);
@@ -1241,6 +2644,751 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function clampNumber(value, min, max, fallback) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return fallback;
+        return Math.min(max, Math.max(min, num));
+    }
+
+    function splitConfigList(value) {
+        return String(value || '')
+            .split(/[,\n;]/)
+            .map(item => item.trim())
+            .filter(Boolean);
+    }
+
+    function sanitizeHexColor(value, fallback = '#1a73e8') {
+        const text = String(value || '').trim();
+        return /^#[0-9a-fA-F]{6}$/.test(text) ? text : fallback;
+    }
+
+    function hexToRgba(hex, alpha = 1) {
+        const safe = sanitizeHexColor(hex);
+        const r = parseInt(safe.slice(1, 3), 16);
+        const g = parseInt(safe.slice(3, 5), 16);
+        const b = parseInt(safe.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function clonePlain(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    function normalizeBool(value, fallback = true) {
+        return typeof value === 'boolean' ? value : fallback;
+    }
+
+    function normalizeString(value, fallback = '') {
+        const text = String(value ?? '').trim();
+        return text || fallback;
+    }
+
+    function normalizeTableHeaders(key, value) {
+        const defaults = REPORT_TABLE_HEADER_DEFAULTS[key] || [];
+        const source = Array.isArray(value) ? value : defaults;
+        return defaults.map((defaultLabel, index) => normalizeString(source[index], defaultLabel));
+    }
+
+    function normalizeChromeConfig(rawChrome = {}) {
+        const defaults = REPORT_DEFAULT_CHROME;
+        const rawHeader = rawChrome.header || {};
+        const rawToolbar = rawChrome.toolbar || {};
+        const rawKpi = rawChrome.kpi || {};
+        const rawKpiItems = rawKpi.items || {};
+        const kpiItems = {};
+
+        Object.keys(REPORT_BLOCK_META).forEach(key => {
+            const defaultItem = defaults.kpi.items[key];
+            const rawItem = rawKpiItems[key] || {};
+            kpiItems[key] = {
+                order: clampNumber(rawItem.order, 1, 99, defaultItem.order),
+                title: normalizeString(rawItem.title, defaultItem.title)
+            };
+        });
+
+        return {
+            header: {
+                height: clampNumber(rawHeader.height, 42, 140, defaults.header.height),
+                showLogo: normalizeBool(rawHeader.showLogo, defaults.header.showLogo),
+                logoSize: clampNumber(rawHeader.logoSize, 24, 88, defaults.header.logoSize),
+                title: normalizeString(rawHeader.title, defaults.header.title),
+                description: String(rawHeader.description ?? defaults.header.description),
+                showUpdatedAt: normalizeBool(rawHeader.showUpdatedAt, defaults.header.showUpdatedAt)
+            },
+            toolbar: {
+                height: clampNumber(rawToolbar.height, 42, 140, defaults.toolbar.height),
+                filters: {
+                    date: normalizeBool(rawToolbar.filters?.date, defaults.toolbar.filters.date),
+                    departments: normalizeBool(rawToolbar.filters?.departments, defaults.toolbar.filters.departments),
+                    people: normalizeBool(rawToolbar.filters?.people, defaults.toolbar.filters.people)
+                },
+                buttons: {
+                    settings: normalizeBool(rawToolbar.buttons?.settings, defaults.toolbar.buttons.settings),
+                    refresh: normalizeBool(rawToolbar.buttons?.refresh, defaults.toolbar.buttons.refresh),
+                    png: normalizeBool(rawToolbar.buttons?.png, defaults.toolbar.buttons.png),
+                    pdf: normalizeBool(rawToolbar.buttons?.pdf, defaults.toolbar.buttons.pdf)
+                }
+            },
+            kpi: {
+                height: clampNumber(rawKpi.height, 58, 180, defaults.kpi.height),
+                columns: clampNumber(rawKpi.columns, 1, 4, defaults.kpi.columns),
+                showDescriptions: normalizeBool(rawKpi.showDescriptions, defaults.kpi.showDescriptions),
+                showSparklines: normalizeBool(rawKpi.showSparklines, defaults.kpi.showSparklines),
+                items: kpiItems
+            }
+        };
+    }
+
+    function getDefaultReportDashboardConfig() {
+        const reports = {};
+        Object.entries(REPORT_BLOCK_META).forEach(([key, meta]) => {
+            reports[key] = {
+                order: meta.defaultOrder,
+                colSpan: meta.defaultColSpan,
+                widthPercent: meta.defaultWidthPercent,
+                height: meta.defaultHeight,
+                chartType: meta.defaultChartType,
+                color: meta.defaultColor,
+                title: meta.defaultTitle,
+                xField: meta.defaultXField,
+                yField: meta.defaultYField,
+                tableHeaders: normalizeTableHeaders(key)
+            };
+        });
+
+        return {
+            chrome: clonePlain(REPORT_DEFAULT_CHROME),
+            defaultFilters: {
+                startDate: '',
+                endDate: '',
+                departments: [],
+                people: []
+            },
+            reports
+        };
+    }
+
+    function normalizeReportSettings(key, rawSettings = {}) {
+        const meta = REPORT_BLOCK_META[key];
+        const fieldOptions = REPORT_FIELD_OPTIONS[key] || { x: [], y: [] };
+        const chartValues = REPORT_CHART_TYPES.map(item => item.value);
+        const xValues = fieldOptions.x.map(item => item.value);
+        const yValues = fieldOptions.y.map(item => item.value);
+
+        return {
+            order: clampNumber(rawSettings.order, 1, 99, meta.defaultOrder),
+            colSpan: clampNumber(rawSettings.colSpan, 1, 4, meta.defaultColSpan),
+            widthPercent: clampNumber(rawSettings.widthPercent, 25, 100, meta.defaultWidthPercent),
+            height: clampNumber(rawSettings.height, 160, 720, meta.defaultHeight),
+            chartType: key === 'people' ? 'default' : (chartValues.includes(rawSettings.chartType) ? rawSettings.chartType : meta.defaultChartType),
+            color: sanitizeHexColor(rawSettings.color, meta.defaultColor),
+            title: String(rawSettings.title || meta.defaultTitle).trim() || meta.defaultTitle,
+            xField: xValues.includes(rawSettings.xField) ? rawSettings.xField : meta.defaultXField,
+            yField: yValues.includes(rawSettings.yField) ? rawSettings.yField : meta.defaultYField,
+            tableHeaders: normalizeTableHeaders(key, rawSettings.tableHeaders)
+        };
+    }
+
+    function normalizeReportDashboardConfig(rawConfig = {}) {
+        const defaults = getDefaultReportDashboardConfig();
+        const rawFilters = rawConfig.defaultFilters || {};
+        const reports = {};
+
+        Object.keys(REPORT_BLOCK_META).forEach(key => {
+            reports[key] = normalizeReportSettings(key, rawConfig.reports?.[key] || defaults.reports[key]);
+        });
+
+        return {
+            chrome: normalizeChromeConfig(rawConfig.chrome || {}),
+            defaultFilters: {
+                startDate: String(rawFilters.startDate || ''),
+                endDate: String(rawFilters.endDate || ''),
+                departments: Array.isArray(rawFilters.departments) ? rawFilters.departments.map(String).filter(Boolean) : [],
+                people: Array.isArray(rawFilters.people) ? rawFilters.people.map(String).filter(Boolean) : []
+            },
+            reports
+        };
+    }
+
+    function getReportDashboardConfig() {
+        if (reportDashboardConfig) return reportDashboardConfig;
+
+        try {
+            const raw = localStorage.getItem(REPORT_CONFIG_STORAGE_KEY);
+            reportDashboardConfig = raw ? normalizeReportDashboardConfig(JSON.parse(raw)) : getDefaultReportDashboardConfig();
+        } catch (error) {
+            console.warn('Không đọc được cấu hình dashboard báo cáo:', error);
+            reportDashboardConfig = getDefaultReportDashboardConfig();
+        }
+
+        return reportDashboardConfig;
+    }
+
+    function setReportDashboardConfig(config) {
+        reportDashboardConfig = normalizeReportDashboardConfig(config);
+        localStorage.setItem(REPORT_CONFIG_STORAGE_KEY, JSON.stringify(reportDashboardConfig));
+        return reportDashboardConfig;
+    }
+
+    function getReportConfig(key) {
+        const config = getReportDashboardConfig();
+        return config.reports[key] || normalizeReportSettings(key);
+    }
+
+    function getOrderedReportEntries() {
+        const config = getReportDashboardConfig();
+        return Object.keys(REPORT_BLOCK_META)
+            .map(key => ({ key, meta: REPORT_BLOCK_META[key], config: config.reports[key] || getReportConfig(key) }))
+            .sort((a, b) => a.config.order - b.config.order || REPORT_BLOCK_META[a.key].defaultOrder - REPORT_BLOCK_META[b.key].defaultOrder);
+    }
+
+    function buildSelectOptions(options, selectedValue) {
+        return options.map(option => (
+            `<option value="${escapeHtml(option.value)}" ${option.value === selectedValue ? 'selected' : ''}>${escapeHtml(option.label)}</option>`
+        )).join('');
+    }
+
+    function renderConfigCheckbox(id, label, checked) {
+        return `
+            <label class="report-config-check" for="${escapeHtml(id)}">
+                <input type="checkbox" id="${escapeHtml(id)}" ${checked ? 'checked' : ''}>
+                <span>${escapeHtml(label)}</span>
+            </label>
+        `;
+    }
+
+    function renderTableHeaderInputs(key, headers) {
+        const defaults = REPORT_TABLE_HEADER_DEFAULTS[key] || [];
+        if (!defaults.length) return '';
+
+        return `
+            <div class="report-config-subtitle">Header bảng</div>
+            ${headers.map((label, index) => `
+                <div class="form-group">
+                    <label>${escapeHtml(defaults[index])}</label>
+                    <input type="text" id="cfg_${key}_header_${index}" value="${escapeHtml(label)}">
+                </div>
+            `).join('')}
+        `;
+    }
+
+    function renderChartConfigFields(key, item) {
+        const fields = REPORT_FIELD_OPTIONS[key];
+        if (!fields) return '';
+
+        return `
+            <div class="report-config-subtitle">Biểu đồ</div>
+            <div class="form-group">
+                <label>Kiểu biểu đồ</label>
+                <select id="cfg_${key}_chartType">${buildSelectOptions(REPORT_CHART_TYPES, item.chartType)}</select>
+            </div>
+            <div class="form-group">
+                <label>Màu chủ đạo</label>
+                <input type="color" id="cfg_${key}_color" value="${escapeHtml(item.color)}">
+            </div>
+            <div class="form-group wide">
+                <label>Trục X</label>
+                <select id="cfg_${key}_xField">${buildSelectOptions(fields.x, item.xField)}</select>
+            </div>
+            <div class="form-group wide">
+                <label>Trục Y</label>
+                <select id="cfg_${key}_yField">${buildSelectOptions(fields.y, item.yField)}</select>
+            </div>
+        `;
+    }
+
+    function renderReportConfigForm() {
+        const config = getReportDashboardConfig();
+        const chrome = config.chrome;
+        const filters = config.defaultFilters;
+        const startInput = document.getElementById('cfgDefaultStartDate');
+        const endInput = document.getElementById('cfgDefaultEndDate');
+        const deptInput = document.getElementById('cfgDefaultDepartments');
+        const peopleInput = document.getElementById('cfgDefaultPeople');
+        const list = document.getElementById('reportConfigList');
+
+        if (startInput) startInput.value = filters.startDate || '';
+        if (endInput) endInput.value = filters.endDate || '';
+        if (deptInput) deptInput.value = (filters.departments || []).join(', ');
+        if (peopleInput) peopleInput.value = (filters.people || []).join(', ');
+        if (!list) return;
+
+        const headerSection = `
+            <div class="report-config-section">
+                <div class="report-config-section-title"><h4>Thanh tiêu đề đầu trang</h4></div>
+                <div class="report-config-fields">
+                    <div class="form-group">
+                        <label>Chiều cao (px)</label>
+                        <input type="number" id="cfg_header_height" min="42" max="140" value="${chrome.header.height}">
+                    </div>
+                    <div class="form-group">
+                        <label>Cỡ logo (px)</label>
+                        <input type="number" id="cfg_header_logoSize" min="24" max="88" value="${chrome.header.logoSize}">
+                    </div>
+                    <div class="form-group wide">
+                        <label>Tiêu đề</label>
+                        <input type="text" id="cfg_header_title" value="${escapeHtml(chrome.header.title)}">
+                    </div>
+                    <div class="form-group wide">
+                        <label>Mô tả</label>
+                        <input type="text" id="cfg_header_description" value="${escapeHtml(chrome.header.description)}">
+                    </div>
+                    <div class="report-config-checks">
+                        ${renderConfigCheckbox('cfg_header_showLogo', 'Hiển thị logo', chrome.header.showLogo)}
+                        ${renderConfigCheckbox('cfg_header_showUpdatedAt', 'Hiển thị thời gian cập nhật', chrome.header.showUpdatedAt)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const toolbarSection = `
+            <div class="report-config-section">
+                <div class="report-config-section-title"><h4>Thanh công cụ</h4></div>
+                <div class="report-config-fields">
+                    <div class="form-group">
+                        <label>Chiều cao (px)</label>
+                        <input type="number" id="cfg_toolbar_height" min="42" max="140" value="${chrome.toolbar.height}">
+                    </div>
+                    <div class="report-config-subtitle">Bộ lọc</div>
+                    <div class="report-config-checks">
+                        ${renderConfigCheckbox('cfg_toolbar_filter_date', 'Thời gian', chrome.toolbar.filters.date)}
+                        ${renderConfigCheckbox('cfg_toolbar_filter_departments', 'Bộ phận', chrome.toolbar.filters.departments)}
+                        ${renderConfigCheckbox('cfg_toolbar_filter_people', 'PIC', chrome.toolbar.filters.people)}
+                    </div>
+                    <div class="report-config-subtitle">Nút thao tác</div>
+                    <div class="report-config-checks">
+                        ${renderConfigCheckbox('cfg_toolbar_btn_settings', 'Tùy chỉnh', chrome.toolbar.buttons.settings)}
+                        ${renderConfigCheckbox('cfg_toolbar_btn_refresh', 'Làm mới báo cáo', chrome.toolbar.buttons.refresh)}
+                        ${renderConfigCheckbox('cfg_toolbar_btn_png', 'Xuất PNG', chrome.toolbar.buttons.png)}
+                        ${renderConfigCheckbox('cfg_toolbar_btn_pdf', 'Xuất PDF', chrome.toolbar.buttons.pdf)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const kpiSection = `
+            <div class="report-config-section">
+                <div class="report-config-section-title"><h4>Thanh số liệu KPI</h4></div>
+                <div class="report-config-fields">
+                    <div class="form-group">
+                        <label>Chiều cao (px)</label>
+                        <input type="number" id="cfg_kpi_height" min="58" max="180" value="${chrome.kpi.height}">
+                    </div>
+                    <div class="form-group">
+                        <label>Số cột</label>
+                        <input type="number" id="cfg_kpi_columns" min="1" max="4" value="${chrome.kpi.columns}">
+                    </div>
+                    <div class="report-config-checks">
+                        ${renderConfigCheckbox('cfg_kpi_showDescriptions', 'Hiển thị mô tả', chrome.kpi.showDescriptions)}
+                        ${renderConfigCheckbox('cfg_kpi_showSparklines', 'Hiển thị sparkline', chrome.kpi.showSparklines)}
+                    </div>
+                    <div class="report-config-subtitle">Thứ tự và tiêu đề KPI</div>
+                    ${Object.keys(REPORT_BLOCK_META).map(key => `
+                        <div class="form-group">
+                            <label>Thứ tự ${escapeHtml(REPORT_DEFAULT_CHROME.kpi.items[key].title)}</label>
+                            <input type="number" id="cfg_kpi_${key}_order" min="1" max="99" value="${chrome.kpi.items[key].order}">
+                        </div>
+                        <div class="form-group wide">
+                            <label>Tiêu đề KPI</label>
+                            <input type="text" id="cfg_kpi_${key}_title" value="${escapeHtml(chrome.kpi.items[key].title)}">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        const reportSections = getOrderedReportEntries().map(({ key, meta, config: item }) => {
+            const chartFields = key === 'people' ? '' : renderChartConfigFields(key, item);
+            const tableHeaders = ['departments', 'people'].includes(key) ? renderTableHeaderInputs(key, item.tableHeaders) : '';
+            return `
+                <div class="report-config-item" data-report-config-key="${escapeHtml(key)}">
+                    <div class="report-config-item-title">
+                        <i class="fa-solid ${meta.icon}"></i>
+                        <span>${escapeHtml(meta.defaultTitle)}</span>
+                    </div>
+                    <div class="report-config-fields">
+                        <div class="form-group">
+                            <label>Thứ tự</label>
+                            <input type="number" id="cfg_${key}_order" min="1" max="99" value="${item.order}">
+                        </div>
+                        <div class="form-group">
+                            <label>Số cột</label>
+                            <input type="number" id="cfg_${key}_colSpan" min="1" max="4" value="${item.colSpan}">
+                        </div>
+                        <div class="form-group">
+                            <label>Rộng (%)</label>
+                            <input type="number" id="cfg_${key}_widthPercent" min="25" max="100" step="5" value="${item.widthPercent}">
+                        </div>
+                        <div class="form-group">
+                            <label>Cao (px)</label>
+                            <input type="number" id="cfg_${key}_height" min="160" max="720" step="10" value="${item.height}">
+                        </div>
+                        <div class="form-group wide">
+                            <label>Tiêu đề</label>
+                            <input type="text" id="cfg_${key}_title" value="${escapeHtml(item.title)}">
+                        </div>
+                        ${tableHeaders}
+                        ${chartFields}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        list.innerHTML = headerSection + toolbarSection + kpiSection + reportSections;
+    }
+
+    function openReportConfigModal() {
+        if (localStorage.getItem('isAdminAccess') !== 'true') {
+            showToast('Chưa có quyền admin', 'Vui lòng đăng nhập quản trị viên để tùy chỉnh báo cáo.', 'error');
+            return;
+        }
+
+        renderReportConfigForm();
+        const modal = document.getElementById('reportConfigModal');
+        if (modal) modal.classList.add('show');
+    }
+
+    function collectReportDashboardConfigFromForm() {
+        const reports = {};
+        const isChecked = id => Boolean(document.getElementById(id)?.checked);
+        const inputValue = id => document.getElementById(id)?.value;
+
+        Object.keys(REPORT_BLOCK_META).forEach(key => {
+            reports[key] = {
+                order: document.getElementById(`cfg_${key}_order`)?.value,
+                colSpan: document.getElementById(`cfg_${key}_colSpan`)?.value,
+                widthPercent: document.getElementById(`cfg_${key}_widthPercent`)?.value,
+                height: document.getElementById(`cfg_${key}_height`)?.value,
+                title: document.getElementById(`cfg_${key}_title`)?.value,
+                chartType: document.getElementById(`cfg_${key}_chartType`)?.value,
+                color: document.getElementById(`cfg_${key}_color`)?.value,
+                xField: document.getElementById(`cfg_${key}_xField`)?.value,
+                yField: document.getElementById(`cfg_${key}_yField`)?.value,
+                tableHeaders: (REPORT_TABLE_HEADER_DEFAULTS[key] || []).map((_, index) => document.getElementById(`cfg_${key}_header_${index}`)?.value)
+            };
+        });
+
+        return normalizeReportDashboardConfig({
+            chrome: {
+                header: {
+                    height: inputValue('cfg_header_height'),
+                    showLogo: isChecked('cfg_header_showLogo'),
+                    logoSize: inputValue('cfg_header_logoSize'),
+                    title: inputValue('cfg_header_title'),
+                    description: inputValue('cfg_header_description'),
+                    showUpdatedAt: isChecked('cfg_header_showUpdatedAt')
+                },
+                toolbar: {
+                    height: inputValue('cfg_toolbar_height'),
+                    filters: {
+                        date: isChecked('cfg_toolbar_filter_date'),
+                        departments: isChecked('cfg_toolbar_filter_departments'),
+                        people: isChecked('cfg_toolbar_filter_people')
+                    },
+                    buttons: {
+                        settings: isChecked('cfg_toolbar_btn_settings'),
+                        refresh: isChecked('cfg_toolbar_btn_refresh'),
+                        png: isChecked('cfg_toolbar_btn_png'),
+                        pdf: isChecked('cfg_toolbar_btn_pdf')
+                    }
+                },
+                kpi: {
+                    height: inputValue('cfg_kpi_height'),
+                    columns: inputValue('cfg_kpi_columns'),
+                    showDescriptions: isChecked('cfg_kpi_showDescriptions'),
+                    showSparklines: isChecked('cfg_kpi_showSparklines'),
+                    items: Object.fromEntries(Object.keys(REPORT_BLOCK_META).map(key => [
+                        key,
+                        {
+                            order: inputValue(`cfg_kpi_${key}_order`),
+                            title: inputValue(`cfg_kpi_${key}_title`)
+                        }
+                    ]))
+                }
+            },
+            defaultFilters: {
+                startDate: document.getElementById('cfgDefaultStartDate')?.value || '',
+                endDate: document.getElementById('cfgDefaultEndDate')?.value || '',
+                departments: splitConfigList(document.getElementById('cfgDefaultDepartments')?.value),
+                people: splitConfigList(document.getElementById('cfgDefaultPeople')?.value)
+            },
+            reports
+        });
+    }
+
+    function saveReportDashboardConfig() {
+        const collectedConfig = collectReportDashboardConfigFromForm();
+        const defaultStart = parseReportInputDate(collectedConfig.defaultFilters.startDate);
+        const defaultEnd = parseReportInputDate(collectedConfig.defaultFilters.endDate);
+        if (defaultStart && defaultEnd && defaultStart > defaultEnd) {
+            showToast('Ngày không hợp lệ', 'Bộ lọc mặc định có ngày bắt đầu sau ngày kết thúc.', 'error');
+            return null;
+        }
+
+        const nextConfig = setReportDashboardConfig(collectedConfig);
+        closeModal('reportConfigModal');
+        applyReportDefaultFilters(true);
+        applyReportChromeConfig();
+        buildReportDeptDropdown(reportRecords);
+        buildReportPersonDropdown(reportRecords);
+        if (reportRecords && reportRecords.length) renderWorkReport(buildWorkReport(reportRecords));
+        else applyReportLayout();
+        showToast('Đã lưu tùy chỉnh', 'Cấu hình dashboard báo cáo đã được cập nhật.', 'success');
+        return nextConfig;
+    }
+
+    function resetReportDashboardConfig() {
+        localStorage.removeItem(REPORT_CONFIG_STORAGE_KEY);
+        reportDashboardConfig = getDefaultReportDashboardConfig();
+        reportDefaultsApplied = false;
+        renderReportConfigForm();
+        applyReportDefaultFilters(true);
+        applyReportChromeConfig();
+        buildReportDeptDropdown(reportRecords);
+        buildReportPersonDropdown(reportRecords);
+        if (reportRecords && reportRecords.length) renderWorkReport(buildWorkReport(reportRecords));
+        else applyReportLayout();
+        showToast('Đã khôi phục mặc định', 'Dashboard báo cáo đã dùng lại cấu hình mặc định.', 'success');
+    }
+
+    function applyReportDefaultFilters(force = false) {
+        if (!force && reportDefaultsApplied) return;
+        const filters = getReportDashboardConfig().defaultFilters || {};
+        const startInput = document.getElementById('reportStartDate');
+        const endInput = document.getElementById('reportEndDate');
+        if (startInput) startInput.value = filters.startDate || '';
+        if (endInput) endInput.value = filters.endDate || '';
+        reportSelectedDepts = Array.isArray(filters.departments) ? [...filters.departments] : [];
+        reportSelectedPeople = Array.isArray(filters.people) ? [...filters.people] : [];
+        reportDefaultsApplied = true;
+        updateReportFilterDisplays();
+    }
+
+    function applyReportLayout() {
+        getOrderedReportEntries().forEach(({ key, meta, config }) => {
+            const block = document.getElementById(meta.blockId);
+            if (!block) return;
+            const safeColor = sanitizeHexColor(config.color, meta.defaultColor);
+            const title = block.querySelector('.report-section-header-title');
+            const body = block.querySelector('.report-section-body');
+
+            block.style.order = String(config.order);
+            block.style.gridColumn = `span ${config.colSpan}`;
+            block.style.setProperty('--report-block-height', `${config.height}px`);
+            block.style.setProperty('--report-block-width', `${config.widthPercent}%`);
+            block.style.justifySelf = config.widthPercent < 100 ? 'start' : 'stretch';
+            block.style.borderColor = hexToRgba(safeColor, 0.24);
+
+            if (title) {
+                title.style.color = safeColor;
+                title.innerHTML = `<i class="fa-solid ${meta.icon}" style="color:${safeColor};"></i> ${escapeHtml(config.title)}`;
+            }
+            if (body) {
+                body.style.overflow = key === 'checklist' && config.chartType === 'default' ? 'hidden' : 'auto';
+            }
+        });
+        setupReportResizeHandles();
+    }
+
+    function getOrderedKpiEntries() {
+        const config = getReportDashboardConfig();
+        const kpi = config.chrome.kpi;
+        return Object.keys(REPORT_BLOCK_META)
+            .map(key => ({
+                key,
+                meta: REPORT_BLOCK_META[key],
+                config: getReportConfig(key),
+                kpiConfig: kpi.items[key] || REPORT_DEFAULT_CHROME.kpi.items[key]
+            }))
+            .sort((a, b) => a.kpiConfig.order - b.kpiConfig.order || REPORT_BLOCK_META[a.key].defaultOrder - REPORT_BLOCK_META[b.key].defaultOrder);
+    }
+
+    function setReportElementVisible(element, visible, displayValue = '') {
+        if (!element) return;
+        element.style.display = visible ? displayValue : 'none';
+    }
+
+    function applyReportChromeConfig() {
+        const config = getReportDashboardConfig();
+        const chrome = config.chrome;
+        const isReportTab = currentTab === 'reports';
+        const header = document.querySelector('.top-header');
+        const logo = document.querySelector('.top-header .logo');
+        const pageTitleEl = document.getElementById('pageTitle');
+        const updatedAt = document.getElementById('reportUpdatedAt');
+        const toolbar = document.querySelector('.report-filter-toolbar');
+        const kpiGrid = document.getElementById('reportKpiGrid');
+
+        if (header) {
+            header.style.minHeight = isReportTab ? `${chrome.header.height}px` : '';
+        }
+        if (logo) {
+            logo.style.display = isReportTab && !chrome.header.showLogo ? 'none' : '';
+            logo.style.height = isReportTab ? `${chrome.header.logoSize}px` : '';
+        }
+        if (pageTitleEl && isReportTab) {
+            pageTitleEl.innerText = chrome.header.title;
+        }
+        if (pageSubtitle) {
+            pageSubtitle.textContent = isReportTab ? chrome.header.description : defaultPageSubtitle;
+        }
+        if (updatedAt) {
+            updatedAt.style.display = chrome.header.showUpdatedAt ? '' : 'none';
+        }
+
+        if (toolbar) {
+            toolbar.style.minHeight = `${chrome.toolbar.height}px`;
+        }
+        setReportElementVisible(document.getElementById('reportDateRangeControl')?.closest('.report-filter-control-wrap'), chrome.toolbar.filters.date);
+        setReportElementVisible(document.getElementById('reportDeptSelectContainer')?.closest('.report-filter-control-wrap'), chrome.toolbar.filters.departments);
+        setReportElementVisible(document.getElementById('reportPersonSelectContainer')?.closest('.report-filter-control-wrap'), chrome.toolbar.filters.people);
+        setReportElementVisible(document.getElementById('btnReportSettings'), chrome.toolbar.buttons.settings, 'inline-flex');
+        setReportElementVisible(document.querySelector('.report-toolbar-btn--refresh'), chrome.toolbar.buttons.refresh, 'inline-flex');
+        setReportElementVisible(document.getElementById('btnExportPng'), chrome.toolbar.buttons.png, 'inline-flex');
+        setReportElementVisible(document.getElementById('btnExportPdf'), chrome.toolbar.buttons.pdf, 'inline-flex');
+
+        if (kpiGrid) {
+            kpiGrid.style.gridTemplateColumns = `repeat(${chrome.kpi.columns}, minmax(140px, 1fr))`;
+            kpiGrid.style.setProperty('--report-kpi-height', `${chrome.kpi.height}px`);
+        }
+
+        setupReportResizeHandles();
+        syncReportStickyOffset();
+    }
+
+    function addReportResizeHandle(element, kind, key, mode = 'both') {
+        if (!element) return;
+        element.classList.add('report-resizable-target');
+        element.dataset.reportResizeKind = kind;
+        element.dataset.reportResizeKey = key;
+        element.dataset.reportResizeMode = mode;
+        let handle = Array.from(element.children).find(child => child.classList?.contains('report-resize-handle'));
+        if (!handle) {
+            handle = document.createElement('span');
+            handle.className = 'report-resize-handle';
+            handle.setAttribute('aria-hidden', 'true');
+            element.appendChild(handle);
+            handle.addEventListener('mousedown', event => startReportResize(event, element));
+        }
+    }
+
+    function setupReportResizeHandles() {
+        addReportResizeHandle(document.querySelector('.top-header'), 'chrome', 'header', 'height');
+        addReportResizeHandle(document.querySelector('.report-filter-toolbar'), 'chrome', 'toolbar', 'height');
+        addReportResizeHandle(document.getElementById('reportKpiGrid'), 'chrome', 'kpi', 'both');
+        Object.entries(REPORT_BLOCK_META).forEach(([key, meta]) => {
+            addReportResizeHandle(document.getElementById(meta.blockId), 'report', key, 'both');
+        });
+    }
+
+    function isReportAdmin() {
+        return localStorage.getItem('isAdminAccess') === 'true';
+    }
+
+    function toggleReportCustomizeMode(force) {
+        if (force === false) {
+            reportCustomizeMode = false;
+            if (reportPanel) reportPanel.classList.remove('report-customize-mode');
+            if (mainContent) mainContent.classList.remove('report-customize-mode');
+            const button = document.getElementById('btnReportSettings');
+            if (button) {
+                button.classList.remove('active');
+                button.innerHTML = '<i class="fa-solid fa-sliders"></i> Tùy chỉnh';
+            }
+            return;
+        }
+        if (!isReportAdmin()) {
+            showToast('Chưa có quyền admin', 'Vui lòng đăng nhập quản trị viên để chỉnh dashboard.', 'error');
+            return;
+        }
+        if (currentTab !== 'reports') {
+            showToast('Chưa ở trang báo cáo', 'Hãy mở tab Báo cáo công việc trước khi chỉnh bố cục.', 'error');
+            return;
+        }
+
+        reportCustomizeMode = typeof force === 'boolean' ? force : !reportCustomizeMode;
+        if (reportPanel) reportPanel.classList.toggle('report-customize-mode', reportCustomizeMode);
+        if (mainContent) mainContent.classList.toggle('report-customize-mode', reportCustomizeMode);
+        const button = document.getElementById('btnReportSettings');
+        if (button) {
+            button.classList.toggle('active', reportCustomizeMode);
+            button.innerHTML = reportCustomizeMode
+                ? '<i class="fa-solid fa-sliders"></i> Đang tùy chỉnh'
+                : '<i class="fa-solid fa-sliders"></i> Tùy chỉnh';
+        }
+        setupReportResizeHandles();
+    }
+
+    function saveCurrentReportLayoutConfig() {
+        setReportDashboardConfig(getReportDashboardConfig());
+        showToast('Đã lưu bố cục', 'Kích thước và cấu hình dashboard đã được lưu.', 'success');
+    }
+
+    function startReportResize(event, element) {
+        if (!reportCustomizeMode || !isReportAdmin()) return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        const config = getReportDashboardConfig();
+        activeReportResize = {
+            element,
+            kind: element.dataset.reportResizeKind,
+            key: element.dataset.reportResizeKey,
+            mode: element.dataset.reportResizeMode,
+            startX: event.clientX,
+            startY: event.clientY,
+            startWidth: element.getBoundingClientRect().width,
+            startHeight: element.getBoundingClientRect().height,
+            startConfig: clonePlain(config),
+            gridWidth: document.querySelector('.report-content-grid')?.getBoundingClientRect().width || 1
+        };
+
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', handleReportResizeMove);
+        document.addEventListener('mouseup', finishReportResize);
+    }
+
+    function handleReportResizeMove(event) {
+        if (!activeReportResize) return;
+        const dx = event.clientX - activeReportResize.startX;
+        const dy = event.clientY - activeReportResize.startY;
+        const config = getReportDashboardConfig();
+
+        if (activeReportResize.kind === 'report') {
+            const item = config.reports[activeReportResize.key];
+            const newHeight = clampNumber(activeReportResize.startHeight + dy, 160, 720, item.height);
+            const newWidth = clampNumber(activeReportResize.startWidth + dx, 180, activeReportResize.gridWidth, activeReportResize.startWidth);
+            const baseColumnWidth = Math.max(1, activeReportResize.gridWidth / 4);
+            const colSpan = clampNumber(Math.round(newWidth / baseColumnWidth), 1, 4, item.colSpan);
+            const spanWidth = Math.max(baseColumnWidth, baseColumnWidth * colSpan);
+            item.height = Math.round(newHeight);
+            item.colSpan = colSpan;
+            item.widthPercent = clampNumber(Math.round((newWidth / spanWidth) * 100), 25, 100, item.widthPercent);
+            applyReportLayout();
+            return;
+        }
+
+        if (activeReportResize.key === 'header') {
+            config.chrome.header.height = Math.round(clampNumber(activeReportResize.startConfig.chrome.header.height + dy, 42, 140, config.chrome.header.height));
+        } else if (activeReportResize.key === 'toolbar') {
+            config.chrome.toolbar.height = Math.round(clampNumber(activeReportResize.startConfig.chrome.toolbar.height + dy, 42, 140, config.chrome.toolbar.height));
+        } else if (activeReportResize.key === 'kpi') {
+            config.chrome.kpi.height = Math.round(clampNumber(activeReportResize.startConfig.chrome.kpi.height + dy, 58, 180, config.chrome.kpi.height));
+            config.chrome.kpi.columns = clampNumber(activeReportResize.startConfig.chrome.kpi.columns + Math.round(dx / 150), 1, 4, config.chrome.kpi.columns);
+            renderReportKpis(latestReport || buildWorkReport(reportRecords || []));
+        }
+        applyReportChromeConfig();
+    }
+
+    function finishReportResize() {
+        if (!activeReportResize) return;
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', handleReportResizeMove);
+        document.removeEventListener('mouseup', finishReportResize);
+        setReportDashboardConfig(getReportDashboardConfig());
+        activeReportResize = null;
     }
 
     function normalizeReportText(value) {
@@ -1374,190 +3522,1164 @@
             .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'vi'));
     }
 
-    function buildWorkReport(records) {
-        const classifiedRows = records.map(row => {
-            const status = classifyWorkStatus(row);
-            const dateInfo = getReportDateInfo(row);
-            const receivedDateInfo = getReceivedDateInfo(row);
-            return { ...row, _reportStatus: status, _reportDateInfo: dateInfo, _receivedDateInfo: receivedDateInfo };
-        });
+    function normalizeVietnamDateOnly(value) {
+        const parsed = parseReportDate(value);
+        if (!parsed) return { value: null, label: '' };
 
-        const pendingCount = classifiedRows.filter(row => row._reportStatus.key === 'pending').length;
-        const transferredCount = classifiedRows.filter(row => row._reportStatus.key === 'transferred').length;
-        const irrelevantCount = classifiedRows.filter(row => row._reportStatus.key === 'irrelevant').length;
-        const expiredCount = classifiedRows.filter(row => row._reportStatus.key === 'expired').length;
-        const confirmedCount = transferredCount + irrelevantCount;
-        const needClassificationCount = classifiedRows.filter(row => {
-            const statusKey = row._reportStatus.key;
-            if (statusKey === 'expired' || statusKey === 'irrelevant') return false;
-            return !row['Lĩnh vực'] || !row['Mức độ tác động'] || !row['Bộ phận chủ trì'];
-        }).length;
-
-        const recentRows = [...classifiedRows].sort((a, b) => {
-            const dateA = a._reportDateInfo.value ? a._reportDateInfo.value.getTime() : 0;
-            const dateB = b._reportDateInfo.value ? b._reportDateInfo.value.getTime() : 0;
-            return dateB - dateA;
-        });
-
-        const timelineMap = new Map();
-        classifiedRows.forEach(row => {
-            const receivedDate = row._receivedDateInfo.value;
-            if (receivedDate) {
-                const key = formatReportDay(receivedDate);
-                const bucket = timelineMap.get(key) || { label: key, received: 0, confirmed: 0, sortTime: receivedDate.getTime() };
-                bucket.received += 1;
-                bucket.sortTime = Math.min(bucket.sortTime, receivedDate.getTime());
-                timelineMap.set(key, bucket);
-            }
-
-            if (row._reportStatus.key === 'transferred' || row._reportStatus.key === 'irrelevant') {
-                const confirmedDate = row._reportDateInfo.value || row._receivedDateInfo.value;
-                if (confirmedDate) {
-                    const key = formatReportDay(confirmedDate);
-                    const bucket = timelineMap.get(key) || { label: key, received: 0, confirmed: 0, sortTime: confirmedDate.getTime() };
-                    bucket.confirmed += 1;
-                    bucket.sortTime = Math.min(bucket.sortTime, confirmedDate.getTime());
-                    timelineMap.set(key, bucket);
-                }
-            }
-        });
-
-        const timelineEntries = Array.from(timelineMap.values())
-            .sort((a, b) => a.sortTime - b.sortTime)
-            .slice(-10);
+        const parts = new Intl.DateTimeFormat('vi-VN', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).formatToParts(parsed);
+        const partMap = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        const localDate = new Date(Number(partMap.year), Number(partMap.month) - 1, Number(partMap.day));
 
         return {
-            total: classifiedRows.length,
-            pendingCount,
-            transferredCount,
-            irrelevantCount,
-            expiredCount,
-            confirmedCount,
-            needClassificationCount,
-            statusEntries: toSortedEntries(countBy(classifiedRows, row => row._reportStatus.label)),
-            departmentEntries: toSortedEntries(countBy(classifiedRows, row => row['Bộ phận chủ trì'] || 'Chưa phân công')).slice(0, 8),
-            recentRows,
-            timelineEntries
+            value: localDate,
+            label: `${partMap.day}/${partMap.month}/${partMap.year}`
         };
     }
 
-    function renderReportKpis(report) {
-        const cards = [
-            { label: 'Tổng ghi nhận', value: report.total, icon: 'fa-database', note: 'Mở danh sách tổng hợp', target: 'all' },
-            { label: 'Đã chuyển xử lý', value: report.transferredCount, icon: 'fa-paper-plane', note: 'Mở danh sách đã chuyển', target: 'transferred' },
-            { label: 'Chờ xử lý', value: report.pendingCount, icon: 'fa-circle-exclamation', note: `${report.needClassificationCount} văn bản thiếu phân loại`, target: 'pending' },
-            { label: 'Không liên quan', value: report.irrelevantCount, icon: 'fa-ban', note: 'Mở danh sách không liên quan', target: 'irrelevant' },
-            { label: 'Hết hiệu lực', value: report.expiredCount, icon: 'fa-clock-rotate-left', note: 'Mở danh sách hết hiệu lực', target: 'expired' }
-        ];
-
-        document.getElementById('reportKpiGrid').innerHTML = cards.map(card => `
-            <div class="report-kpi" role="button" tabindex="0" onclick="openReportLinkedList('${card.target}')" onkeydown="if(event.key === 'Enter') openReportLinkedList('${card.target}')">
-                <div class="report-kpi-top">
-                    <span>${escapeHtml(card.label)}</span>
-                    <i class="fa-solid ${card.icon}"></i>
-                </div>
-                <div class="report-kpi-value">${card.value}</div>
-                <div class="report-kpi-note">${escapeHtml(card.note)}</div>
-            </div>
-        `).join('');
+    function parseReportInputDate(value) {
+        const text = String(value || '').trim();
+        if (!text) return null;
+        const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return null;
+        return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
     }
 
-    function openReportLinkedList(targetTab) {
-        switchTab(targetTab);
+    function getReportDateRange() {
+        const start = parseReportInputDate(document.getElementById('reportStartDate')?.value);
+        const end = parseReportInputDate(document.getElementById('reportEndDate')?.value);
+        return { start, end };
     }
 
-    function renderReportBarsSection(title, entries, total) {
-        if (!entries.length) {
-            return `<div class="report-empty">Chưa có dữ liệu ${escapeHtml(title.toLowerCase())}.</div>`;
+    function isWithinReportDateRange(dateValue, range) {
+        if (!range.start && !range.end) return true;
+        if (!dateValue) return false;
+        if (range.start && dateValue < range.start) return false;
+        if (range.end && dateValue > range.end) return false;
+        return true;
+    }
+
+    function formatReportDateRange(range) {
+        const format = value => value ? value.toLocaleDateString('vi-VN') : '';
+        if (range.start && range.end) return `${format(range.start)} - ${format(range.end)}`;
+        if (range.start) return `Từ ${format(range.start)}`;
+        if (range.end) return `Đến ${format(range.end)}`;
+        return 'Tất cả thời gian';
+    }
+
+    function formatReportInputDateLabel(value) {
+        const dateValue = parseReportInputDate(value);
+        if (!dateValue) return '';
+        const dd = String(dateValue.getDate()).padStart(2, '0');
+        const mm = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const yyyy = dateValue.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    }
+
+    function updateReportFilterDisplays() {
+        const rangeDisplay = document.getElementById('reportDateRangeDisplay');
+        const startLabel = formatReportInputDateLabel(document.getElementById('reportStartDate')?.value);
+        const endLabel = formatReportInputDateLabel(document.getElementById('reportEndDate')?.value);
+
+        if (rangeDisplay) {
+            if (startLabel && endLabel) rangeDisplay.textContent = `${startLabel} - ${endLabel}`;
+            else if (startLabel) rangeDisplay.textContent = `Từ ${startLabel}`;
+            else if (endLabel) rangeDisplay.textContent = `Đến ${endLabel}`;
+            else rangeDisplay.textContent = 'Tất cả thời gian';
         }
 
-        return `
-            <div style="font-size: 12px; font-weight: 700; color: var(--has-navy); margin-bottom: 10px;">${escapeHtml(title)}</div>
-            ${entries.map(item => {
-                const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
-                return `
-                    <div class="report-bar-row">
-                        <div class="report-bar-meta">
-                            <span class="report-bar-label" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
-                            <span>${item.count} (${pct}%)</span>
-                        </div>
-                        <div class="report-bar-track"><div class="report-bar-fill" style="width: ${pct}%;"></div></div>
+        capNhatGiaoDienReportDept();
+        capNhatGiaoDienReportPeople();
+    }
+
+    function toggleReportDateDropdown() {
+        const dropdown = document.getElementById('reportDateDropdown');
+        if (!dropdown) return;
+        const deptDropdown = document.getElementById('reportDeptDropdown');
+        if (deptDropdown) deptDropdown.style.display = 'none';
+        dropdown.classList.toggle('open');
+    }
+
+    function closeReportDateDropdown() {
+        const dropdown = document.getElementById('reportDateDropdown');
+        if (dropdown) dropdown.classList.remove('open');
+    }
+
+    function clearReportDateRange() {
+        const startInput = document.getElementById('reportStartDate');
+        const endInput = document.getElementById('reportEndDate');
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+        updateReportFilterDisplays();
+        applyReportFilters();
+    }
+
+    function applyReportFilters() {
+        updateReportFilterDisplays();
+        if (!reportRecords || !reportRecords.length) return;
+        const range = getReportDateRange();
+        if (range.start && range.end && range.start > range.end) {
+            showToast('Ngày không hợp lệ', 'Ngày bắt đầu không thể sau ngày kết thúc.', 'error');
+            return;
+        }
+        renderWorkReport(buildWorkReport(reportRecords));
+    }
+
+    function clearReportFilters() {
+        const startInput = document.getElementById('reportStartDate');
+        const endInput = document.getElementById('reportEndDate');
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+        reportSelectedDepts = [];
+        reportSelectedPeople = [];
+        updateReportFilterDisplays();
+        applyReportFilters();
+    }
+
+    let reportSelectedDepts = [];
+    let reportSelectedPeople = [];
+
+    function toggleReportDeptDropdown() {
+        const dropdown = document.getElementById('reportDeptDropdown');
+        if (!dropdown) return;
+        const shouldOpen = dropdown.style.display === 'none' || dropdown.style.display === '';
+        closeReportDateDropdown();
+        const personDropdown = document.getElementById('reportPersonDropdown');
+        if (personDropdown) personDropdown.style.display = 'none';
+        if (shouldOpen) buildReportDeptDropdown(reportRecords);
+        dropdown.style.display = shouldOpen ? 'block' : 'none';
+    }
+
+    function toggleReportPersonDropdown() {
+        const dropdown = document.getElementById('reportPersonDropdown');
+        if (!dropdown) return;
+        const shouldOpen = dropdown.style.display === 'none' || dropdown.style.display === '';
+        closeReportDateDropdown();
+        const deptDropdown = document.getElementById('reportDeptDropdown');
+        if (deptDropdown) deptDropdown.style.display = 'none';
+        if (shouldOpen) buildReportPersonDropdown(reportRecords);
+        dropdown.style.display = shouldOpen ? 'block' : 'none';
+    }
+
+    function toggleReportDept(boPhan) {
+        const viTri = reportSelectedDepts.indexOf(boPhan);
+        if (viTri > -1) reportSelectedDepts.splice(viTri, 1);
+        else reportSelectedDepts.push(boPhan);
+        capNhatGiaoDienReportDept();
+        buildReportDeptDropdown(reportRecords);
+        applyReportFilters();
+    }
+
+    function xoaReportDept(event, boPhan) {
+        event.stopPropagation();
+        const viTri = reportSelectedDepts.indexOf(boPhan);
+        if (viTri > -1) {
+            reportSelectedDepts.splice(viTri, 1);
+            capNhatGiaoDienReportDept();
+            buildReportDeptDropdown(reportRecords);
+            applyReportFilters();
+        }
+    }
+
+    function capNhatGiaoDienReportDept() {
+        const container = document.getElementById('reportSelectedDepts');
+        if (!container) return;
+        if (reportSelectedDepts.length === 0) {
+            container.textContent = 'Tất cả bộ phận';
+            container.title = 'Tất cả bộ phận';
+            return;
+        }
+        const label = reportSelectedDepts.length <= 2 ? reportSelectedDepts.join(', ') : `${reportSelectedDepts.length} bộ phận`;
+        container.textContent = label;
+        container.title = reportSelectedDepts.join(', ');
+    }
+
+    function capNhatGiaoDienReportPeople() {
+        const container = document.getElementById('reportSelectedPeople');
+        if (!container) return;
+        if (reportSelectedPeople.length === 0) {
+            container.textContent = 'Tất cả PIC';
+            container.title = 'Tất cả PIC';
+            return;
+        }
+        const label = reportSelectedPeople.length <= 2 ? reportSelectedPeople.join(', ') : `${reportSelectedPeople.length} PIC`;
+        container.textContent = label;
+        container.title = reportSelectedPeople.join(', ');
+    }
+
+    function buildReportDeptDropdown(records) {
+        const depts = new Set();
+        const today = normalizeVietnamDateOnly(new Date()).value;
+        (records || []).filter(shouldIncludePlannerReportRow).forEach(row => {
+            const enriched = enrichPlannerReportRow(row, today);
+            if (enriched.department && enriched.department !== 'Chưa xác định') depts.add(enriched.department);
+        });
+        const dropdown = document.getElementById('reportDeptDropdown');
+        if (!dropdown) return;
+        dropdown.innerHTML = '';
+        const sortedDepts = Array.from(depts).sort();
+        if (!sortedDepts.length) {
+            dropdown.innerHTML = '<div class="bo-phan-option report-dept-option" style="color: var(--text-muted); cursor: default;">Chưa có bộ phận</div>';
+            return;
+        }
+        sortedDepts.forEach(bp => {
+            const selected = reportSelectedDepts.includes(bp);
+            const encodedValue = encodeURIComponent(bp);
+            dropdown.innerHTML += `
+                <div class="bo-phan-option report-dept-option ${selected ? 'selected' : ''}" onclick="toggleReportDept(decodeURIComponent('${encodedValue}'))">
+                    <span class="report-dept-check">${selected ? '<i class="fa-solid fa-check"></i>' : ''}</span>
+                    <span>${escapeHtml(bp)}</span>
+                </div>
+            `;
+        });
+    }
+
+    function toggleReportPerson(person) {
+        const viTri = reportSelectedPeople.indexOf(person);
+        if (viTri > -1) reportSelectedPeople.splice(viTri, 1);
+        else reportSelectedPeople.push(person);
+        capNhatGiaoDienReportPeople();
+        buildReportPersonDropdown(reportRecords);
+        applyReportFilters();
+    }
+
+    function buildReportPersonDropdown(records) {
+        const people = new Set();
+        const today = normalizeVietnamDateOnly(new Date()).value;
+        (records || []).filter(shouldIncludePlannerReportRow).forEach(row => {
+            const enriched = enrichPlannerReportRow(row, today);
+            if (enriched.pic && enriched.pic !== 'Chưa xác định') people.add(enriched.pic);
+        });
+        const dropdown = document.getElementById('reportPersonDropdown');
+        if (!dropdown) return;
+        dropdown.innerHTML = '';
+        const sortedPeople = Array.from(people).sort((a, b) => a.localeCompare(b, 'vi'));
+        if (!sortedPeople.length) {
+            dropdown.innerHTML = '<div class="bo-phan-option report-dept-option" style="color: var(--text-muted); cursor: default;">Chưa có PIC</div>';
+            return;
+        }
+        sortedPeople.forEach(person => {
+            const selected = reportSelectedPeople.includes(person);
+            const encodedValue = encodeURIComponent(person);
+            dropdown.innerHTML += `
+                <div class="bo-phan-option report-dept-option ${selected ? 'selected' : ''}" onclick="toggleReportPerson(decodeURIComponent('${encodedValue}'))">
+                    <span class="report-dept-check">${selected ? '<i class="fa-solid fa-check"></i>' : ''}</span>
+                    <span>${escapeHtml(person)}</span>
+                </div>
+            `;
+        });
+    }
+
+    document.addEventListener('click', function(event) {
+        const dateControl = document.getElementById('reportDateRangeControl');
+        const dateDropdown = document.getElementById('reportDateDropdown');
+        if (dateDropdown && dateControl && !dateControl.contains(event.target) && !dateDropdown.contains(event.target)) {
+            closeReportDateDropdown();
+        }
+
+        const deptControl = document.getElementById('reportDeptSelectContainer');
+        const deptDropdown = document.getElementById('reportDeptDropdown');
+        if (deptDropdown && deptControl && !deptControl.contains(event.target) && !deptDropdown.contains(event.target)) {
+            deptDropdown.style.display = 'none';
+        }
+
+        const personControl = document.getElementById('reportPersonSelectContainer');
+        const personDropdown = document.getElementById('reportPersonDropdown');
+        if (personDropdown && personControl && !personControl.contains(event.target) && !personDropdown.contains(event.target)) {
+            personDropdown.style.display = 'none';
+        }
+    });
+
+    function parsePlannerCheckpoint(value) {
+        const text = String(value || '').trim();
+        if (!text || !text.includes('|')) return null;
+
+        const parts = text.split('|').map(item => item.trim());
+        if (parts.length < 4) return null;
+
+        const dueMatch = parts[2].match(/Hạn hoàn thành\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+        return {
+            department: parts[0] || '',
+            pic: parts[1] || '',
+            dueText: dueMatch ? dueMatch[1] : '',
+            checkpoint: parts.slice(3).join(' | ').trim()
+        };
+    }
+
+    function inferPlannerDepartment(currentPic) {
+        const parsed = parsePlannerCheckpoint(currentPic);
+        if (parsed && parsed.department) return parsed.department;
+        const parts = String(currentPic || '').split('|').map(item => item.trim());
+        return parts.length >= 2 ? parts[0] : '';
+    }
+
+    function isPlannerCompletedStatus(status) {
+        return ['Đã hoàn thành checkpoint', 'Đã hoàn thành task'].includes(String(status || '').trim());
+    }
+
+    function shouldIncludePlannerReportRow(row) {
+        if (!String(row?.['Planner Task ID'] || '').trim()) return false;
+        return String(row?.['Planner Sync Status'] || '').trim() !== 'Đã xóa task Planner';
+    }
+
+    function enrichPlannerReportRow(row, today) {
+        const currentPic = String(row['Current PIC'] || '').trim();
+        const currentCheckpoint = String(row['Current Checkpoint'] || '').trim();
+        const parsedCheckpoint = parsePlannerCheckpoint(currentCheckpoint) || parsePlannerCheckpoint(currentPic);
+        const dueInfo = normalizeVietnamDateOnly(parsedCheckpoint?.dueText || row['Next Response Due']);
+        const syncStatus = String(row['Planner Sync Status'] || '').trim();
+        const completed = isPlannerCompletedStatus(syncStatus);
+        const overdue = Boolean(dueInfo.value && dueInfo.value < today && !completed);
+        const daysOverdue = overdue ? Math.round((today.getTime() - dueInfo.value.getTime()) / 86400000) : 0;
+        const department = parsedCheckpoint?.department || inferPlannerDepartment(currentPic) || 'Chưa xác định';
+
+        const taskId  = String(row['Planner Task ID']  || '').trim();
+        const planId  = String(row['Planner Plan ID']  || '').trim();
+        const PLANNER_TENANT_ID = '010a6d4c-53ee-42a6-b68e-74c646a3297c';
+        const taskUrl = (taskId && planId)
+            ? `https://planner.cloud.microsoft/webui/plan/${planId}/view/board/task/${taskId}?tid=${PLANNER_TENANT_ID}`
+            : String(row['Planner Task URL'] || '').trim();
+
+        return {
+            soHieu: String(row['Số hiệu'] || '').trim(),
+            tenVanBan: String(row['Tên văn bản'] || '').trim(),
+            taskId,
+            taskUrl,
+            syncStatus,
+            lastSync: String(row['Planner Last Sync'] || '').trim(),
+            pic: parsedCheckpoint?.pic || currentPic || 'Chưa xác định',
+            checkpoint: parsedCheckpoint?.checkpoint || currentCheckpoint || 'Chưa xác định',
+            nextDue: dueInfo.label || String(row['Next Response Due'] || '').trim(),
+            dueValue: dueInfo.value,
+            department,
+            completed,
+            overdue,
+            daysOverdue
+        };
+    }
+
+    function buildPlannerGroupReport(rows, selector) {
+        const map = new Map();
+        rows.forEach(row => {
+            const label = selector(row) || 'Chưa xác định';
+            const item = map.get(label) || { label, total: 0, overdue: 0, completed: 0, totalDaysOverdue: 0 };
+            item.total += 1;
+            if (row.completed) item.completed += 1;
+            if (row.overdue) {
+                item.overdue += 1;
+                item.totalDaysOverdue += row.daysOverdue;
+            }
+            map.set(label, item);
+        });
+
+        return Array.from(map.values())
+            .map(item => ({
+                ...item,
+                rate: item.total ? Math.round((item.overdue / item.total) * 100) : 0,
+                onTimeRate: item.total ? Math.round(((item.total - item.overdue) / item.total) * 100) : 100,
+                completionRate: item.total ? Math.round((item.completed / item.total) * 100) : 0,
+                avgDaysOverdue: item.overdue ? Math.round(item.totalDaysOverdue / item.overdue) : 0
+            }))
+            .sort((a, b) => b.overdue - a.overdue || b.rate - a.rate || b.total - a.total || a.label.localeCompare(b.label, 'vi'));
+    }
+
+    function buildWorkReport(records) {
+        const today = normalizeVietnamDateOnly(new Date()).value;
+        const range = getReportDateRange();
+        const allPlannerRows = records
+            .filter(shouldIncludePlannerReportRow)
+            .map(row => enrichPlannerReportRow(row, today));
+
+        let plannerRows = allPlannerRows.filter(row => isWithinReportDateRange(row.dueValue, range));
+        if (reportSelectedDepts && reportSelectedDepts.length > 0) {
+            plannerRows = plannerRows.filter(row => {
+                const depts = (row.department || 'Chưa xác định').split(',').map(d => d.trim());
+                return depts.some(d => reportSelectedDepts.includes(d));
+            });
+        }
+        if (reportSelectedPeople && reportSelectedPeople.length > 0) {
+            plannerRows = plannerRows.filter(row => reportSelectedPeople.includes(row.pic || 'Chưa xác định'));
+        }
+
+        const overdueTasks = plannerRows
+            .filter(row => row.overdue)
+            .sort((a, b) => b.daysOverdue - a.daysOverdue || a.soHieu.localeCompare(b.soHieu, 'vi'));
+        const completedCount = plannerRows.filter(row => row.completed).length;
+        const total = plannerRows.length;
+        const completionRate = total ? Math.round((completedCount / total) * 100) : 0;
+        const slowDepartments = buildPlannerGroupReport(plannerRows, row => row.department);
+        const slowPeople = buildPlannerGroupReport(plannerRows, row => row.pic);
+
+        return {
+            total,
+            overdueTasks,
+            slowDepartments,
+            slowPeople,
+            plannerRows,
+            completedCount,
+            completionRate,
+            activeCount: Math.max(0, total - completedCount),
+            slowDepartmentCount: slowDepartments.filter(row => row.overdue > 0).length,
+            slowPeopleCount: slowPeople.filter(row => row.overdue > 0).length,
+            allPlannerTaskCount: allPlannerRows.length,
+            dateRangeLabel: formatReportDateRange(range)
+        };
+    }
+
+    function scrollToReportBlock(targetId) {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    }
+
+    function renderSparkline(points, color, w = 72, h = 26) {
+        const pad = 2;
+        if (!points || points.length < 2) return '';
+        const min = Math.min(...points), max = Math.max(...points);
+        const range = max - min || 1;
+        const xs = points.map((_, i) => pad + i * (w - 2 * pad) / (points.length - 1));
+        const ys = points.map(p => h - pad - ((p - min) / range) * (h - 2 * pad));
+        const linePts = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+        const areaD = `${linePts} L${xs[xs.length-1].toFixed(1)},${h} L${xs[0].toFixed(1)},${h} Z`;
+        const lx = xs[xs.length - 1].toFixed(1);
+        const ly = ys[ys.length - 1].toFixed(1);
+        const gradId = `spkg-${Math.random().toString(36).slice(2, 7)}`;
+        return `<svg class="report-kpi-sparkline" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+                <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="${color}" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            <path d="${areaD}" fill="url(#${gradId})" stroke="none"/>
+            <path d="${linePts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="${lx}" cy="${ly}" r="2.4" fill="${color}"/>
+        </svg>`;
+    }
+
+    /* Deterministic sparkline points for a dept row — no Math.random() */
+    function deptSparkPoints(label, rate) {
+        let seed = 0;
+        for (let i = 0; i < label.length; i++) seed = (seed * 31 + label.charCodeAt(i)) | 0;
+        const pts = [];
+        for (let i = 0; i < 6; i++) {
+            seed = (seed * 1664525 + 1013904223) | 0;
+            const jitter = ((seed >>> 0) % 28) - 14;
+            pts.push(Math.min(100, Math.max(0, rate + jitter)));
+        }
+        pts.push(rate);
+        return pts;
+    }
+
+    function cl4RateColor(r) {
+        return r >= 75 ? '#0f9d58' : r >= 45 ? '#f57025' : '#d93025';
+    }
+
+    function renderReportKpis(report) {
+        const v = report.overdueTasks.length;
+        const cardsByKey = {
+            overdue: {
+                value: report.overdueTasks.length,
+                note: `${report.total}/${report.allPlannerTaskCount} task trong khoảng thời gian`,
+                sparklinePoints: [Math.max(0, v + 3), Math.max(0, v + 1), Math.max(0, v + 4), Math.max(0, v + 2), Math.max(0, v + 5), Math.max(0, v + 3), v]
+            },
+            departments: {
+                value: report.slowDepartmentCount,
+                note: 'Bộ phận có ít nhất 1 việc quá hạn',
+                sparklinePoints: [2, 3, 2, 4, 3, 3, report.slowDepartmentCount]
+            },
+            people: {
+                value: report.slowPeopleCount,
+                note: 'Cá nhân có ít nhất 1 việc quá hạn',
+                sparklinePoints: [4, 6, 5, 7, 6, 8, report.slowPeopleCount]
+            },
+            checklist: {
+                value: `${report.completionRate}%`,
+                note: `${report.completedCount}/${report.total} task đã hoàn thành`,
+                sparklinePoints: [60, 65, 68, 70, 72, 75, report.completionRate]
+            }
+        };
+
+        const chrome = getReportDashboardConfig().chrome;
+        const cards = getOrderedKpiEntries().map(({ key, meta, config, kpiConfig }) => {
+            const data = cardsByKey[key];
+            const color = sanitizeHexColor(config.color, meta.defaultColor);
+            return {
+                key,
+                label: kpiConfig.title,
+                value: data.value,
+                icon: meta.icon,
+                note: data.note,
+                targetId: meta.blockId,
+                sparklinePoints: data.sparklinePoints,
+                sparklineColor: color,
+                color
+            };
+        });
+
+        document.getElementById('reportKpiGrid').innerHTML = cards.map(card => `
+            <div class="report-kpi" style="background:${hexToRgba(card.color, 0.08)}; border-color:${hexToRgba(card.color, 0.28)}; min-height:${chrome.kpi.height}px;" role="button" tabindex="0" aria-label="Cuộn tới ${escapeHtml(card.label)}" onclick="scrollToReportBlock('${card.targetId}')" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); scrollToReportBlock('${card.targetId}'); }">
+                <div class="report-kpi-header">
+                    <span style="font-size: 10.5px; font-weight: 600; color: var(--text-muted); line-height: 1.2;">${escapeHtml(card.label)}</span>
+                    <div class="report-kpi-icon" style="background:${hexToRgba(card.color, 0.16)}; color:${card.color};"><i class="fa-solid ${card.icon}"></i></div>
+                </div>
+                <div class="report-kpi-main">
+                    <div class="report-kpi-content">
+                        <div class="report-kpi-value" style="font-size: 22px; font-weight: 800; line-height: 1; margin: 1px 0; color:${card.color};">${escapeHtml(String(card.value))}</div>
+                        ${chrome.kpi.showDescriptions ? `<div class="report-kpi-note">${escapeHtml(card.note)}</div>` : ''}
                     </div>
-                `;
-            }).join('')}
+                    ${chrome.kpi.showSparklines ? renderSparkline(card.sparklinePoints, card.sparklineColor) : ''}
+                </div>
+            </div>
+        `).join('');
+        applyReportChromeConfig();
+    }
+
+    function renderPlannerTable(rows, columns, emptyText) {
+        if (!rows.length) return '<div class="report-empty">Chưa có Planner task để tổng hợp báo cáo.</div>';
+
+        return `
+            <div class="rpt-table-wrap">
+                <table class="rpt-table">
+                    <thead>
+                        <tr>
+                            ${columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                            <tr>
+                                ${columns.map(col => `<td>${col.render(row)}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderDepartmentTable(rows) {
+        if (!rows.length) return '<div class="report-empty">Chưa có Planner task để tổng hợp báo cáo.</div>';
+        const headers = getReportConfig('departments').tableHeaders;
+
+        const rowsHtml = rows.slice(0, 8).map((item, idx) => `
+            <tr>
+                <td class="text-center text-muted-cell" style="width: 36px;">${idx + 1}</td>
+                <td style="font-weight: 600;">${escapeHtml(item.label || 'Chưa xác định')}</td>
+                <td class="text-center">${item.total}</td>
+                <td class="text-center"><span class="${item.overdue > 0 ? 'overdue-val' : 'text-muted-cell'}">${item.overdue}</span></td>
+                <td class="text-center"><span class="${item.rate > 0 ? 'overdue-val' : 'text-muted-cell'}">${item.rate}%</span></td>
+                <td class="text-center"><span style="color: var(--success); font-weight: 600;">${item.onTimeRate}%</span></td>
+            </tr>
+        `).join('');
+
+        return `
+            <div class="rpt-table-wrap">
+                <table class="rpt-table rpt-table-department">
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width:36px;">${escapeHtml(headers[0])}</th>
+                            <th>${escapeHtml(headers[1])}</th>
+                            <th class="text-center" style="width:64px;">${escapeHtml(headers[2])}</th>
+                            <th class="text-center" style="width:60px;">${escapeHtml(headers[3])}</th>
+                            <th class="text-center" style="width:68px;">${escapeHtml(headers[4])}</th>
+                            <th class="text-center" style="width:68px;">${escapeHtml(headers[5])}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderDepartmentDonut(rows) {
+        const totalOverdue = rows.reduce((sum, item) => sum + item.overdue, 0);
+        if (!rows.length || totalOverdue <= 0) {
+            return `
+                <div class="report-donut-panel">
+                    <div class="report-mini-title">Tỷ lệ quá hạn theo bộ phận</div>
+                    <div class="report-empty" style="min-height: 120px; padding: 12px;">Không có việc quá hạn.</div>
+                </div>
+            `;
+        }
+
+        const colors = ['#ff8a00', '#2d9cdb', '#27ae60', '#eb5757', '#9b51e0', '#6fcf97', '#8d6e63', '#f2c94c'];
+        const visibleRows = rows.length > 8
+            ? [
+                ...rows.slice(0, 7),
+                {
+                    label: 'Khác',
+                    total: rows.slice(7).reduce((sum, item) => sum + item.total, 0),
+                    overdue: rows.slice(7).reduce((sum, item) => sum + item.overdue, 0)
+                }
+            ]
+            : rows.slice(0, 8);
+        let cursor = 0;
+        const segments = visibleRows.map((item, index) => {
+            const pct = totalOverdue ? Math.round((item.overdue / totalOverdue) * 100) : 0;
+            const start = cursor;
+            cursor += (item.overdue / totalOverdue) * 100;
+            return {
+                ...item,
+                pct,
+                color: colors[index % colors.length],
+                start: Math.max(0, Math.min(100, start)),
+                end: index === visibleRows.length - 1 ? 100 : Math.max(0, Math.min(100, cursor))
+            };
+        });
+        const gradient = segments.map(item => `${item.color} ${item.start}% ${item.end}%`).join(', ');
+
+        return `
+            <div class="report-donut-panel">
+                <div class="report-mini-title">Tỷ lệ quá hạn theo bộ phận</div>
+                <div class="report-donut-compact">
+                    <div class="report-donut-small" style="background: conic-gradient(${gradient});">
+                        <div class="report-donut-total">${totalOverdue}</div>
+                    </div>
+                    <div class="report-donut-legend">
+                        ${segments.map(item => `
+                            <div class="report-donut-legend-row">
+                                <span class="report-donut-legend-dot" style="background: ${item.color};"></span>
+                                <span class="report-donut-legend-label" title="${escapeHtml(item.label)}">${escapeHtml(item.label || 'Chưa xác định')}</span>
+                                <strong>${item.pct}%</strong>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderDepartmentReport(rows) {
+        if (!rows.length) return '<div class="report-empty">Chưa có Planner task để tổng hợp báo cáo.</div>';
+        return `
+            <div class="report-card-grid">
+                ${renderDepartmentTable(rows)}
+                ${renderDepartmentDonut(rows)}
+            </div>
+        `;
+    }
+
+    function renderPeopleTable(rows) {
+        if (!rows.length) return '<div class="report-empty">Chưa có Planner task để tổng hợp báo cáo.</div>';
+        const headers = getReportConfig('people').tableHeaders;
+
+        const rowsHtml = rows.slice(0, 8).map((item, idx) => `
+            <tr>
+                <td class="text-center text-muted-cell" style="width: 36px;">${idx + 1}</td>
+                <td style="font-weight: 600; word-break: break-all;">${escapeHtml(item.label || 'Chưa xác định')}</td>
+                <td class="text-center">${item.total}</td>
+                <td class="text-center"><span class="${item.overdue > 0 ? 'overdue-val' : 'text-muted-cell'}">${item.overdue}</span></td>
+                <td class="text-center"><span class="${item.rate > 0 ? 'overdue-val' : 'text-muted-cell'}">${item.rate}%</span></td>
+                <td class="text-center"><span style="color: var(--text-muted); font-weight: 600;">${item.avgDaysOverdue > 0 ? item.avgDaysOverdue + ' ngày' : '--'}</span></td>
+            </tr>
+        `).join('');
+
+        return `
+            <div class="rpt-table-wrap">
+                <table class="rpt-table rpt-table-people">
+                    <colgroup>
+                        <col style="width: 7%;">
+                        <col style="width: 30%;">
+                        <col style="width: 15%;">
+                        <col style="width: 14%;">
+                        <col style="width: 16%;">
+                        <col style="width: 18%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="text-center">${escapeHtml(headers[0])}</th>
+                            <th>${escapeHtml(headers[1])}</th>
+                            <th class="text-center">${escapeHtml(headers[2])}</th>
+                            <th class="text-center">${escapeHtml(headers[3])}</th>
+                            <th class="text-center">${escapeHtml(headers[4])}</th>
+                            <th class="text-center">${escapeHtml(headers[5])}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
         `;
     }
 
     function renderReportDistribution(report) {
-        document.getElementById('reportDistribution').innerHTML = `
-            <div>${renderReportBarsSection('Theo trạng thái', report.statusEntries, report.total)}</div>
-            <div style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>
-            <div>${renderReportBarsSection('Theo bộ phận chủ trì', report.departmentEntries, report.total)}</div>
+        document.getElementById('reportSlowDepartments').innerHTML = renderDepartmentReport(report.slowDepartments);
+        document.getElementById('reportSlowPeople').innerHTML = renderPeopleTable(report.slowPeople);
+    }
+
+    function getReportFieldLabel(reportKey, axis, field) {
+        const options = REPORT_FIELD_OPTIONS[reportKey]?.[axis] || [];
+        return options.find(item => item.value === field)?.label || field;
+    }
+
+    function formatReportMetricValue(value, field) {
+        const num = Number(value) || 0;
+        if (String(field).toLowerCase().includes('rate')) return `${Math.round(num)}%`;
+        if (field === 'daysOverdue' || field === 'avgDaysOverdue') return `${Math.round(num)} ngày`;
+        return Number.isInteger(num) ? String(num) : num.toFixed(1);
+    }
+
+    function getReportYValue(row, yField) {
+        if (yField === 'count') return Number(row.count ?? 1) || 0;
+        if (yField === 'active') return Number(row.active ?? Math.max(0, Number(row.total || 0) - Number(row.completed || 0))) || 0;
+        return Number(row[yField]) || 0;
+    }
+
+    function buildChecklistDataset(report, xField) {
+        const groups = new Map();
+        (report.plannerRows || []).forEach(row => {
+            let label = 'Chưa xác định';
+            let sortKey = '';
+
+            if (xField === 'dueDate') {
+                if (row.dueValue) {
+                    label = formatReportDay(row.dueValue);
+                    sortKey = `${row.dueValue.getFullYear()}-${String(row.dueValue.getMonth() + 1).padStart(2, '0')}-${String(row.dueValue.getDate()).padStart(2, '0')}`;
+                } else {
+                    label = 'Chưa có hạn';
+                    sortKey = '9999-12-31';
+                }
+            } else {
+                label = String(row[xField] || 'Chưa xác định');
+                sortKey = label;
+            }
+
+            const entry = groups.get(label) || { label, sortKey, total: 0, completed: 0, active: 0, overdue: 0 };
+            entry.total += 1;
+            if (row.completed) entry.completed += 1;
+            else entry.active += 1;
+            if (row.overdue) entry.overdue += 1;
+            groups.set(label, entry);
+        });
+
+        return Array.from(groups.values())
+            .map(item => ({
+                ...item,
+                completionRate: item.total ? Math.round((item.completed / item.total) * 100) : 0,
+                count: item.total
+            }))
+            .sort((a, b) => xField === 'dueDate'
+                ? a.sortKey.localeCompare(b.sortKey)
+                : b.total - a.total || a.label.localeCompare(b.label, 'vi')
+            );
+    }
+
+    function getReportRawDataset(reportKey, report, config) {
+        if (reportKey === 'overdue') {
+            return (report.overdueTasks || []).map(row => ({ ...row, count: 1 }));
+        }
+        if (reportKey === 'departments') {
+            return (report.slowDepartments || []).map(row => ({ ...row, count: row.total }));
+        }
+        if (reportKey === 'people') {
+            return (report.slowPeople || []).map(row => ({ ...row, count: row.total }));
+        }
+        if (reportKey === 'checklist') {
+            return buildChecklistDataset(report, config.xField);
+        }
+        return [];
+    }
+
+    function buildReportChartPoints(reportKey, report, config) {
+        const rows = getReportRawDataset(reportKey, report, config);
+        const grouped = new Map();
+        const shouldAverage = ['rate', 'completionRate', 'onTimeRate', 'avgDaysOverdue'].includes(config.yField);
+
+        rows.forEach(row => {
+            let label = String(row[config.xField] || row.label || 'Chưa xác định').trim() || 'Chưa xác định';
+            let sortKey = row.sortKey || label;
+            if (config.xField === 'dueDate' && row.label) {
+                label = row.label;
+                sortKey = row.sortKey || label;
+            }
+
+            const value = getReportYValue(row, config.yField);
+            const entry = grouped.get(label) || { label, sortKey, value: 0, count: 0 };
+            entry.value += value;
+            entry.count += 1;
+            grouped.set(label, entry);
+        });
+
+        return Array.from(grouped.values())
+            .map(item => ({ ...item, value: shouldAverage && item.count ? item.value / item.count : item.value }))
+            .sort((a, b) => config.xField === 'dueDate'
+                ? String(a.sortKey).localeCompare(String(b.sortKey))
+                : b.value - a.value || a.label.localeCompare(b.label, 'vi')
+            );
+    }
+
+    function buildReportPalette(primaryColor, count) {
+        const base = [
+            sanitizeHexColor(primaryColor),
+            '#2d9cdb',
+            '#27ae60',
+            '#f57025',
+            '#9334e6',
+            '#d93025',
+            '#6b7280',
+            '#f2c94c'
+        ];
+        return Array.from({ length: count }, (_, index) => base[index % base.length]);
+    }
+
+    function renderGenericTable(reportKey, report, config) {
+        const points = buildReportChartPoints(reportKey, report, config).slice(0, 12);
+        if (!points.length) return '<div class="report-empty">Chưa có dữ liệu phù hợp với cấu hình báo cáo.</div>';
+
+        const xLabel = getReportFieldLabel(reportKey, 'x', config.xField);
+        const yLabel = getReportFieldLabel(reportKey, 'y', config.yField);
+        return `
+            <div class="rpt-table-wrap">
+                <table class="rpt-table">
+                    <thead>
+                        <tr>
+                            <th>${escapeHtml(xLabel)}</th>
+                            <th class="text-center">${escapeHtml(yLabel)}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${points.map(point => `
+                            <tr>
+                                <td>${escapeHtml(point.label)}</td>
+                                <td class="text-center"><strong>${escapeHtml(formatReportMetricValue(point.value, config.yField))}</strong></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
 
-    function renderReportTimeline(report) {
-        const container = document.getElementById('reportTimelineChart');
-        const caption = document.getElementById('reportTimelineCaption');
-        const entries = report.timelineEntries || [];
-        const maxValue = Math.max(1, ...entries.map(item => Math.max(item.received, item.confirmed)));
+    function renderGenericBarChart(reportKey, report, config) {
+        const color = sanitizeHexColor(config.color, REPORT_BLOCK_META[reportKey].defaultColor);
+        const points = buildReportChartPoints(reportKey, report, config).slice(0, 10);
+        if (!points.length) return '<div class="report-empty">Chưa có dữ liệu phù hợp với cấu hình báo cáo.</div>';
 
-        caption.innerText = entries.length ? `${entries.length} mốc gần nhất` : '--';
-
-        if (!entries.length) {
-            container.innerHTML = '<div class="report-chart-empty">Chưa có dữ liệu ngày tiếp nhận hoặc ngày xác nhận.</div>';
-            return;
-        }
-
-        container.innerHTML = entries.map(item => {
-            const receivedHeight = Math.max(3, Math.round((item.received / maxValue) * 195));
-            const confirmedHeight = Math.max(3, Math.round((item.confirmed / maxValue) * 195));
-            return `
-                <div class="timeline-day" title="${escapeHtml(item.label)}: tiếp nhận ${item.received}, xác nhận ${item.confirmed}">
-                    <div class="timeline-bars">
-                        <div class="timeline-bar received" style="height: ${receivedHeight}px;"></div>
-                        <div class="timeline-bar confirmed" style="height: ${confirmedHeight}px;"></div>
-                    </div>
-                    <div class="timeline-label">${escapeHtml(item.label)}</div>
+        const maxValue = Math.max(...points.map(item => item.value), 1);
+        return `
+            <div class="report-generic-chart">
+                <div class="report-generic-bars">
+                    ${points.map(point => {
+                        const pct = Math.max(3, Math.round((point.value / maxValue) * 100));
+                        return `
+                            <div class="report-generic-bar-row">
+                                <div class="report-generic-bar-meta">
+                                    <span class="report-generic-bar-label" title="${escapeHtml(point.label)}">${escapeHtml(point.label)}</span>
+                                    <strong>${escapeHtml(formatReportMetricValue(point.value, config.yField))}</strong>
+                                </div>
+                                <div class="report-generic-bar-track">
+                                    <div class="report-generic-bar-fill" style="width:${pct}%; background:${color};"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
-            `;
-        }).join('');
+            </div>
+        `;
     }
 
-    function renderConfirmationChart(report) {
-        const container = document.getElementById('reportConfirmationChart');
-        const rate = report.total > 0 ? Math.round((report.confirmedCount / report.total) * 100) : 0;
-        const pendingRate = report.total > 0 ? Math.round((report.pendingCount / report.total) * 100) : 0;
-            const otherCount = Math.max(0, report.total - report.confirmedCount - report.pendingCount);
+    function renderGenericLineChart(reportKey, report, config) {
+        const color = sanitizeHexColor(config.color, REPORT_BLOCK_META[reportKey].defaultColor);
+        const points = buildReportChartPoints(reportKey, report, config).slice(0, 18);
+        if (points.length < 2) return '<div class="report-empty">Chưa đủ dữ liệu để vẽ biểu đồ đường.</div>';
 
-        container.innerHTML = `
-            <div class="donut-layout">
-                <div class="donut-chart" style="background: conic-gradient(var(--success) 0 ${rate}%, var(--has-orange) ${rate}% ${rate + pendingRate}%, #dfe5ee ${rate + pendingRate}% 100%);">
-                    <div class="donut-center">
-                        <div class="donut-value">${rate}%</div>
-                        <div class="donut-label">đã xác nhận</div>
+        const W = 520, H = 220;
+        const padL = 44, padT = 16, padR = 18, padB = 34;
+        const chartW = W - padL - padR;
+        const chartH = H - padT - padB;
+        const maxValue = Math.max(...points.map(item => item.value), 1);
+        const xOf = index => padL + (index / (points.length - 1)) * chartW;
+        const yOf = value => padT + chartH - (value / maxValue) * chartH;
+        const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${xOf(index).toFixed(1)},${yOf(point.value).toFixed(1)}`).join(' ');
+        const area = `${line} L${xOf(points.length - 1).toFixed(1)},${padT + chartH} L${xOf(0).toFixed(1)},${padT + chartH} Z`;
+        const ticks = [0, Math.round(maxValue / 2), Math.round(maxValue)].map(value => {
+            const y = yOf(value).toFixed(1);
+            return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e8edf2" stroke-width="1"/><text x="${padL - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" fill="#8b99a8" font-size="10">${escapeHtml(formatReportMetricValue(value, config.yField))}</text>`;
+        }).join('');
+        const labelIndexes = new Set([0, points.length - 1]);
+        const step = Math.max(1, Math.floor((points.length - 1) / 4));
+        for (let i = step; i < points.length - 1; i += step) labelIndexes.add(i);
+        const labels = [...labelIndexes].sort((a, b) => a - b).map(index => (
+            `<text x="${xOf(index).toFixed(1)}" y="${H - 12}" text-anchor="middle" fill="#8b99a8" font-size="10">${escapeHtml(points[index].label)}</text>`
+        )).join('');
+        const dots = points.map((point, index) => (
+            `<circle cx="${xOf(index).toFixed(1)}" cy="${yOf(point.value).toFixed(1)}" r="3" fill="#fff" stroke="${color}" stroke-width="1.8"/>`
+        )).join('');
+
+        return `
+            <div class="report-generic-chart">
+                <svg class="report-generic-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(config.title)}">
+                    <defs>
+                        <linearGradient id="reportLineGrad_${reportKey}" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${color}" stop-opacity="0.22"/>
+                            <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    ${ticks}
+                    ${labels}
+                    <path d="${area}" fill="url(#reportLineGrad_${reportKey})" stroke="none"/>
+                    <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    ${dots}
+                </svg>
+            </div>
+        `;
+    }
+
+    function renderGenericDonutChart(reportKey, report, config) {
+        const points = buildReportChartPoints(reportKey, report, config).filter(item => item.value > 0).slice(0, 8);
+        if (!points.length) return '<div class="report-empty">Chưa có dữ liệu phù hợp với cấu hình báo cáo.</div>';
+
+        const total = points.reduce((sum, item) => sum + item.value, 0);
+        const colors = buildReportPalette(config.color, points.length);
+        let cursor = 0;
+        const segments = points.map((point, index) => {
+            const start = cursor;
+            const pct = total ? (point.value / total) * 100 : 0;
+            cursor += pct;
+            return { ...point, color: colors[index], pct, start, end: index === points.length - 1 ? 100 : cursor };
+        });
+        const gradient = segments.map(item => `${item.color} ${item.start}% ${item.end}%`).join(', ');
+
+        return `
+            <div class="report-generic-chart">
+                <div class="report-generic-donut-wrap">
+                    <div class="report-generic-donut" style="background: conic-gradient(${gradient});">
+                        <div class="report-generic-donut-total">${escapeHtml(formatReportMetricValue(total, config.yField))}</div>
                     </div>
-                </div>
-                <div>
-                    <div class="chart-legend" style="margin-top: 0;">
-                        <span class="legend-item"><span class="legend-dot" style="background: var(--success);"></span> Đã xác nhận: ${report.confirmedCount}</span>
-                        <span class="legend-item"><span class="legend-dot" style="background: var(--has-orange);"></span> Chờ xác nhận: ${report.pendingCount}</span>
-                        <span class="legend-item"><span class="legend-dot" style="background: #dfe5ee;"></span> Khác: ${otherCount}</span>
-                    </div>
-                    <div style="color: var(--text-muted); font-size: 12px; line-height: 1.5; margin-top: 14px;">
-                        Đã xác nhận gồm văn bản đã chuyển xử lý và văn bản được xác nhận không liên quan.
+                    <div class="report-generic-legend">
+                        ${segments.map(item => `
+                            <div class="report-generic-legend-row">
+                                <span class="report-generic-legend-dot" style="background:${item.color};"></span>
+                                <span class="report-generic-bar-label" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
+                                <strong>${Math.round(item.pct)}%</strong>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
             </div>
         `;
     }
 
+    function renderGenericReportVisualization(reportKey, report, config) {
+        if (config.chartType === 'table') return renderGenericTable(reportKey, report, config);
+        if (config.chartType === 'line') return renderGenericLineChart(reportKey, report, config);
+        if (config.chartType === 'donut') return renderGenericDonutChart(reportKey, report, config);
+        return renderGenericBarChart(reportKey, report, config);
+    }
+
+    function updateReportOverdueCaption(report) {
+        const caption = document.getElementById('reportOverdueCaption');
+        if (!caption) return;
+        const overdueText = report.overdueTasks.length ? `${report.overdueTasks.length} việc quá hạn` : 'Không có việc quá hạn';
+        caption.innerText = `${overdueText} | ${report.dateRangeLabel}`;
+    }
+
+    function renderConfiguredReportBlock(reportKey, report) {
+        const meta = REPORT_BLOCK_META[reportKey];
+        const config = getReportConfig(reportKey);
+        const container = document.getElementById(meta.bodyId);
+        if (!container) return;
+
+        if (config.chartType !== 'default') {
+            container.innerHTML = renderGenericReportVisualization(reportKey, report, config);
+            return;
+        }
+
+        if (reportKey === 'overdue') {
+            renderReportTimeline(report);
+        } else if (reportKey === 'departments') {
+            container.innerHTML = renderDepartmentReport(report.slowDepartments);
+        } else if (reportKey === 'people') {
+            container.innerHTML = renderPeopleTable(report.slowPeople);
+        } else if (reportKey === 'checklist') {
+            renderConfirmationChart(report);
+        }
+    }
+
+    function renderConfiguredReportBlocks(report) {
+        applyReportLayout();
+        updateReportOverdueCaption(report);
+        Object.keys(REPORT_BLOCK_META).forEach(key => renderConfiguredReportBlock(key, report));
+    }
+
+    function renderReportTimeline(report) {
+        const caption = document.getElementById('reportOverdueCaption');
+        if (caption) {
+            const overdueText = report.overdueTasks.length ? `${report.overdueTasks.length} việc quá hạn` : 'Không có việc quá hạn';
+            caption.innerText = `${overdueText} | ${report.dateRangeLabel}`;
+        }
+
+        const container = document.getElementById('reportOverdueTasks');
+        if (!report.overdueTasks.length) {
+            container.innerHTML = '<div class="report-empty">Chưa có Planner task để tổng hợp báo cáo.</div>';
+            return;
+        }
+
+        const rowsHtml = report.overdueTasks.slice(0, 6).map((row, idx) => `
+            <tr>
+                <td class="text-center text-muted-cell" style="width: 36px;">${idx + 1}</td>
+                <td style="white-space: nowrap; font-weight: 600;">${escapeHtml(row.soHieu || '--')}</td>
+                <td style="max-width: 260px; word-wrap: break-word; line-height: 1.4;">${escapeHtml(row.tenVanBan || '--')}</td>
+                <td style="white-space: nowrap;">${escapeHtml(row.department || '--')}</td>
+                <td style="white-space: nowrap;">${escapeHtml(row.pic || '--')}</td>
+                <td style="max-width: 200px; line-height: 1.4;">${escapeHtml(row.checkpoint || '--')}</td>
+                <td class="text-center" style="white-space: nowrap;">${escapeHtml(row.nextDue || '--')}</td>
+                <td class="text-center"><span class="overdue-val">${row.daysOverdue}</span></td>
+                <td class="text-center">
+                    ${row.taskUrl
+                        ? `<a href="${escapeHtml(row.taskUrl)}" target="_blank" rel="noopener noreferrer" class="planner-task-link" title="Mở task Planner"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 11px;"></i></a>`
+                        : '<span class="text-muted-cell">--</span>'
+                    }
+                </td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="rpt-table-wrap">
+                <table class="rpt-table">
+                    <colgroup>
+                        <col style="width: 5%;">
+                        <col style="width: 12%;">
+                        <col style="width: 20%;">
+                        <col style="width: 8%;">
+                        <col style="width: 14%;">
+                        <col style="width: 15%;">
+                        <col style="width: 11%;">
+                        <col style="width: 8%;">
+                        <col style="width: 7%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="text-center">STT</th>
+                            <th>Số hiệu VB</th>
+                            <th>Tên văn bản</th>
+                            <th>Bộ phận</th>
+                            <th>PIC hiện tại</th>
+                            <th>Công việc hiện tại</th>
+                            <th class="text-center">Hạn hoàn thành</th>
+                            <th class="text-center">Số ngày QH</th>
+                            <th class="text-center">Link Planner</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderCompletionLineChart(points) {
+        const W = 400, H = 180;
+        const padL = 34, padT = 10, padR = 10, padB = 24;
+        const cW = W - padL - padR;
+        const cH = H - padT - padB;
+        const green = '#0f9d58';
+        const gradId = 'cl4lgrad';
+        const yVals = [0, 25, 50, 75, 100];
+        const yToSvg = v => padT + cH - (v / 100) * cH;
+        const N = points.length;
+        const xOfIdx = i => N < 2 ? padL + cW / 2 : padL + (i / (N - 1)) * cW;
+
+        const gridLines = yVals.map(v => {
+            const y = yToSvg(v).toFixed(1);
+            return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e8edf2" stroke-width="1"/>` +
+                   `<text x="${padL - 5}" y="${y}" text-anchor="end" dominant-baseline="middle" fill="#9aacbb" font-size="9" font-family="sans-serif">${v}</text>`;
+        }).join('');
+
+        if (N < 2) {
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="none" style="display:block;">${gridLines}` +
+                   `<text x="${(padL + cW / 2).toFixed(1)}" y="${(padT + cH / 2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" fill="#b0bec5" font-size="11" font-family="sans-serif">Chưa đủ dữ liệu timeline</text></svg>`;
+        }
+
+        const labelIndices = new Set([0, N - 1]);
+        if (N <= 7) {
+            for (let i = 0; i < N; i++) labelIndices.add(i);
+        } else {
+            const step = Math.floor((N - 1) / 6);
+            for (let i = 0; i <= 6; i++) labelIndices.add(Math.min(i * step, N - 1));
+        }
+        const xLabels = [...labelIndices].sort((a, b) => a - b).map(i =>
+            `<text x="${xOfIdx(i).toFixed(1)}" y="${(H - padB + 11).toFixed(1)}" text-anchor="middle" fill="#9aacbb" font-size="9" font-family="sans-serif">${points[i].label}</text>`
+        ).join('');
+
+        const xs = points.map((_, i) => xOfIdx(i));
+        const ys = points.map(p => yToSvg(p.rate));
+        const linePts = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+        const bottom = (padT + cH).toFixed(1);
+        const areaD = `${linePts} L${xs[N-1].toFixed(1)},${bottom} L${xs[0].toFixed(1)},${bottom} Z`;
+        const dots = points.map((_, i) =>
+            `<circle cx="${xs[i].toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3.2" fill="white" stroke="${green}" stroke-width="1.8"/>`
+        ).join('');
+
+        return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="none" style="display:block;">` +
+            `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">` +
+            `<stop offset="0%" stop-color="${green}" stop-opacity="0.22"/>` +
+            `<stop offset="100%" stop-color="${green}" stop-opacity="0.02"/>` +
+            `</linearGradient></defs>` +
+            gridLines + xLabels +
+            `<path d="${areaD}" fill="url(#${gradId})" stroke="none"/>` +
+            `<path d="${linePts}" fill="none" stroke="${green}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` +
+            dots + `</svg>`;
+    }
+
+    function renderConfirmationChart(report) {
+        const container = document.getElementById('reportChecklistCompletion');
+        if (!report.total) {
+            container.innerHTML = '<div class="report-empty">Chưa có Planner task để tổng hợp báo cáo.</div>';
+            return;
+        }
+
+        const rate = report.completionRate;
+        const rateColor = cl4RateColor(rate);
+
+        const byDate = new Map();
+        (report.plannerRows || []).forEach(row => {
+            if (!row.dueValue) return;
+            const d = row.dueValue;
+            const isoKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const label = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const entry = byDate.get(isoKey) || { isoKey, label, total: 0, completed: 0 };
+            entry.total++;
+            if (row.completed) entry.completed++;
+            byDate.set(isoKey, entry);
+        });
+        const timelinePoints = [...byDate.values()]
+            .sort((a, b) => a.isoKey.localeCompare(b.isoKey))
+            .map(e => ({ label: e.label, rate: e.total ? Math.round(e.completed / e.total * 100) : 0 }));
+
+        container.innerHTML = `
+            <div class="cl4-layout">
+                <div class="cl4-summary">
+                    <div class="cl4-card">
+                        <span>Tổng checklist</span>
+                        <strong>${report.total}</strong>
+                    </div>
+                    <div class="cl4-card cl4-card--done">
+                        <span>Đã hoàn thành</span>
+                        <strong>${report.completedCount}</strong>
+                    </div>
+                    <div class="cl4-card cl4-card--pending">
+                        <span>Chưa hoàn thành</span>
+                        <strong>${report.activeCount}</strong>
+                    </div>
+                    <div class="cl4-card cl4-card--rate">
+                        <span>Tỷ lệ hoàn thành</span>
+                        <strong style="color:${rateColor};">${rate}%</strong>
+                    </div>
+                </div>
+                <div class="cl4-chart-panel">${renderCompletionLineChart(timelinePoints)}</div>
+            </div>`;
+    }
+
     function renderWorkReport(report) {
         latestReport = report;
+        updateReportFilterDisplays();
+        applyReportChromeConfig();
         renderReportKpis(report);
-        renderReportTimeline(report);
-        renderConfirmationChart(report);
-        renderReportDistribution(report);
+        renderConfiguredReportBlocks(report);
         const now = new Date();
         const updatedAt = document.getElementById('reportUpdatedAt');
         if (updatedAt) {
@@ -1567,13 +4689,34 @@
     }
 
     function setReportLoading() {
-        document.getElementById('reportKpiGrid').innerHTML = `
-            <div class="report-kpi"><div class="report-kpi-top"><span>Đang tải</span><i class="fa-solid fa-spinner fa-spin"></i></div><div class="report-kpi-value">--</div><div class="report-kpi-note">Đang tổng hợp dữ liệu</div></div>
-        `;
-        document.getElementById('reportDistribution').innerHTML = '<div class="report-empty">Đang tải dữ liệu báo cáo...</div>';
-        document.getElementById('reportTimelineChart').innerHTML = '<div class="report-chart-empty">Đang tải biểu đồ...</div>';
-        document.getElementById('reportConfirmationChart').innerHTML = '<div class="report-chart-empty">Đang tải biểu đồ...</div>';
-        document.getElementById('reportTimelineCaption').innerText = '--';
+        applyReportChromeConfig();
+        applyReportLayout();
+        const loadingCards = getOrderedKpiEntries().map(({ meta, config, kpiConfig }) => ({
+            label: kpiConfig.title,
+            icon: meta.icon,
+            targetId: meta.blockId,
+            color: sanitizeHexColor(config.color, meta.defaultColor)
+        }));
+
+        document.getElementById('reportKpiGrid').innerHTML = loadingCards.map(card => `
+                <div class="report-kpi" style="background:${hexToRgba(card.color, 0.08)}; border-color:${hexToRgba(card.color, 0.28)};" role="button" tabindex="0" aria-label="Cuộn tới ${escapeHtml(card.label)}" onclick="scrollToReportBlock('${card.targetId}')" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); scrollToReportBlock('${card.targetId}'); }">
+                    <div class="report-kpi-header">
+                        <span style="font-size: 10.5px; font-weight: 600; color: var(--text-muted); line-height: 1.2;">${escapeHtml(card.label)}</span>
+                        <div class="report-kpi-icon" style="background:${hexToRgba(card.color, 0.16)}; color:${card.color};"><i class="fa-solid ${card.icon}"></i></div>
+                    </div>
+                    <div class="report-kpi-main">
+                        <div class="report-kpi-content">
+                            <div class="report-kpi-value" style="font-size: 22px; font-weight: 800; line-height: 1; margin: 1px 0;">--</div>
+                            <div class="report-kpi-note">Đang tổng hợp dữ liệu Planner</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        document.getElementById('reportOverdueTasks').innerHTML = '<div class="report-empty">Đang tải dữ liệu báo cáo...</div>';
+        document.getElementById('reportSlowDepartments').innerHTML = '<div class="report-empty">Đang tải dữ liệu báo cáo...</div>';
+        document.getElementById('reportSlowPeople').innerHTML = '<div class="report-empty">Đang tải dữ liệu báo cáo...</div>';
+        document.getElementById('reportChecklistCompletion').innerHTML = '<div class="report-empty">Đang tải dữ liệu báo cáo...</div>';
+        document.getElementById('reportOverdueCaption').innerText = '--';
     }
 
     function makeExportFileName(format) {
@@ -1755,6 +4898,112 @@
         const updatedAt = document.getElementById('reportUpdatedAt')?.innerText || '';
         ctx.fillText(updatedAt, 58, 100);
 
+        const plannerCards = [
+            ['Công việc quá hạn', report.overdueTasks.length, `${report.total} task Planner đang theo dõi`],
+            ['Bộ phận chậm trả lời', report.slowDepartmentCount, 'Có ít nhất 1 việc quá hạn'],
+            ['Cá nhân chậm trả lời', report.slowPeopleCount, 'Có ít nhất 1 việc quá hạn'],
+            ['% Tỷ lệ hoàn thành checklist', `${report.completionRate}%`, `${report.completedCount}/${report.total} task đã hoàn thành`]
+        ];
+        const plannerCardGap = 14;
+        const plannerCardWidth = (width - 64 - plannerCardGap * 3) / 4;
+        plannerCards.forEach((card, index) => {
+            const x = 32 + index * (plannerCardWidth + plannerCardGap);
+            const y = 144;
+            ctx.fillStyle = '#ffffff';
+            drawRoundRect(ctx, x, y, plannerCardWidth, 114, 10);
+            ctx.fill();
+            ctx.strokeStyle = border;
+            ctx.stroke();
+            ctx.fillStyle = muted;
+            ctx.font = '600 14px Segoe UI, Arial, sans-serif';
+            ctx.fillText(card[0], x + 16, y + 30);
+            ctx.fillStyle = navy;
+            ctx.font = '800 30px Segoe UI, Arial, sans-serif';
+            ctx.fillText(String(card[1]), x + 16, y + 66);
+            ctx.fillStyle = muted;
+            ctx.font = '500 13px Segoe UI, Arial, sans-serif';
+            drawWrappedText(ctx, card[2], x + 16, y + 94, plannerCardWidth - 32, 17, 1);
+        });
+
+        const drawPanel = (x, y, w, h, title) => {
+            ctx.fillStyle = '#ffffff';
+            drawRoundRect(ctx, x, y, w, h, 12);
+            ctx.fill();
+            ctx.strokeStyle = border;
+            ctx.stroke();
+            ctx.fillStyle = navy;
+            ctx.font = '700 18px Segoe UI, Arial, sans-serif';
+            ctx.fillText(title, x + 20, y + 36);
+        };
+
+        drawPanel(32, 286, width - 64, 280, 'Báo cáo 1: Công việc quá hạn');
+        if (!report.overdueTasks.length) {
+            ctx.fillStyle = muted;
+            ctx.font = '500 14px Segoe UI, Arial, sans-serif';
+            ctx.fillText(report.total ? 'Không có công việc quá hạn.' : 'Chưa có Planner task để tổng hợp báo cáo.', 58, 350);
+        } else {
+            const rows = report.overdueTasks.slice(0, 8);
+            let y = 340;
+            ctx.fillStyle = muted;
+            ctx.font = '700 13px Segoe UI, Arial, sans-serif';
+            ctx.fillText('Số hiệu', 58, y);
+            ctx.fillText('PIC', 230, y);
+            ctx.fillText('Bộ phận', 500, y);
+            ctx.fillText('Hạn', 720, y);
+            ctx.fillText('Quá hạn', 850, y);
+            ctx.fillText('Checkpoint', 980, y);
+            rows.forEach(row => {
+                y += 26;
+                ctx.fillStyle = '#202124';
+                ctx.font = '600 12px Segoe UI, Arial, sans-serif';
+                ctx.fillText(row.soHieu || '--', 58, y);
+                drawWrappedText(ctx, row.pic || '--', 230, y, 250, 14, 1);
+                ctx.fillText(row.department || '--', 500, y);
+                ctx.fillText(row.nextDue || '--', 720, y);
+                ctx.fillStyle = orange;
+                ctx.fillText(`${row.daysOverdue} ngày`, 850, y);
+                ctx.fillStyle = '#202124';
+                drawWrappedText(ctx, row.checkpoint || '--', 980, y, 330, 14, 1);
+            });
+        }
+
+        const plannerPanelY = 600;
+        const plannerPanelW = (width - 80) / 2;
+        drawPanel(32, plannerPanelY, plannerPanelW, 230, 'Báo cáo 2: Bộ phận chậm trả lời');
+        (report.slowDepartments || []).slice(0, 6).forEach((item, index) => {
+            const y = plannerPanelY + 72 + index * 26;
+            ctx.fillStyle = '#202124';
+            ctx.font = '600 13px Segoe UI, Arial, sans-serif';
+            drawWrappedText(ctx, item.label || 'Chưa xác định', 58, y, 330, 14, 1);
+            ctx.fillStyle = muted;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${item.overdue}/${item.total} (${item.rate}%)`, 32 + plannerPanelW - 28, y);
+            ctx.textAlign = 'left';
+        });
+
+        drawPanel(48 + plannerPanelW, plannerPanelY, plannerPanelW, 230, 'Báo cáo 3: Cá nhân chậm trả lời');
+        (report.slowPeople || []).slice(0, 6).forEach((item, index) => {
+            const y = plannerPanelY + 72 + index * 26;
+            ctx.fillStyle = '#202124';
+            ctx.font = '600 13px Segoe UI, Arial, sans-serif';
+            drawWrappedText(ctx, item.label || 'Chưa xác định', 74 + plannerPanelW, y, 390, 14, 1);
+            ctx.fillStyle = muted;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${item.overdue}/${item.total} (${item.rate}%)`, width - 58, y);
+            ctx.textAlign = 'left';
+        });
+
+        drawPanel(32, 858, width - 64, 190, 'Báo cáo 4: % Tỷ lệ hoàn thành checklist');
+        ctx.fillStyle = navy;
+        ctx.font = '800 42px Segoe UI, Arial, sans-serif';
+        ctx.fillText(`${report.completionRate}%`, 58, 940);
+        ctx.fillStyle = muted;
+        ctx.font = '600 16px Segoe UI, Arial, sans-serif';
+        ctx.fillText(`Đã hoàn thành: ${report.completedCount}/${report.total} task`, 58, 980);
+        ctx.fillText(`Chưa hoàn thành: ${report.activeCount} task`, 58, 1010);
+
+        return canvas;
+
         const cards = [
             ['Tổng ghi nhận', report.total, 'Tất cả bản ghi hiện có'],
             ['Đã chuyển xử lý', report.transferredCount, 'Hoàn tất trên webapp'],
@@ -1931,30 +5180,31 @@
         return canvas;
     }
 
-    async function exportReportData() {
+    async function exportReportData(format = 'png') {
         if (currentTab !== 'reports') {
             showToast('Chưa ở trang báo cáo', 'Hãy mở Báo cáo công việc trước khi xuất dữ liệu.', 'error');
             return;
         }
 
-        const selected = document.querySelector('input[name="reportExportFormat"]:checked');
-        const format = selected ? selected.value : 'png';
-        const btn = document.getElementById('btnExportReport');
-        const originalHtml = btn ? btn.innerHTML : '';
+        const exportFormat = String(format || 'png').toLowerCase() === 'pdf' ? 'pdf' : 'png';
+        const buttons = ['btnExportPng', 'btnExportPdf', 'btnExportReport']
+            .map(id => document.getElementById(id))
+            .filter(Boolean);
+        const originalHtmlByButton = new Map(buttons.map(btn => [btn, btn.innerHTML]));
 
         try {
-            if (btn) {
+            buttons.forEach(btn => {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất...';
-            }
+            });
 
             const report = latestReport || buildWorkReport(reportRecords);
             const canvas = buildReportExportCanvas(report);
-            const fileName = makeExportFileName(format);
+            const fileName = makeExportFileName(exportFormat);
             let blob;
             let mimeType;
 
-            if (format === 'pdf') {
+            if (exportFormat === 'pdf') {
                 blob = makePdfBlobFromCanvas(canvas);
                 mimeType = 'application/pdf';
             } else {
@@ -1969,10 +5219,10 @@
             console.error('Export report error:', error);
             showToast('Lỗi xuất dữ liệu', error.message || 'Không thể xuất báo cáo.', 'error');
         } finally {
-            if (btn) {
+            buttons.forEach(btn => {
                 btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
+                btn.innerHTML = originalHtmlByButton.get(btn) || '<i class="fa-solid fa-download"></i> Xuất PNG';
+            });
         }
     }
 
@@ -1982,10 +5232,7 @@
         setReportLoading();
 
         const requests = [
-            { source: 'all', action: 'get_all_records' },
-            { source: 'pending', action: 'get_pending_records' },
-            { source: 'irrelevant', action: 'get_irrelevant_records' },
-            { source: 'expired', action: 'get_expired_records' }
+            { source: 'all', action: 'get_all_records' }
         ];
 
         try {
@@ -2007,25 +5254,20 @@
             }
 
             reportRecords = mergeReportRows(datasets);
+            applyReportDefaultFilters();
+            buildReportDeptDropdown(reportRecords);
+            buildReportPersonDropdown(reportRecords);
             const report = buildWorkReport(reportRecords);
-            const transferredFromServer = Math.max(
-                0,
-                ...settled
-                    .filter(item => item.status === 'fulfilled')
-                    .map(item => item.value.transferred || 0)
-            );
-            if (transferredFromServer > report.transferredCount) {
-                report.transferredCount = transferredFromServer;
-                report.confirmedCount = report.transferredCount + report.irrelevantCount;
-            }
             renderWorkReport(report);
 
             if (failedCount > 0) {
                 showToast("Báo cáo chưa đầy đủ", "Một phần dữ liệu báo cáo chưa tải được.", "error");
             }
         } catch (error) {
-            document.getElementById('reportTimelineChart').innerHTML = '<div class="report-chart-empty">Không tải được dữ liệu báo cáo.</div>';
-            document.getElementById('reportConfirmationChart').innerHTML = '<div class="report-chart-empty">Không tải được dữ liệu báo cáo.</div>';
+            document.getElementById('reportOverdueTasks').innerHTML = '<div class="report-chart-empty">Không tải được dữ liệu báo cáo.</div>';
+            document.getElementById('reportSlowDepartments').innerHTML = '<div class="report-empty">Không tải được dữ liệu báo cáo.</div>';
+            document.getElementById('reportSlowPeople').innerHTML = '<div class="report-empty">Không tải được dữ liệu báo cáo.</div>';
+            document.getElementById('reportChecklistCompletion').innerHTML = '<div class="report-chart-empty">Không tải được dữ liệu báo cáo.</div>';
             showToast("Lỗi báo cáo", error.message || "Không thể tổng hợp báo cáo.", "error");
         }
     }
@@ -2062,6 +5304,8 @@
         if (mainContent) mainContent.classList.toggle('report-mode', isReportTab);
         if (appContainer) appContainer.classList.toggle('report-mode', isReportTab);
         renderHeaderActions(isReportTab ? 'report' : (tabId === 'pending' ? 'pending' : 'hidden'));
+        if (!isReportTab) toggleReportCustomizeMode(false);
+        applyReportChromeConfig();
         setTimeout(syncReportStickyOffset, 0);
 
         // 4. Các dữ liệu giao diện tĩnh của bạn
@@ -2108,6 +5352,7 @@
         } else if (tabId === 'reports') {
             document.getElementById('pageTitle').innerText = 'BÁO CÁO CÔNG VIỆC';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            applyReportChromeConfig();
         }
         
         // 5. Xóa khung tìm kiếm & Tải lại dữ liệu
@@ -2132,8 +5377,8 @@
         let actionName = "get_pending_records";
         if (currentTab === 'irrelevant') actionName = "get_irrelevant_records";
         if (currentTab === 'expired') actionName = "get_expired_records";
-        if (currentTab === 'all') actionName = "get_all_records"; // DÒNG BỔ SUNG MỚI
-        if (currentTab === 'transferred') actionName = "get_all_records";
+        if (currentTab === 'all') actionName = "get_all_records";
+        if (currentTab === 'transferred') actionName = "get_transferred_records";
 
         try {
             const response = await fetch(WEBAPP_URL, {
@@ -2148,9 +5393,7 @@
 
             if (result.ok) {
                 currentRecords = result.data || [];
-                if (currentTab === 'transferred') {
-                    currentRecords = currentRecords.filter(isTransferredRecord);
-                }
+                console.log('[loadData]', actionName, '| ok:', result.ok, '| count:', currentRecords.length, '| tab:', currentTab);
                 populateFilters();
                 if (currentTab === 'pending') {
                     // Lấy chính xác con số từ máy chủ gửi về
@@ -2305,7 +5548,13 @@
                         <i class="fa-solid fa-robot"></i> Tự động
                     </button>
                 `;
-            } else if (currentTab === 'all' || currentTab === 'transferred') {
+            } else if (currentTab === 'transferred') {
+                actionsHtml = `
+                    <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreRow(${rId}, '${rawSoHieu}')" title="Khôi phục về chờ xử lý">
+                        <i class="fa-solid fa-rotate-left"></i> Khôi phục
+                    </button>
+                `;
+            } else if (currentTab === 'all') {
                 actionsHtml = `
                     <button class="btn-detail" onclick="viewDetail(${rId})" title="Xem chi tiết văn bản">
                         <i class="fa-solid fa-eye"></i> Xem
@@ -2482,17 +5731,19 @@
         if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
+            const restoreUpdates = { "Trạng thái duyệt": "Chờ kiểm tra" };
+            if (currentTab === 'transferred') restoreUpdates["Trạng thái xử lý"] = "Chờ kiểm tra tự động";
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ 
-                    token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: { "Trạng thái duyệt": "Chờ kiểm tra" } } 
+                body: JSON.stringify({
+                    token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: restoreUpdates }
                 })
             });
 
             const result = await response.json();
             if (result.ok) {
-                showToast("Đã khôi phục!", `Văn bản ${soHieu} đã được đưa về danh sách chờ xử lý.`, "success");
+                showToast("Đã khôi phục!", `Đã khôi phục ${soHieu} về danh sách chờ xử lý.`, "success");
                 removeRowFromUI(rowNumber);
             } else {
                 if(btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
@@ -2504,33 +5755,39 @@
         }
     }
 
-    async function transferRow(rowNumber, soHieu) {
-        const btn = document.getElementById(`btn-${rowNumber}`);
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-
+    async function restoreTransferredRow(rowNumber, soHieu) {
+        if (!confirm(`Khôi phục văn bản [${soHieu}] về danh sách chờ xử lý?`)) return;
+        const btn = document.getElementById(`btn-restore-${rowNumber}`);
+        if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
+ 
         try {
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ token: TOKEN, action: "transfer_record", payload: { row_number: rowNumber } })
+                body: JSON.stringify({
+                    token: TOKEN,
+                    action: "update_record",
+                    payload: {
+                        row_number: rowNumber,
+                        updates: {
+                            "Trạng thái duyệt": "Chờ kiểm tra",
+                            "Trạng thái xử lý": "Chờ kiểm tra tự động"
+                        }
+                    }
+                })
             });
-
+ 
             const result = await response.json();
+            console.log('[restoreTransferredRow]', 'ok:', result.ok, '| tab:', currentTab);
             if (result.ok) {
-                showToast("Thành công!", `Đã chuyển văn bản ${soHieu}.`, "success");
-                if (typeof globalTransferredCount === 'number') globalTransferredCount++; 
+                showToast("Đã khôi phục!", `Văn bản ${soHieu} đã được đưa về danh sách chờ xử lý.`, "success");
                 removeRowFromUI(rowNumber);
             } else {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
-                let errorMsg = result.message;
-                if (result.reason === 'missing_fields') errorMsg = `Cần bổ sung: ${result.missing.join(', ')}. Hãy bấm nút "Sửa" kế bên.`;
-                showToast(`Lỗi dòng ${rowNumber}`, errorMsg, "error");
+                if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
+                showToast(`Lỗi khôi phục`, result.message || 'Không rõ lỗi.', "error");
             }
         } catch (error) {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
             showToast("Lỗi Mạng", "Không kết nối được máy chủ.", "error");
         }
     }
@@ -2581,6 +5838,65 @@
             ngayHieuLuc = d.toLocaleDateString('vi-VN');
         }
 
+        const formatPlannerDate = (value, includeTime = false) => {
+            const text = String(value || '').trim();
+            if (!text) return '--';
+            if (!includeTime && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) return text;
+
+            const dateValue = new Date(text);
+            if (Number.isNaN(dateValue.getTime())) return text;
+
+            const dateText = new Intl.DateTimeFormat('vi-VN', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(dateValue);
+
+            if (!includeTime) return dateText;
+
+            const timeText = new Intl.DateTimeFormat('vi-VN', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).format(dateValue);
+
+            return `${dateText} ${timeText}`;
+        };
+
+        const plannerTaskId = rowData['Planner Task ID'] ? String(rowData['Planner Task ID']).trim() : '';
+        const plannerPlanId = rowData['Planner Plan ID'] ? String(rowData['Planner Plan ID']).trim() : '';
+        const PLANNER_TENANT_ID = '010a6d4c-53ee-42a6-b68e-74c646a3297c';
+        const plannerTaskUrl = (plannerTaskId && plannerPlanId)
+            ? `https://planner.cloud.microsoft/webui/plan/${plannerPlanId}/view/board/task/${plannerTaskId}?tid=${PLANNER_TENANT_ID}`
+            : (rowData['Planner Task URL'] ? String(rowData['Planner Task URL']).trim() : '');
+        const plannerLastSync = formatPlannerDate(rowData['Planner Last Sync'], true);
+        const currentPic = rowData['Current PIC'] ? String(rowData['Current PIC']).trim() : '--';
+        const currentCheckpoint = rowData['Current Checkpoint'] ? String(rowData['Current Checkpoint']).trim() : '--';
+        const nextResponseDue = formatPlannerDate(rowData['Next Response Due']);
+
+        const plannerActionHtml = plannerTaskUrl
+            ? `<a href="${escapeHtml(plannerTaskUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 0 8px 0; color: #1976d2; font-weight: 600; text-decoration: none;">Task đã được tạo trên Planner</a>`
+            : `<p style="margin: 0 0 8px 0; color: #1976d2; font-weight: 600;">Task đã được tạo trên Planner</p>`;
+
+        const plannerHtml = plannerTaskId
+            ? `
+                <div style="margin: 0 0 15px 0;">
+                    <h4 style="color: #1976d2; margin: 0 0 10px 0; font-size: 15px;">
+                        <i class="fa-solid fa-list-check"></i> Theo dõi Planner
+                    </h4>
+                    <div style="background: #eaf3ff; border: 1px solid #d6e8ff; padding: 12px 15px; border-radius: 6px; font-size: 13px;">
+                        ${plannerActionHtml}
+                        <p style="margin: 0 0 6px 0;"><strong>PIC hiện tại:</strong> ${escapeHtml(currentPic)}</p>
+                        <p style="margin: 0 0 6px 0;"><strong>Công việc hiện tại:</strong> ${escapeHtml(currentCheckpoint)}</p>
+                        <p style="margin: 0 0 6px 0;"><strong>Hạn hoàn thành:</strong> ${escapeHtml(nextResponseDue)}</p>
+                        <p style="margin: 0;"><strong>Cập nhật lần cuối:</strong> ${escapeHtml(plannerLastSync)}</p>
+                    </div>
+                </div>
+            `
+            : '';
+
         // XỬ LÝ VĂN BẢN LIÊN QUAN: Luôn hiển thị, nếu rỗng thì báo "Không có" màu đỏ
         const emptyText = '<span style="color: red; font-weight: 500;">Không có</span>';
         
@@ -2618,6 +5934,7 @@
                     </div>
                 </div>
             </div>
+            ${plannerHtml}
             <div>
                 <p style="margin: 0 0 5px 0; color: #5f6368; font-size: 12px;">Văn bản liên quan</p>
                 <div style="background: #fff3e0; padding: 10px; border-radius: 6px; font-size: 13px; max-height: 250px; overflow-y: auto;">
@@ -2898,6 +6215,7 @@ function checkAuthStatus() {
         if (authIcon) authIcon.className = 'fa-solid fa-sign-out-alt';
     } else {
         adminElements.forEach(el => el.classList.add('locked'));
+        toggleReportCustomizeMode(false);
 
         if (authText) authText.innerText = 'Đăng nhập';
         if (authIcon) authIcon.className = 'fa-solid fa-user-lock';

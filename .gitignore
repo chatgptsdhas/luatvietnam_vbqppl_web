@@ -4,3 +4,6 @@ output/
 credentials/
 __pycache__/
 *.pyc
+apps_script/.clasp.json
+config/browser_session.json
+config/browser_session_*.json
