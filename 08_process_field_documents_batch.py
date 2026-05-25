@@ -258,10 +258,12 @@ def click_luoc_do_tab(page):
     ]
     for sel in selectors:
         try:
-            loc = page.locator(sel).first
-            if loc.count() > 0:
-                loc.click(timeout=3000)
-                page.wait_for_timeout(600)
+            if page.locator(sel).count() > 0:
+                page.locator(sel).first.click(timeout=3000)
+                try:
+                    page.wait_for_selector(".block-list.list-luocdo", timeout=5000)
+                except Exception:
+                    pass
                 return
         except Exception:
             continue
@@ -1012,6 +1014,7 @@ def main():
                     result_row["send_retry_errors"] = sent.get("retry_errors", [])
                     print(f"Gửi Apps Script thành công sau {sent.get('attempt', 1)} lần thử.")
                 results.append(result_row)
+                time.sleep(1.5)
             else:
                 results.append(
                     {

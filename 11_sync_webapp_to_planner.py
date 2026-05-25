@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 from dotenv import load_dotenv
-from ms_planner import create_planner_task_from_record, parse_ddmmyyyy
+from ms_planner import create_planner_task_from_record, delete_planner_task, parse_ddmmyyyy
 
 
 WEBAPP_TIMEOUT_SECONDS = 60
@@ -311,6 +311,162 @@ def summarize_record(record: dict) -> dict:
     }
 
 
+def find_record_for_planner_sync(
+    records: list[dict],
+    row_number: int | str | None = None,
+    so_hieu: str = "",
+) -> dict | None:
+    target_row_number = clean_text(row_number)
+    target_so_hieu = clean_text(so_hieu)
+
+    if target_row_number:
+        for record in records:
+            if clean_text(record.get("_rowNumber")) == target_row_number:
+                return record
+
+    if target_so_hieu:
+        for record in records:
+            if clean_text(record.get("Số hiệu")) == target_so_hieu:
+                return record
+
+    return None
+
+
+def sync_single_webapp_record_to_planner(
+    row_number: int | str | None = None,
+    so_hieu: str = "",
+    dry_run: bool = False,
+) -> dict:
+    if not clean_text(row_number) and not clean_text(so_hieu):
+        raise ValueError("Cần truyền row_number hoặc so_hieu để đồng bộ đúng record.")
+
+    records = get_records(DEFAULT_RECORD_ACTION)
+    record = find_record_for_planner_sync(records, row_number=row_number, so_hieu=so_hieu)
+
+    if not record:
+        summary = {
+            "ok": False,
+            "dry_run": dry_run,
+            "action": DEFAULT_RECORD_ACTION,
+            "target_row_number": clean_text(row_number),
+            "target_so_hieu": clean_text(so_hieu),
+            "total_records": len(records),
+            "created_tasks": 0,
+            "failed_records": 1,
+            "message": "Không tìm thấy record trong sheet VBQPPL.",
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return summary
+
+    should_create, reason = should_create_planner_task(record)
+    if not should_create:
+        summary = {
+            "ok": True,
+            "dry_run": dry_run,
+            "action": DEFAULT_RECORD_ACTION,
+            "target_row_number": record.get("_rowNumber"),
+            "target_so_hieu": clean_text(record.get("Số hiệu")),
+            "total_records": len(records),
+            "skipped_records": 1,
+            "created_tasks": 0,
+            "failed_records": 0,
+            "skip_reason": classify_skip_reason(record, reason),
+            "raw_skip_reason": reason,
+            "record": summarize_record(record),
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return summary
+
+    if dry_run:
+        summary = {
+            "ok": True,
+            "dry_run": True,
+            "action": DEFAULT_RECORD_ACTION,
+            "target_row_number": record.get("_rowNumber"),
+            "target_so_hieu": clean_text(record.get("Số hiệu")),
+            "total_records": len(records),
+            "records_to_process": 1,
+            "created_tasks": 0,
+            "failed_records": 0,
+            "record": summarize_record(record),
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return summary
+
+    row_number = record.get("_rowNumber")
+    task_result: dict = {}
+    try:
+        print(f"Tạo Planner task cho row={row_number} | {record.get('Số hiệu', '')}")
+        task_result = create_planner_task_from_record(record)
+        if not task_result.get("ok"):
+            summary = {
+                "ok": False,
+                "dry_run": False,
+                "action": DEFAULT_RECORD_ACTION,
+                "target_row_number": row_number,
+                "target_so_hieu": clean_text(record.get("Số hiệu")),
+                "total_records": len(records),
+                "created_tasks": 0,
+                "failed_records": 1,
+                "failed_items": [
+                    {
+                        "row_number": row_number,
+                        "so_hieu": record.get("Số hiệu", ""),
+                        "message": task_result.get("message", "create_planner_task_from_record failed"),
+                    }
+                ],
+            }
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            return summary
+
+        update_result = update_record_with_planner_info(record, task_result)
+        summary = {
+            "ok": True,
+            "dry_run": False,
+            "action": DEFAULT_RECORD_ACTION,
+            "target_row_number": row_number,
+            "target_so_hieu": clean_text(record.get("Số hiệu")),
+            "total_records": len(records),
+            "created_tasks": 1,
+            "failed_records": 0,
+            "created_items": [
+                {
+                    "row_number": row_number,
+                    "task_id": task_result.get("task_id", ""),
+                    "title": task_result.get("title", ""),
+                    "update_result": update_result,
+                }
+            ],
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return summary
+    except Exception as exc:
+        rollback_result = None
+        if task_result.get("ok") and task_result.get("task_id"):
+            rollback_result = delete_planner_task(task_result["task_id"])
+        summary = {
+            "ok": False,
+            "dry_run": False,
+            "action": DEFAULT_RECORD_ACTION,
+            "target_row_number": row_number,
+            "target_so_hieu": clean_text(record.get("Số hiệu")),
+            "total_records": len(records),
+            "created_tasks": 0,
+            "failed_records": 1,
+            "failed_items": [
+                    {
+                        "row_number": row_number,
+                        "so_hieu": record.get("Số hiệu", ""),
+                        "task_id": task_result.get("task_id", ""),
+                        "message": str(exc),
+                        "rollback_result": rollback_result,
+                    }
+                ],
+            }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return summary
+
+
 def sync_webapp_to_planner(
     limit: int = 1,
     dry_run: bool = False,
@@ -360,6 +516,7 @@ def sync_webapp_to_planner(
 
     for record in records_to_process:
         row_number = record.get("_rowNumber")
+        task_result: dict = {}
         try:
             print(f"Tạo Planner task cho row={row_number} | {record.get('Số hiệu', '')}")
             task_result = create_planner_task_from_record(record)
@@ -368,7 +525,9 @@ def sync_webapp_to_planner(
                     {
                         "row_number": row_number,
                         "so_hieu": record.get("Số hiệu", ""),
+                        "task_id": task_result.get("task_id", ""),
                         "message": task_result.get("message", "create_planner_task_from_record failed"),
+                        "rollback_result": task_result.get("rollback_result"),
                     }
                 )
                 continue
@@ -383,11 +542,16 @@ def sync_webapp_to_planner(
                 }
             )
         except Exception as exc:
+            rollback_result = None
+            if task_result.get("ok") and task_result.get("task_id"):
+                rollback_result = delete_planner_task(task_result["task_id"])
             failed_records.append(
                 {
                     "row_number": row_number,
                     "so_hieu": record.get("Số hiệu", ""),
+                    "task_id": task_result.get("task_id", ""),
                     "message": str(exc),
+                    "rollback_result": rollback_result,
                 }
             )
 

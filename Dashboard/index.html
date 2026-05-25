@@ -6,6 +6,8 @@
     <title>Hệ thống Duyệt VBQPPL - H.A.S</title>
     <!-- Font Awesome cho Icon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js cho biểu đồ Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             /* Bộ màu thương hiệu Hanoi Adelaide School (HAS) */
@@ -1856,9 +1858,11 @@
         .toast { min-width: 300px; background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: flex-start; gap: 12px; transform: translateX(120%); transition: transform 0.3s ease; border-left: 4px solid var(--has-navy); }
         .toast.show { transform: translateX(0); }
         .toast.success { border-left-color: var(--success); }
+        .toast.warning { border-left-color: var(--warning); }
         .toast.error { border-left-color: var(--danger); }
         .toast-icon { font-size: 20px; }
         .toast.success .toast-icon { color: var(--success); }
+        .toast.warning .toast-icon { color: var(--warning); }
         .toast.error .toast-icon { color: var(--danger); }
         .toast-content { flex: 1; }
         .toast-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text-main); }
@@ -1887,7 +1891,68 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-        }        
+        }
+
+        /* --- ANALYTICS PANEL --- */
+        .analytics-panel {
+            display: none; flex-direction: column; gap: 16px;
+            flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px;
+        }
+        .analytics-section {
+            background: var(--surface); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(27,42,89,0.05); flex-shrink: 0;
+        }
+        .analytics-section h3 {
+            margin: 0 0 12px 0; font-size: 14px; font-weight: 700;
+            color: var(--has-navy); display: flex; align-items: center; gap: 8px;
+        }
+        .analytics-filters {
+            display: flex; align-items: center; gap: 10px;
+            flex-wrap: wrap; margin-bottom: 14px;
+        }
+        .analytics-filters label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+        .analytics-filters input[type="date"],
+        .analytics-filters select {
+            border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 6px 10px; font-size: 12px; color: var(--text-main);
+            background: #fff; font-family: inherit;
+        }
+        .analytics-filters button {
+            background: var(--has-teal); color: white; border: none;
+            border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;
+        }
+        .analytics-filters button:hover { background: #007a80; }
+        .analytics-chart-wrap { position: relative; height: 240px; }
+        .analytics-kpi-row {
+            display: flex; gap: 12px; flex-wrap: wrap; flex-shrink: 0;
+        }
+        .analytics-kpi {
+            background: var(--surface); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 12px 18px; text-align: center;
+            flex: 1; min-width: 100px;
+            box-shadow: 0 2px 6px rgba(27,42,89,0.04);
+        }
+        .analytics-kpi .kpi-val { font-size: 24px; font-weight: 800; color: var(--has-navy); line-height: 1; }
+        .analytics-kpi .kpi-lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
+        .analytics-top-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .analytics-top-table th {
+            background: #f4f6f9; color: var(--has-navy); font-weight: 700;
+            padding: 7px 12px; border-bottom: 2px solid var(--border-color); text-align: left;
+            position: sticky; top: 0;
+        }
+        .analytics-top-table td { padding: 7px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .analytics-top-table tr:last-child td { border-bottom: none; }
+        .analytics-top-table tbody tr:hover td { background: #f8faff; }
+        .analytics-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px; }
+        .analytics-rank-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 50%; font-size: 11px;
+            font-weight: 700; background: #eef2f7; color: var(--has-navy);
+        }
+        .analytics-rank-badge.top1 { background: #fde68a; color: #92400e; }
+        .analytics-rank-badge.top2 { background: #e2e8f0; color: #475569; }
+        .analytics-rank-badge.top3 { background: #fcd9b6; color: #9a3412; }
     </style>
 </head>
 <body>
@@ -1922,6 +1987,10 @@
 
             <li id="tab-reports" onclick="switchTab('reports')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-chart-column"></i> Báo cáo công việc
+            </li>
+
+            <li id="tab-analytics" onclick="switchTab('analytics')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-chart-line"></i> Thống kê truy cập
             </li>
 
         </ul>
@@ -2112,6 +2181,78 @@
             </div>
         </section>
 
+        <!-- ANALYTICS PANEL -->
+        <section id="analyticsPanel" class="analytics-panel">
+            <!-- KPI row -->
+            <div class="analytics-kpi-row">
+                <div class="analytics-kpi">
+                    <div class="kpi-val" id="akpi-total">--</div>
+                    <div class="kpi-lbl">Tổng lượt truy cập</div>
+                </div>
+                <div class="analytics-kpi">
+                    <div class="kpi-val" id="akpi-docview">--</div>
+                    <div class="kpi-lbl">Lượt xem văn bản</div>
+                </div>
+                <div class="analytics-kpi">
+                    <div class="kpi-val" id="akpi-peak">--</div>
+                    <div class="kpi-lbl">Giờ cao điểm</div>
+                </div>
+                <div class="analytics-kpi">
+                    <div class="kpi-val" id="akpi-top-tab">--</div>
+                    <div class="kpi-lbl">Tab phổ biến nhất</div>
+                </div>
+            </div>
+
+            <!-- Phần 1: Biểu đồ tần suất truy cập -->
+            <div class="analytics-section">
+                <h3><i class="fa-solid fa-chart-line" style="color:var(--has-teal)"></i> Tần suất truy cập theo thời gian</h3>
+                <div class="analytics-filters">
+                    <label>Từ ngày:</label>
+                    <input type="date" id="analyticsFromDate">
+                    <label>Đến ngày:</label>
+                    <input type="date" id="analyticsToDate">
+                    <label>Độ chi tiết:</label>
+                    <select id="analyticsGranularity">
+                        <option value="hour">Theo giờ</option>
+                        <option value="day" selected>Theo ngày</option>
+                        <option value="week">Theo tuần</option>
+                        <option value="month">Theo tháng</option>
+                    </select>
+                    <button onclick="loadAnalyticsData()"><i class="fa-solid fa-filter"></i> Lọc</button>
+                    <button onclick="analyticsResetFilter()" style="background:#f1f3f4;color:var(--text-main);border:1px solid #d1d5db;">
+                        <i class="fa-solid fa-rotate-left"></i> Đặt lại
+                    </button>
+                </div>
+                <div class="analytics-chart-wrap">
+                    <canvas id="analyticsAccessChart"></canvas>
+                    <div id="analyticsAccessEmpty" class="analytics-empty" style="display:none">
+                        <i class="fa-regular fa-chart-bar" style="font-size:32px;margin-bottom:8px;display:block"></i>
+                        Chưa có dữ liệu truy cập trong khoảng thời gian này.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 2: Top văn bản xem nhiều -->
+            <div class="analytics-section">
+                <h3><i class="fa-solid fa-fire" style="color:var(--has-orange)"></i> Top văn bản xem nhiều nhất</h3>
+                <div id="analyticsTopDocsWrap" style="max-height:320px;overflow-y:auto;">
+                    <div class="analytics-empty">Đang tải dữ liệu...</div>
+                </div>
+            </div>
+
+            <!-- Phần 3: Biểu đồ phân bổ theo lĩnh vực -->
+            <div class="analytics-section">
+                <h3><i class="fa-solid fa-chart-pie" style="color:#9334e6"></i> Phân bổ lượt xem theo lĩnh vực</h3>
+                <div class="analytics-chart-wrap" style="height:220px;">
+                    <canvas id="analyticsLinhVucChart"></canvas>
+                    <div id="analyticsLinhVucEmpty" class="analytics-empty" style="display:none">
+                        <i class="fa-regular fa-chart-pie" style="font-size:32px;margin-bottom:8px;display:block"></i>
+                        Chưa có dữ liệu lĩnh vực.
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- TABLE AREA -->
         <div class="table-wrapper" id="recordsPanel">
             <div class="table-toolbar">
@@ -2130,6 +2271,9 @@
                         <i class="fa-solid fa-magnifying-glass"></i> Tra cứu
                     </span>
                     <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Nhập số hiệu hoặc tên văn bản..." style="border: none; padding: 6px 12px; outline: none; width: 260px; font-size: 13px; font-family: inherit; color: var(--text-main);">
+                    <button id="btnExtendedSearch" onclick="openExtendedSearch()" title="Tìm kiếm trên Google" style="display:none; border:none; border-left:1px solid var(--border-color); background:#f1f3f4; color:#1a73e8; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:inherit;">
+                        <i class="fa-brands fa-google"></i> Tìm kiếm mở rộng
+                    </button>
                 </div>
 
                 <div style="margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500;" id="recordCount">
@@ -2286,6 +2430,7 @@
         </div>
         <h2 style="margin: 0 0 12px 0; color: var(--has-navy); font-size: 20px;">Xác nhận thao tác</h2>
         <p id="confirmMessage" style="color: var(--text-muted); margin: 0 0 24px 0; line-height: 1.5;"></p>
+        <div id="confirmExtraOptions" style="display: none; text-align: left; margin: -8px 0 20px 0;"></div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('confirmModal')">Hủy</button>
             <button class="btn-primary" style="background: var(--danger); border: none;" id="btnConfirmAction">
@@ -2352,6 +2497,8 @@
     // --- CẤU HÌNH KẾT NỐI ---
     const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDES8M8mTjzpeIZJ78QqZYz1cDo5ODNzU2DGMbZDSRVzH-yXLh7ashwHh8CeDQwXnwww/exec"; 
     const TOKEN = "T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0";
+    const PLANNER_SYNC_SERVER_URL = localStorage.getItem('plannerSyncServerUrl') || "http://127.0.0.1:8765/sync-webapp-to-planner";
+    const PLANNER_SYNC_SERVER_BASE_URL = PLANNER_SYNC_SERVER_URL.replace(/\/sync-webapp-to-planner\/?$/, '');
 
     let currentRecords = [];
     let reportRecords = [];
@@ -2584,6 +2731,19 @@
 
     function closeModal(modalId) { 
         document.getElementById(modalId).classList.remove('show'); 
+    }
+
+    function openConfirmDialog({ messageHtml, confirmText = 'Đồng ý', extraHtml = '', onConfirm }) {
+        const messageEl = document.getElementById('confirmMessage');
+        const extraEl = document.getElementById('confirmExtraOptions');
+        const buttonEl = document.getElementById('btnConfirmAction');
+
+        messageEl.innerHTML = messageHtml || '';
+        extraEl.innerHTML = extraHtml || '';
+        extraEl.style.display = extraHtml ? 'block' : 'none';
+        buttonEl.innerHTML = confirmText;
+        confirmActionCallback = typeof onConfirm === 'function' ? onConfirm : null;
+        document.getElementById('confirmModal').classList.add('show');
     }
 
     function actionFromPopup() {
@@ -5275,14 +5435,14 @@
     function switchTab(tabId) {
         // 1. Kiểm tra bảo mật
         const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
-        if ((tabId === 'pending' || tabId === 'irrelevant' || tabId === 'reports' || tabId === 'transferred') && !isAdmin) {
+        if ((tabId === 'pending' || tabId === 'irrelevant' || tabId === 'reports' || tabId === 'transferred' || tabId === 'analytics') && !isAdmin) {
             return; 
         }
         
         currentTab = tabId;
 
         // 2. Tắt sáng toàn bộ các tab (Dùng mảng ID để quét, KHÔNG bao giờ lỗi null)
-        const allTabIds = ['tab-all', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports'];
+        const allTabIds = ['tab-all', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports', 'tab-analytics'];
         allTabIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -5299,8 +5459,11 @@
         }
 
         const isReportTab = tabId === 'reports';
+        const isAnalyticsTab = tabId === 'analytics';
         if (reportPanel) reportPanel.style.display = isReportTab ? 'flex' : 'none';
-        if (recordsPanel) recordsPanel.style.display = isReportTab ? 'none' : 'flex';
+        const analyticsPanel = document.getElementById('analyticsPanel');
+        if (analyticsPanel) analyticsPanel.style.display = isAnalyticsTab ? 'flex' : 'none';
+        if (recordsPanel) recordsPanel.style.display = (isReportTab || isAnalyticsTab) ? 'none' : 'flex';
         if (mainContent) mainContent.classList.toggle('report-mode', isReportTab);
         if (appContainer) appContainer.classList.toggle('report-mode', isReportTab);
         renderHeaderActions(isReportTab ? 'report' : (tabId === 'pending' ? 'pending' : 'hidden'));
@@ -5353,18 +5516,29 @@
             document.getElementById('pageTitle').innerText = 'BÁO CÁO CÔNG VIỆC';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
             applyReportChromeConfig();
+        } else if (tabId === 'analytics') {
+            document.getElementById('pageTitle').innerText = 'THỐNG KÊ TRUY CẬP';
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
         }
-        
+
         // 5. Xóa khung tìm kiếm & Tải lại dữ liệu
         const searchInput = document.getElementById('searchInput');
         if (searchInput) searchInput.value = '';
 
         if (tabId === 'reports') {
             loadReportData();
+            trackPageAccess(tabId);
             return;
         }
 
-        loadData(); 
+        if (tabId === 'analytics') {
+            loadAnalyticsData();
+            trackPageAccess(tabId);
+            return;
+        }
+
+        trackPageAccess(tabId);
+        loadData();
     }
     // --- HÀM TẢI DỮ LIỆU ĐÃ ĐƯỢC LÀM SẠCH ---
     async function loadData() {
@@ -5402,6 +5576,10 @@
                     updateStatsUI();
                 } else {
                     document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
+                    if (currentTab === 'transferred') {
+                        globalTransferredCount = result.total || currentRecords.length;
+                        document.getElementById('stat-transferred').innerText = globalTransferredCount;
+                    }
                 }
                 handleLinkedFilters('init'); 
                 renderTable(currentRecords);
@@ -5457,25 +5635,23 @@
         // 2. BỘ LỌC TRA CỨU (TÌM KIẾM THÔNG MINH)
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
-            const query = searchInput.value.toLowerCase().trim();
+            const query = searchInput.value.trim();
             if (query !== '') {
-                displayRecords = displayRecords.filter(row => {
-                    const soHieu = String(row['Số hiệu'] || '').toLowerCase();
-                    const tenVB = String(row['Tên văn bản'] || '').toLowerCase();
-                    // So sánh xem từ khóa có nằm trong Số hiệu hoặc Tên VB hay không
-                    return soHieu.includes(query) || tenVB.includes(query);
-                });
+                displayRecords = applySmartSearchAndSort(displayRecords, query);
             }
         }
         
-        // 3. Sắp xếp danh sách
+        // 3. Sắp xếp danh sách (chỉ áp dụng khi không có từ khóa tìm kiếm)
         const sortType = document.getElementById('sortSelect').value;
-        if (sortType === 'row_desc') {
-            displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
-        } else if (sortType === 'row_asc') {
-            displayRecords.sort((a, b) => a._rowNumber - b._rowNumber);
-        } else if (sortType === 'priority') {
-            displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
+        const activeQuery = searchInput ? searchInput.value.trim() : '';
+        if (!activeQuery) {
+            if (sortType === 'row_desc') {
+                displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
+            } else if (sortType === 'row_asc') {
+                displayRecords.sort((a, b) => a._rowNumber - b._rowNumber);
+            } else if (sortType === 'priority') {
+                displayRecords.sort((a, b) => b._rowNumber - a._rowNumber);
+            }
         }
         
         // Hiển thị lại số lượng theo kết quả tìm kiếm
@@ -5550,7 +5726,7 @@
                 `;
             } else if (currentTab === 'transferred') {
                 actionsHtml = `
-                    <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreRow(${rId}, '${rawSoHieu}')" title="Khôi phục về chờ xử lý">
+                    <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreTransferredRow(${rId})" title="Xóa khỏi sheet VBQPPL">
                         <i class="fa-solid fa-rotate-left"></i> Khôi phục
                     </button>
                 `;
@@ -5686,11 +5862,100 @@
         }
     }
 
+    // =====================================================================
+    // HÀM transferRow — Gọi API transfer_record sau khi saveEdit thành công
+    // =====================================================================
+    function getPlannerSyncSkipMessage(result) {
+        const summary = result?.summary || {};
+        return summary.raw_skip_reason || summary.skip_reason || result?.raw_skip_reason || result?.skip_reason || 'Không có record đủ điều kiện để tạo task.';
+    }
+
+    async function triggerPlannerSyncAfterTransfer(sourceRowNumber, soHieu, transferResult = {}) {
+        const payload = {
+            source: 'dashboard_transfer',
+            source_row_number: sourceRowNumber,
+            vbqppl_row_number: transferResult.vbqppl_row_number || transferResult.vbqpplRowNumber || '',
+            so_hieu: transferResult.soHieu || soHieu || '',
+            limit: 1
+        };
+
+        try {
+            const response = await fetch(PLANNER_SYNC_SERVER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.ok) {
+                throw new Error(result.message || `HTTP ${response.status}`);
+            }
+
+            const summary = result.summary || {};
+            const createdTasks = Number(result.created_tasks || summary.created_tasks || 0);
+            if (createdTasks > 0) {
+                showToast('Đã tạo task Planner', `Task cho <strong>${escapeHtml(payload.so_hieu || soHieu || '')}</strong> đã được tạo.`, 'success');
+                return;
+            }
+
+            showToast('Chưa tạo task Planner', escapeHtml(getPlannerSyncSkipMessage(result)), 'warning');
+        } catch (error) {
+            console.warn('[Planner sync] Không gọi được server local:', error);
+            showToast(
+                'Chưa tạo task Planner',
+                `Đã chuyển văn bản nhưng chưa kết nối được server local tại <b>${escapeHtml(PLANNER_SYNC_SERVER_URL)}</b>.`,
+                'warning'
+            );
+        }
+    }
+
+    async function transferRow(rowNumber, soHieu) {
+        const btn = document.getElementById(`btn-${rowNumber}`);
+        if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
+
+        try {
+            const response = await fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    token: TOKEN,
+                    action: "transfer_record",
+                    payload: { row_number: rowNumber }
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                showToast("Đã chuyển!", `Văn bản <strong>${soHieu}</strong> đã được chuyển thành công.`, "success");
+                removeRowFromUI(rowNumber);
+                triggerPlannerSyncAfterTransfer(rowNumber, result.soHieu || soHieu, result);
+            } else {
+                if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`; }
+
+                // Hiển thị lý do cụ thể nếu thiếu trường bắt buộc
+                if (result.reason === 'missing_fields' && result.missing) {
+                    showToast("Không thể chuyển!", `Còn thiếu thông tin: <b>${result.missing.join(', ')}</b>`, "error");
+                } else if (result.reason === 'duplicate') {
+                    showToast("Trùng số hiệu!", `Văn bản <b>${soHieu}</b> đã tồn tại trong danh sách chính.`, "error");
+                } else {
+                    showToast("Lỗi chuyển dữ liệu", result.message || "Không rõ lỗi.", "error");
+                }
+            }
+        } catch (error) {
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`; }
+            showToast("Lỗi Mạng", "Không kết nối được máy chủ khi chuyển dữ liệu.", "error");
+            console.error("[transferRow] Lỗi:", error);
+        }
+    }
+
     function rejectRow(rowNumber, soHieu) {
         const msg = `Bạn có chắc chắn muốn đánh dấu văn bản <br><strong style="color: var(--has-navy); font-size: 16px;">[${soHieu}]</strong><br> là <b>KHÔNG LIÊN QUAN</b>?`;
-        document.getElementById('confirmMessage').innerHTML = msg;
-        confirmActionCallback = () => { executeRejectRow(rowNumber, soHieu); };
-        document.getElementById('confirmModal').classList.add('show');
+        openConfirmDialog({
+            messageHtml: msg,
+            confirmText: 'Đồng ý bỏ qua',
+            onConfirm: () => { executeRejectRow(rowNumber, soHieu); }
+        });
     }
 
     document.getElementById('btnConfirmAction').onclick = () => {
@@ -5726,6 +5991,9 @@
     }
 
     async function restoreRow(rowNumber, soHieu) {
+        if (currentTab === 'transferred') {
+            return restoreTransferredRow(rowNumber);
+        }
         if(!confirm(`Bạn có muốn khôi phục văn bản [${soHieu}] về danh sách chờ xử lý không?`)) return;
         const btn = document.getElementById(`btn-restore-${rowNumber}`);
         if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
@@ -5755,24 +6023,152 @@
         }
     }
 
-    async function restoreTransferredRow(rowNumber, soHieu) {
-        if (!confirm(`Khôi phục văn bản [${soHieu}] về danh sách chờ xử lý?`)) return;
+    async function hydrateTransferredPlannerFields(rowData) {
+        if (!rowData || String(rowData['Planner Task ID'] || '').trim()) return rowData;
+
+        const vbqpplRowNumber = rowData._vbqpplRowNumber ? Number(rowData._vbqpplRowNumber) : 0;
+        const soHieu = String(rowData['Số hiệu'] || '').trim();
+        if (!vbqpplRowNumber && !soHieu) return rowData;
+
+        try {
+            const result = await postWebAppAction('get_all_records');
+            const records = result.data || [];
+            const matched = records.find(item => {
+                if (vbqpplRowNumber && Number(item._rowNumber) === vbqpplRowNumber) return true;
+                return soHieu && String(item['Số hiệu'] || '').trim() === soHieu;
+            });
+
+            if (!matched) return rowData;
+
+            [
+                'Planner Task ID',
+                'Planner Plan ID',
+                'Planner Bucket ID',
+                'Planner Bucket Name',
+                'Planner Task URL',
+                'Planner Sync Status',
+                'Planner Last Sync',
+                'Current PIC',
+                'Current Checkpoint',
+                'Next Response Due'
+            ].forEach(fieldName => {
+                if (Object.prototype.hasOwnProperty.call(matched, fieldName)) {
+                    rowData[fieldName] = matched[fieldName];
+                }
+            });
+            return rowData;
+        } catch (error) {
+            console.warn('[restoreTransferredRow] Không tải được thông tin Planner từ VBQPPL:', error);
+            return rowData;
+        }
+    }
+
+    async function restoreTransferredRow(rowNumber) {
+        let rowData = currentRecords.find(r => r._rowNumber == rowNumber);
+        rowData = await hydrateTransferredPlannerFields(rowData);
+        const soHieu = String(rowData?.['Số hiệu'] || '').trim();
+        const idVanBan = String(rowData?.['ID VĂN BẢN'] || rowData?.['ID Văn bản'] || '').trim();
+        const tenVanBan = String(rowData?.['Tên văn bản'] || '').trim();
+        const plannerTaskId = String(rowData?.['Planner Task ID'] || '').trim();
+        const vbqpplRowNumber = rowData?._vbqpplRowNumber || '';
+
+        if (!rowData || (!soHieu && !idVanBan)) {
+            showToast("Không thể khôi phục", "Không xác định được đúng văn bản cần xóa khỏi sheet VBQPPL.", "error");
+            return;
+        }
+
+        const plannerOptionHtml = plannerTaskId ? `
+            <label style="display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid var(--border-color); border-radius:8px; background:#fff8e1; color:var(--text-main); font-size:13px; line-height:1.4;">
+                <input type="checkbox" id="restoreDeletePlannerTask" style="margin-top:2px;">
+                <span>
+                    <strong>Đồng thời xóa task Planner nếu có</strong><br>
+                    <span style="color:var(--text-muted);">Nếu chọn, hệ thống sẽ xóa task Planner trước. Nếu xóa task thất bại, dòng VBQPPL sẽ không bị xóa.</span>
+                </span>
+            </label>
+        ` : '';
+
+        openConfirmDialog({
+            messageHtml: `
+                <span>Khôi phục văn bản</span><br>
+                <strong style="color: var(--has-navy); font-size: 16px;">[${escapeHtml(soHieu || idVanBan)}]</strong><br><br>
+                <span>Thao tác này sẽ xóa dòng tương ứng khỏi sheet <b>VBQPPL</b>.</span><br>
+                <span>Sheet <b>VBQPPL_Nhap</b> không bị xóa hoặc cập nhật.</span><br>
+                <span>${plannerTaskId ? 'Nếu không chọn tùy chọn bên dưới, task Planner hiện có sẽ được giữ nguyên.' : 'Dòng này không có Planner Task ID nên không có tùy chọn xóa Planner.'}</span>
+            `,
+            confirmText: 'Xác nhận khôi phục',
+            extraHtml: plannerOptionHtml,
+            onConfirm: () => {
+                const shouldDeletePlannerTask = Boolean(document.getElementById('restoreDeletePlannerTask')?.checked);
+                executeRestoreTransferredRow({
+                    rowNumber,
+                    soHieu,
+                    idVanBan,
+                    tenVanBan,
+                    plannerTaskId,
+                    vbqpplRowNumber,
+                    deletePlannerTask: shouldDeletePlannerTask
+                });
+            }
+        });
+    }
+
+    async function deletePlannerTaskForRestore({ plannerTaskId, soHieu, tenVanBan }) {
+        if (!plannerTaskId) {
+            return { ok: true, deleted: false, planner_task_id: '', message: 'Không có Planner Task ID để xóa.' };
+        }
+
+        const response = await fetch(`${PLANNER_SYNC_SERVER_BASE_URL}/delete-planner-task`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                planner_task_id: plannerTaskId,
+                so_hieu: soHieu,
+                ten_van_ban: tenVanBan,
+                source: 'dashboard_restore_transferred'
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.ok) {
+            throw new Error(result.message || `Không xóa được task Planner (${response.status}).`);
+        }
+        return result;
+    }
+
+    async function logPlannerTaskDeleteResult(deleteResult) {
+        if (!deleteResult) return;
+        try {
+            await postWebAppAction('log_planner_task_delete_result', deleteResult);
+        } catch (error) {
+            console.warn('[restoreTransferredRow] Không ghi được log xóa Planner:', error);
+        }
+    }
+
+    async function executeRestoreTransferredRow({ rowNumber, soHieu, idVanBan, tenVanBan, plannerTaskId, vbqpplRowNumber, deletePlannerTask }) {
         const btn = document.getElementById(`btn-restore-${rowNumber}`);
         if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
  
         try {
+            let plannerDeleteResult = null;
+            if (deletePlannerTask) {
+                plannerDeleteResult = await deletePlannerTaskForRestore({ plannerTaskId, soHieu, tenVanBan });
+                await logPlannerTaskDeleteResult(plannerDeleteResult);
+            }
+
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     token: TOKEN,
-                    action: "update_record",
+                    action: "restore_transferred_record",
                     payload: {
-                        row_number: rowNumber,
-                        updates: {
-                            "Trạng thái duyệt": "Chờ kiểm tra",
-                            "Trạng thái xử lý": "Chờ kiểm tra tự động"
-                        }
+                        source_row_number: rowNumber,
+                        vbqppl_row_number: vbqpplRowNumber,
+                        so_hieu: soHieu,
+                        id_van_ban: idVanBan,
+                        planner_task_id: plannerTaskId,
+                        delete_planner_task: Boolean(deletePlannerTask),
+                        planner_delete_result: plannerDeleteResult
                     }
                 })
             });
@@ -5780,7 +6176,12 @@
             const result = await response.json();
             console.log('[restoreTransferredRow]', 'ok:', result.ok, '| tab:', currentTab);
             if (result.ok) {
-                showToast("Đã khôi phục!", `Văn bản ${soHieu} đã được đưa về danh sách chờ xử lý.`, "success");
+                const successMessage = deletePlannerTask
+                    ? (plannerDeleteResult?.deleted
+                        ? 'Đã khôi phục và đã xóa task Planner.'
+                        : 'Đã khôi phục. Không có task Planner để xóa.')
+                    : 'Đã khôi phục, task Planner không bị xóa.';
+                showToast("Đã khôi phục!", result.message || successMessage, "success");
                 removeRowFromUI(rowNumber);
             } else {
                 if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
@@ -5788,7 +6189,7 @@
             }
         } catch (error) {
             if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Khôi phục`; }
-            showToast("Lỗi Mạng", "Không kết nối được máy chủ.", "error");
+            showToast("Lỗi khôi phục", error.message || "Không kết nối được máy chủ.", "error");
         }
     }
 
@@ -5810,6 +6211,9 @@
                 
                 if(currentTab === 'pending') {
                     updateStatsUI();
+                } else if (currentTab === 'transferred') {
+                    globalTransferredCount = currentRecords.length;
+                    document.getElementById('stat-transferred').innerText = globalTransferredCount;
                 }
                 
                 document.getElementById('recordCount').innerText = currentRecords.length + " văn bản";
@@ -5825,6 +6229,8 @@
     function viewDetail(rowNum) {
         const rowData = currentRecords.find(r => r._rowNumber === rowNum);
         if (!rowData) return;
+
+        trackDocView(rowData['Số hiệu'], rowData['Tên văn bản'], rowData['Lĩnh vực']);
 
         let linkGoc = rowData['Link Văn bản'] ? String(rowData['Link Văn bản']).trim() : '';
         let soHieuHtml = linkGoc 
@@ -6058,9 +6464,132 @@
         // 6. Gọi lệnh lọc dữ liệu Bảng bên dưới
         applyFilters();
     }
+    // === SMART SEARCH ===
+
+    function normalizeSearchText(value) {
+        if (!value) return '';
+        return value
+            .toLowerCase()
+            .trim()
+            .replace(/đ/g, 'd')
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/[.,\-\/(){}\[\]|:;!?]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function tokenizeSearchQuery(query) {
+        const normalized = normalizeSearchText(query);
+        const stopwords = new Set(['ve', 'doi', 'voi', 'cua', 'va', 'theo', 'trong', 'la', 'co', 'de', 'tren', 'duoi', 'nay', 'do', 'khac', 'mot', 'cac', 'nhung', 'hoac']);
+        const tokens = normalized.split(' ').filter(t => t.length >= 2);
+        if (tokens.length > 3) {
+            const filtered = tokens.filter(t => !stopwords.has(t));
+            if (filtered.length >= 2) return filtered;
+        }
+        return tokens;
+    }
+
+    function calculateSearchScore(row, queryInfo) {
+        const { rawQuery, normalizedQuery, tokens } = queryInfo;
+
+        const tenVB = String(row['Tên văn bản'] || '');
+        const soHieu = String(row['Số hiệu'] || '');
+        const normTenVB = normalizeSearchText(tenVB);
+        const normSoHieu = normalizeSearchText(soHieu);
+        const rawSoHieu = soHieu.toLowerCase().trim();
+        const rawNormQuery = rawQuery.toLowerCase().trim();
+
+        let score = 0;
+
+        // --- Số hiệu matching ---
+        if (rawSoHieu === rawNormQuery || normSoHieu === normalizedQuery) {
+            score += 1200;
+        } else if (rawSoHieu.includes(rawNormQuery) || rawNormQuery.includes(rawSoHieu)) {
+            score += 1200;
+        } else if (normSoHieu.includes(normalizedQuery) || normalizedQuery.includes(normSoHieu)) {
+            score += 1200;
+        } else if (tokens.some(t => rawSoHieu.includes(t) || normSoHieu.includes(t))) {
+            score += 600;
+        }
+
+        // --- Tên văn bản matching ---
+        if (normTenVB.includes(normalizedQuery)) {
+            score += 1000;
+        }
+
+        let matchedTokens = 0;
+        for (const token of tokens) {
+            if (normTenVB.includes(token)) {
+                matchedTokens++;
+                let pos = 0, occ = 0;
+                while ((pos = normTenVB.indexOf(token, pos)) !== -1) { occ++; pos += token.length; }
+                score += Math.min(occ, 3) * 20;
+            }
+        }
+        if (matchedTokens === tokens.length && tokens.length > 0) score += 700;
+        score += matchedTokens * 100;
+
+        // Position bonus
+        for (const token of tokens) {
+            if (normTenVB.startsWith(token + ' ') || normTenVB === token) score += 80;
+        }
+
+        return score;
+    }
+
+    function applySmartSearchAndSort(records, query) {
+        if (!query || !query.trim()) return records;
+
+        const rawQuery = query.trim();
+        const normalizedQuery = normalizeSearchText(rawQuery);
+        const tokens = tokenizeSearchQuery(rawQuery);
+
+        if (!normalizedQuery || tokens.length === 0) return records;
+
+        const queryInfo = { rawQuery, normalizedQuery, tokens };
+
+        const scored = records.map(row => ({ ...row, _searchScore: calculateSearchScore(row, queryInfo) }));
+        const filtered = scored.filter(row => row._searchScore > 0);
+
+        filtered.sort((a, b) => {
+            if (b._searchScore !== a._searchScore) return b._searchScore - a._searchScore;
+            const normA = normalizeSearchText(String(a['Tên văn bản'] || ''));
+            const normB = normalizeSearchText(String(b['Tên văn bản'] || ''));
+            const mA = tokens.filter(t => normA.includes(t)).length;
+            const mB = tokens.filter(t => normB.includes(t)).length;
+            if (mB !== mA) return mB - mA;
+            const exA = normA.includes(normalizedQuery) ? 1 : 0;
+            const exB = normB.includes(normalizedQuery) ? 1 : 0;
+            if (exB !== exA) return exB - exA;
+            return (b._rowNumber || 0) - (a._rowNumber || 0);
+        });
+
+        return filtered;
+    }
+
+    function openExtendedSearch() {
+        const input = document.getElementById('searchInput');
+        const query = input ? input.value.trim() : '';
+        if (!query) return;
+        const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+        const opened = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    }
+
     // Hàm 2: Xử lý hiển thị dữ liệu khi người dùng chọn Bộ lọc hoặc gõ Tìm kiếm
     function applyFilters() {
         const textSearch = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+        const btnExt = document.getElementById('btnExtendedSearch');
+        if (btnExt) btnExt.style.display = textSearch.trim() ? 'inline-block' : 'none';
         const fLinhVuc = document.getElementById('filterLinhVuc').value;
         const fChuDe = document.getElementById('filterChuDe').value;
         const fMuc = document.getElementById('filterMuc').value;
@@ -6068,25 +6597,23 @@
         const fMucDo = document.getElementById('filterMucDo').value;
         const fLoaiVB = document.getElementById('filterLoaiVB').value;
 
-        // Tiến hành lọc dữ liệu
-        const filteredData = currentRecords.filter(row => {
-            const textMatch = !textSearch || 
-                              String(row['Số hiệu'] || '').toLowerCase().includes(textSearch) || 
-                              String(row['Tên văn bản'] || '').toLowerCase().includes(textSearch);
-            
+        // Tiến hành lọc dữ liệu theo bộ lọc dropdown
+        let filteredData = currentRecords.filter(row => {
             const matchLinhVuc = !fLinhVuc || row['Lĩnh vực'] === fLinhVuc;
             const matchChuDe = !fChuDe || row['Chủ đề'] === fChuDe;
             const matchMuc = !fMuc || row['Mục'] === fMuc;
             const matchBoPhan = !fBoPhan || row['Bộ phận chủ trì'] === fBoPhan;
             const matchMucDo = !fMucDo || row['Mức độ tác động'] === fMucDo;
             const matchLoaiVB = !fLoaiVB || row['Loại văn bản'] === fLoaiVB;
-
-            return textMatch && matchLinhVuc && matchChuDe && matchMuc && matchBoPhan && matchMucDo && matchLoaiVB;
+            return matchLinhVuc && matchChuDe && matchMuc && matchBoPhan && matchMucDo && matchLoaiVB;
         });
+
+        // Áp dụng smart search nếu có query
+        filteredData = applySmartSearchAndSort(filteredData, textSearch);
 
         // Vẽ lại bảng với dữ liệu đã lọc
         renderTable(filteredData);
-        
+
         // Cập nhật số đếm văn bản
         const countEle = document.getElementById('recordCount');
         if (countEle) countEle.innerText = `${filteredData.length} văn bản`;
@@ -6476,6 +7003,229 @@ function checkAuthStatus() {
     // Khôi phục trạng thái đăng nhập ngay khi script chạy xong
     checkAuthStatus();
 </script>
+<script>
+/* ===================================================================
+ * ANALYTICS — Thống kê truy cập
+ * Dùng WEBAPP_URL và TOKEN đã khai báo trong script chính của index.html
+ * =================================================================== */
+let _analyticsAccessChart = null;
+let _analyticsLinhVucChart = null;
+
+function _analyticsPost(action, payload) {
+    return fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: TOKEN, action: action, payload: payload || {} })
+    }).then(function(r) { return r.json(); });
+}
+
+function trackPageAccess(tab) {
+    _analyticsPost('log_page_access', {
+        tab: tab,
+        user_agent: navigator.userAgent.substring(0, 150)
+    }).catch(function() {});
+}
+
+function trackDocView(soHieu, tenVanBan, linhVuc) {
+    if (!soHieu) return;
+    _analyticsPost('log_doc_view', {
+        so_hieu: String(soHieu || ''),
+        ten_van_ban: String(tenVanBan || ''),
+        linh_vuc: String(linhVuc || '')
+    }).catch(function() {});
+}
+
+function analyticsResetFilter() {
+    const f = document.getElementById('analyticsFromDate');
+    const t = document.getElementById('analyticsToDate');
+    const g = document.getElementById('analyticsGranularity');
+    if (f) f.value = '';
+    if (t) t.value = '';
+    if (g) g.value = 'day';
+    loadAnalyticsData();
+}
+
+async function loadAnalyticsData() {
+    const fromInput = document.getElementById('analyticsFromDate');
+    const toInput   = document.getElementById('analyticsToDate');
+    const granSel   = document.getElementById('analyticsGranularity');
+    const fromRaw   = fromInput ? fromInput.value : '';
+    const toRaw     = toInput   ? toInput.value   : '';
+    const gran      = granSel   ? granSel.value   : 'day';
+
+    function isoToVn(s) {
+        if (!s) return '';
+        const [y, m, d] = s.split('-');
+        return d + '/' + m + '/' + y;
+    }
+
+    const payload = { granularity: gran };
+    if (fromRaw) payload.from_date = isoToVn(fromRaw);
+    if (toRaw)   payload.to_date   = isoToVn(toRaw);
+
+    // Hiển thị trạng thái đang tải
+    const topWrap = document.getElementById('analyticsTopDocsWrap');
+    if (topWrap) topWrap.innerHTML = '<div class="analytics-empty"><i class="fa-solid fa-spinner fa-spin" style="margin-right:6px"></i>Đang tải...</div>';
+
+    try {
+        const [accessRes, docRes] = await Promise.all([
+            _analyticsPost('get_access_analytics', payload),
+            _analyticsPost('get_docview_analytics', payload)
+        ]);
+
+        if (accessRes.ok) _renderAccessAnalytics(accessRes.data);
+        if (docRes.ok)    _renderDocviewAnalytics(docRes.data);
+    } catch (e) {
+        console.error('[Analytics] Lỗi tải dữ liệu:', e);
+        if (topWrap) topWrap.innerHTML = '<div class="analytics-empty">Không tải được dữ liệu. Vui lòng thử lại.</div>';
+    }
+}
+
+function _renderAccessAnalytics(data) {
+    const TAB_LABELS = {
+        all: 'Tổng hợp', pending: 'Cần xử lý', transferred: 'Đã chuyển',
+        irrelevant: 'Không LQ', expired: 'Hết hiệu lực',
+        reports: 'Báo cáo', analytics: 'Thống kê'
+    };
+
+    // KPI tổng truy cập
+    const elTotal = document.getElementById('akpi-total');
+    if (elTotal) elTotal.textContent = (data.total || 0).toLocaleString('vi-VN');
+
+    // KPI giờ cao điểm
+    const elPeak = document.getElementById('akpi-peak');
+    if (elPeak) {
+        const ph = data.peak_hours || {};
+        let peakHour = '--', peakVal = 0;
+        Object.keys(ph).forEach(function(h) {
+            if (ph[h] > peakVal) { peakVal = ph[h]; peakHour = h + 'h'; }
+        });
+        elPeak.textContent = peakHour;
+    }
+
+    // KPI tab phổ biến nhất
+    const elTopTab = document.getElementById('akpi-top-tab');
+    if (elTopTab) {
+        const td = data.tab_dist || {};
+        let topTab = '--', topVal = 0;
+        Object.keys(td).forEach(function(t) {
+            if (td[t] > topVal) { topVal = td[t]; topTab = TAB_LABELS[t] || t; }
+        });
+        elTopTab.textContent = topTab;
+    }
+
+    // Biểu đồ timeseries truy cập
+    const canvas  = document.getElementById('analyticsAccessChart');
+    const emptyEl = document.getElementById('analyticsAccessEmpty');
+    const ts = data.timeseries || [];
+
+    if (_analyticsAccessChart) { _analyticsAccessChart.destroy(); _analyticsAccessChart = null; }
+
+    if (!ts.length) {
+        if (canvas)  canvas.style.display  = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+    }
+    if (canvas)  canvas.style.display  = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    _analyticsAccessChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ts.map(function(x) { return x.label; }),
+            datasets: [{
+                label: 'Lượt truy cập',
+                data: ts.map(function(x) { return x.count; }),
+                backgroundColor: 'rgba(0,148,154,0.75)',
+                borderColor: '#00949a',
+                borderWidth: 1,
+                borderRadius: 4,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { maxRotation: 45, font: { size: 11 } } },
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            }
+        }
+    });
+}
+
+function _renderDocviewAnalytics(data) {
+    // KPI lượt xem văn bản
+    const elDocview = document.getElementById('akpi-docview');
+    if (elDocview) elDocview.textContent = (data.total || 0).toLocaleString('vi-VN');
+
+    // Bảng top văn bản
+    const wrap = document.getElementById('analyticsTopDocsWrap');
+    const topDocs = data.top_docs || [];
+    if (wrap) {
+        if (!topDocs.length) {
+            wrap.innerHTML = '<div class="analytics-empty">Chưa có dữ liệu xem văn bản trong khoảng thời gian này.</div>';
+        } else {
+            let html = '<table class="analytics-top-table"><thead><tr>'
+                + '<th>#</th><th>Số hiệu</th><th>Tên văn bản</th><th>Lĩnh vực</th><th style="text-align:right">Lượt xem</th>'
+                + '</tr></thead><tbody>';
+            topDocs.forEach(function(doc, i) {
+                const rankClass = i === 0 ? 'top1' : (i === 1 ? 'top2' : (i === 2 ? 'top3' : ''));
+                html += '<tr>'
+                    + '<td><span class="analytics-rank-badge ' + rankClass + '">' + (i + 1) + '</span></td>'
+                    + '<td style="font-weight:600;white-space:nowrap;color:var(--has-navy)">' + escapeHtml(doc.so_hieu || '') + '</td>'
+                    + '<td style="max-width:280px;word-break:break-word;line-height:1.4">' + escapeHtml(doc.ten_van_ban || '') + '</td>'
+                    + '<td><span class="badge badge-blue" style="font-size:11px">' + escapeHtml(doc.linh_vuc || '') + '</span></td>'
+                    + '<td style="text-align:right;font-weight:700;color:var(--has-teal)">' + doc.count + '</td>'
+                    + '</tr>';
+            });
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        }
+    }
+
+    // Biểu đồ phân bổ lĩnh vực
+    const canvas2  = document.getElementById('analyticsLinhVucChart');
+    const emptyEl2 = document.getElementById('analyticsLinhVucEmpty');
+    const lv = data.linh_vuc_dist || {};
+    const lvKeys = Object.keys(lv).sort(function(a, b) { return lv[b] - lv[a]; }).slice(0, 10);
+
+    if (_analyticsLinhVucChart) { _analyticsLinhVucChart.destroy(); _analyticsLinhVucChart = null; }
+
+    if (!lvKeys.length) {
+        if (canvas2)  canvas2.style.display  = 'none';
+        if (emptyEl2) emptyEl2.style.display = 'block';
+        return;
+    }
+    if (canvas2)  canvas2.style.display  = '';
+    if (emptyEl2) emptyEl2.style.display = 'none';
+
+    const palette = ['#00949a','#1b2a59','#f57025','#1a73e8','#0f9d58','#9334e6','#f29900','#d93025','#00bcd4','#607d8b'];
+
+    _analyticsLinhVucChart = new Chart(canvas2, {
+        type: 'doughnut',
+        data: {
+            labels: lvKeys,
+            datasets: [{
+                data: lvKeys.map(function(k) { return lv[k]; }),
+                backgroundColor: palette.slice(0, lvKeys.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { font: { size: 11 }, boxWidth: 12, padding: 10 }
+                }
+            }
+        }
+    });
+}
+</script>
+
 <!-- KHUNG ĐĂNG NHẬP CHUẨN (Tuyệt đối không đụng hàng) -->
 <style>
     .login-modal-overlay {

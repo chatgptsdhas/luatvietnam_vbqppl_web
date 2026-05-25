@@ -14,6 +14,8 @@ from get_token_browser import get_token
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 REQUEST_TIMEOUT_SECONDS = 45
 MAX_CHECKLIST_TITLE_LENGTH = 100
+MAX_TASK_TITLE_LENGTH = 255
+MAX_REFERENCE_ALIAS_LENGTH = 100
 LOCAL_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
 PLANNER_REFERENCE_ODATA_TYPE = "microsoft.graph.plannerExternalReference"
 PLANNER_REFERENCE_KEY_REPLACEMENTS = [
@@ -115,7 +117,10 @@ def graph_request(
     if not response.ok:
         print(f"Graph error status_code={response.status_code}")
         print(response.text)
-        response.raise_for_status()
+        raise requests.HTTPError(
+            f"{response.status_code} Client Error for {url}: {response.text}",
+            response=response,
+        )
 
     if not response.text:
         return None
@@ -135,7 +140,16 @@ def build_title(record: dict) -> str:
     if not ten_van_ban:
         raise ValueError("Thiếu trường 'Tên văn bản' trong record.")
 
-    return f"[{so_hieu}] {ten_van_ban}"
+    title = f"[{so_hieu}] {ten_van_ban}"
+
+    if len(title) > MAX_TASK_TITLE_LENGTH:
+        # Tính số ký tự còn lại cho Tên văn bản sau khi trừ phần [so_hieu] + dấu cách
+        prefix = f"[{so_hieu}] "
+        max_ten = MAX_TASK_TITLE_LENGTH - len(prefix) - 1  # trừ 1 cho dấu "…"
+        ten_van_ban_truncated = ten_van_ban[:max_ten] + "…"
+        title = prefix + ten_van_ban_truncated
+
+    return title
 
 
 def build_description(record: dict) -> str:
@@ -230,6 +244,8 @@ def build_references(record: dict) -> dict:
         raise ValueError("Link Văn bản phải là URL http/https để thêm vào Planner references.")
 
     alias = str(record.get("Tên văn bản", "") or "").strip() or link_van_ban
+    if len(alias) > MAX_REFERENCE_ALIAS_LENGTH:
+        alias = alias[: MAX_REFERENCE_ALIAS_LENGTH - 3].rstrip() + "..."
     return {
         encode_planner_reference_key(link_van_ban): {
             "@odata.type": PLANNER_REFERENCE_ODATA_TYPE,
@@ -366,10 +382,20 @@ def update_task(token: str, task_id: str, etag: str, body: dict) -> dict:
     ) or {}
 
 
-def delete_planner_task(task_id: str) -> dict:
+def delete_planner_task(task_id: str, expected_so_hieu: str = "") -> dict:
     try:
         token = get_token()
         task = graph_request(token, "GET", f"/planner/tasks/{task_id}")
+        title = str((task or {}).get("title", "") or "")
+        expected_so_hieu = str(expected_so_hieu or "").strip()
+        if expected_so_hieu and expected_so_hieu not in title:
+            return {
+                "ok": False,
+                "task_id": task_id,
+                "title": title,
+                "message": f"Planner task không khớp Số hiệu {expected_so_hieu}.",
+            }
+
         etag = str((task or {}).get("@odata.etag", "") or "")
         if not etag:
             raise RuntimeError(f"Không lấy được @odata.etag của task {task_id}.")
@@ -383,7 +409,7 @@ def delete_planner_task(task_id: str) -> dict:
         print(f"DELETE /planner/tasks/{task_id} -> {response.status_code}")
 
         if response.status_code == 204:
-            return {"ok": True, "task_id": task_id, "message": "Đã xóa task Planner"}
+            return {"ok": True, "task_id": task_id, "title": title, "message": "Đã xóa task Planner"}
 
         print(f"Graph error status_code={response.status_code}")
         print(response.text)
@@ -441,6 +467,7 @@ def create_planner_task_from_record(record: dict) -> dict:
     title = ""
     next_response_due = ""
     planner_web_url = ""
+    rollback_result = None
     try:
         token = get_token()
         next_response_due = resolve_next_response_due()
@@ -484,6 +511,8 @@ def create_planner_task_from_record(record: dict) -> dict:
             "message": "Đã tạo Planner task và cập nhật details/checklist.",
         }
     except Exception as exc:
+        if task_id:
+            rollback_result = delete_planner_task(task_id)
         return {
             "ok": False,
             "task_id": task_id,
@@ -491,6 +520,7 @@ def create_planner_task_from_record(record: dict) -> dict:
             "planner_web_url": planner_web_url,
             "next_response_due": next_response_due,
             "message": str(exc),
+            "rollback_result": rollback_result,
         }
 
 

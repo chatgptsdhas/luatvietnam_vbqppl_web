@@ -4,16 +4,32 @@
   "dry_run": false,
   "enabled": true,
   "debug_save_request_body": true,
-  "ma_linh_vuc": "giao-duc",
-  "ten_linh_vuc_luatvietnam": "Giáo dục",
-  "list_url": "https://luatvietnam.vn/van-ban-moi.html?lFieldId=5&DocTypeId=0&EffectStatusId=0&OrganId=0&ShowSapo=0",
+  "ma_linh_vuc": [
+    "giao-duc", 
+    "dau-tu", 
+    "lao-dong",
+    "thue",
+    "doanh-nghiep"
+  ],
+  "ten_linh_vuc_luatvietnam": [
+    "Giáo dục",
+    "Đầu tư",
+    "Lao động - Việc làm",
+    "Thuế",
+    "Doanh nghiệp"
+  ],
+  "list_url": "https://luatvietnam.vn/van-ban-moi.html?lFieldId=1%2C5%2C40%2C7%2C4&DocTypeId=21&EffectStatusId=0&OrganId=0&ShowSapo=0",
   "page_size": 20,
   "max_pages_per_field": 0,
   "max_documents_per_run": 0,
 
   "filters": {
     "required_luatvietnam_field_contains": [
-      "Giáo dục"
+      "Giáo dục",
+      "Đầu tư",
+      "Lao động - Việc làm",
+      "Thuế",
+      "Doanh nghiệp"
     ],
     "doc_type_ids_to_crawl": [21, 11, 10, 58
     ],
@@ -23,8 +39,10 @@
       "/giao-duc/",
       "/dau-tu/",
       "/lao-dong/",
+      "/thue/",
       "/nguoi-khuyet-tat/",
-      "/tai-chinh/"
+      "/tai-chinh/",
+      "/doanh-nghiep/"
     ],
     "exclude_url_path_contains": [
       "/kinh-te/",
