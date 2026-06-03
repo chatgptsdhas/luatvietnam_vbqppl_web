@@ -8,6 +8,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Chart.js cho biểu đồ Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <style>
         :root {
             /* Bộ màu thương hiệu Hanoi Adelaide School (HAS) */
@@ -1953,6 +1956,196 @@
         .analytics-rank-badge.top1 { background: #fde68a; color: #92400e; }
         .analytics-rank-badge.top2 { background: #e2e8f0; color: #475569; }
         .analytics-rank-badge.top3 { background: #fcd9b6; color: #9a3412; }
+
+        /* --- INTRO PANEL --- */
+        .intro-panel {
+            display: none; flex-direction: column; gap: 16px;
+            flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px;
+        }
+        .intro-section {
+            background: var(--surface); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 20px 28px;
+            box-shadow: 0 2px 8px rgba(27,42,89,0.05); flex-shrink: 0;
+        }
+        .intro-section h2 {
+            margin: 0 0 6px; font-size: 20px; color: var(--has-navy); font-weight: 700;
+        }
+        .intro-section h3 {
+            margin: 0 0 14px; font-size: 14px; font-weight: 700;
+            color: var(--has-navy); display: flex; align-items: center; gap: 8px;
+        }
+        .intro-view-image {
+            width: 100%; max-height: 320px; object-fit: cover;
+            border-radius: 8px; display: block; margin-bottom: 16px;
+        }
+        .intro-view-body {
+            line-height: 1.8; font-size: 15px; color: var(--text-main);
+        }
+        .intro-view-body p { margin: 0 0 10px; }
+        .intro-empty {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-muted); font-size: 15px;
+        }
+        .intro-empty i {
+            font-size: 40px; color: #ccc; display: block; margin-bottom: 16px;
+        }
+        .intro-field-label {
+            font-size: 12px; font-weight: 600; color: var(--text-muted);
+            margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px;
+        }
+        .intro-field-input {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 14px; font-family: inherit;
+            outline: none; transition: border-color .2s; color: var(--text-main);
+            background: #fff;
+        }
+        .intro-field-input:focus { border-color: var(--has-teal); }
+        .intro-field-textarea {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 14px; font-family: inherit;
+            outline: none; min-height: 220px; resize: vertical;
+            transition: border-color .2s; color: var(--text-main); background: #fff;
+        }
+        .intro-field-textarea:focus { border-color: var(--has-teal); }
+        .intro-preview-box {
+            border: 1px dashed var(--border-color); border-radius: 8px;
+            padding: 14px 18px; min-height: 72px; background: var(--bg-body);
+            line-height: 1.8; font-size: 14px; color: var(--text-main);
+        }
+        .intro-btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .intro-btn {
+            padding: 9px 20px; border-radius: 6px; cursor: pointer;
+            font-size: 13px; font-weight: 600; border: none;
+            display: inline-flex; align-items: center; gap: 7px; transition: opacity .2s;
+        }
+        .intro-btn:disabled { opacity: .6; cursor: default; }
+        .intro-btn-primary { background: var(--has-teal); color: #fff; }
+        .intro-btn-primary:hover:not(:disabled) { background: #007a80; }
+        .intro-btn-secondary {
+            background: #f1f3f4; color: var(--text-main);
+            border: 1px solid var(--border-color) !important;
+        }
+        .intro-btn-secondary:hover { background: #e2e6ea; }
+        .intro-img-row { display: flex; gap: 8px; align-items: stretch; }
+        .intro-img-row .intro-field-input { flex: 1; }
+
+        /* Rendering nội dung rich-text trong chế độ xem */
+        .intro-view-body h1 { font-size: 22px; margin: 16px 0 8px; color: var(--has-navy); font-weight: 700; }
+        .intro-view-body h2 { font-size: 18px; margin: 14px 0 6px; color: var(--has-navy); font-weight: 700; }
+        .intro-view-body h3 { font-size: 15px; margin: 12px 0 4px; color: var(--has-navy); font-weight: 700; }
+        .intro-view-body ul, .intro-view-body ol { margin: 0 0 10px; padding-left: 28px; }
+        .intro-view-body li { margin-bottom: 4px; }
+        .intro-view-body table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        .intro-view-body td, .intro-view-body th { border: 1px solid var(--border-color); padding: 8px 12px; vertical-align: top; }
+        .intro-view-body th { background: #f8f9fa; font-weight: 600; text-align: left; }
+        .intro-view-body img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; display: block; }
+        .intro-view-body a { color: var(--has-teal); text-decoration: underline; }
+        .intro-view-body blockquote { border-left: 4px solid var(--has-teal); margin: 12px 0; padding: 8px 16px; color: var(--text-muted); background: #f8f9fa; border-radius: 0 4px 4px 0; }
+        .intro-view-body pre { background: #f1f3f4; border-radius: 4px; padding: 12px 16px; font-size: 13px; overflow-x: auto; }
+
+        /* Quill editor: style overrides để hoà với HAS theme */
+        #introEditorContainer .ql-toolbar.ql-snow {
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            background: #f8f9fa;
+            padding: 8px 10px;
+            flex-wrap: wrap;
+        }
+        #introEditorContainer .ql-container.ql-snow {
+            border: none;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 15px;
+        }
+        #introEditorContainer .ql-editor {
+            min-height: 260px;
+            padding: 14px 16px;
+            line-height: 1.8;
+            position: relative;
+        }
+        #introEditorContainer .ql-editor.ql-blank::before {
+            color: #bbb;
+            font-style: normal;
+        }
+        #introEditorContainer .ql-editor table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        #introEditorContainer .ql-editor td,
+        #introEditorContainer .ql-editor th { border: 1px solid #ccc; padding: 8px 12px; vertical-align: top; }
+        #introEditorContainer .ql-editor th { background: #f5f7fa; font-weight: 600; }
+        #introEditorContainer .ql-editor img { max-width: 100%; height: auto; cursor: pointer; }
+        #introEditorContainer .ql-editor blockquote { border-left: 4px solid var(--has-teal); padding: 8px 16px; color: var(--text-muted); background: #f8f9fa; margin: 12px 0; }
+
+        /* Font/size picker: ẩn ::before của Quill Snow (dùng ID selector để đảm bảo specificity thắng),
+           thay bằng span text thực được chèn qua JS (_fixIntroPickerLabels) */
+        #introEditorContainer .ql-picker.ql-font .ql-picker-item::before,
+        #introEditorContainer .ql-picker.ql-font .ql-picker-label::before,
+        #introEditorContainer .ql-picker.ql-size .ql-picker-item::before,
+        #introEditorContainer .ql-picker.ql-size .ql-picker-label::before { display: none !important; }
+        /* Span text chèn vào label (nút thu gọn) */
+        #introEditorContainer .ql-picker-label .ql-label-text {
+            display: inline-block; vertical-align: middle;
+            max-width: 90px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+        }
+        /* Span text chèn vào từng item trong dropdown */
+        #introEditorContainer .ql-picker-item .ql-label-text {
+            display: inline-block; vertical-align: middle;
+        }
+
+        /* Image resize overlay */
+        .intro-img-overlay { position: absolute; border: 2px solid #1a73e8; pointer-events: none; z-index: 100; box-sizing: border-box; }
+        .intro-img-handle { position: absolute; width: 10px; height: 10px; background: #1a73e8; border: 1px solid #fff; border-radius: 2px; pointer-events: all; box-sizing: border-box; }
+        .intro-img-handle.se { right: -5px; bottom: -5px; cursor: se-resize; }
+        .intro-img-handle.sw { left: -5px; bottom: -5px; cursor: sw-resize; }
+        .intro-img-handle.ne { right: -5px; top: -5px; cursor: ne-resize; }
+        .intro-img-handle.nw { left: -5px; top: -5px; cursor: nw-resize; }
+
+        /* Quill alignment classes: hiển thị đúng trong view mode và preview box */
+        .intro-view-body .ql-align-center, .intro-preview-box .ql-align-center { text-align: center; }
+        .intro-view-body .ql-align-right,  .intro-preview-box .ql-align-right  { text-align: right; }
+        .intro-view-body .ql-align-justify,.intro-preview-box .ql-align-justify { text-align: justify; }
+
+        /* Nút Viền tuỳ chỉnh trong toolbar Quill */
+        #introEditorContainer .ql-border-toggle {
+            padding: 2px 7px; font-size: 12px; font-weight: 500; color: #444;
+            border-radius: 3px; cursor: pointer; background: none; border: none;
+        }
+        #introEditorContainer .ql-border-toggle:hover { background: #e8f0fe; color: #1a73e8; }
+
+        /* Dialog chèn ảnh */
+        .intro-img-dialog-overlay {
+            position: fixed; top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.45); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .intro-img-dialog {
+            background: #fff; border-radius: 10px; padding: 24px 28px;
+            width: 420px; max-width: 92vw;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+        }
+        .intro-img-dialog h4 { margin: 0 0 16px; font-size: 15px; color: var(--has-navy); }
+        .intro-img-dialog .idg-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 6px; }
+        .intro-img-dialog .idg-url-row { display: flex; gap: 8px; margin-bottom: 14px; }
+        .intro-img-dialog .idg-url-row input {
+            flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 13px; outline: none; color: #333;
+        }
+        .intro-img-dialog .idg-url-row input:focus { border-color: #1a73e8; }
+        .intro-img-dialog .idg-url-row button {
+            padding: 8px 14px; background: #1a73e8; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+        }
+        .intro-img-dialog .idg-url-row button:hover { background: #1557b0; }
+        .intro-img-dialog .idg-file-label {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 8px 14px; background: #f1f3f4; border: 1px solid #ddd;
+            border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; color: #444;
+        }
+        .intro-img-dialog .idg-file-label:hover { background: #e0e0e0; }
+        .intro-img-dialog .idg-note { font-size: 11px; color: #999; margin-top: 6px; }
+        .intro-img-dialog .idg-footer { text-align: right; margin-top: 18px; }
+        .intro-img-dialog .idg-cancel {
+            padding: 8px 16px; background: #f1f3f4; border: 1px solid #ddd;
+            border-radius: 6px; cursor: pointer; font-size: 13px; color: #444;
+        }
+        .intro-img-dialog .idg-cancel:hover { background: #e0e0e0; }
     </style>
 </head>
 <body>
@@ -1965,6 +2158,10 @@
     </div>
     <ul class="sidebar" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px;">
             
+            <li id="tab-intro" onclick="switchTab('intro')" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-circle-info"></i> Giới thiệu
+            </li>
+
             <li id="tab-all" onclick="switchTab('all')" class="active" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-list"></i> Danh sách tổng hợp
             </li>
@@ -1992,6 +2189,7 @@
             <li id="tab-analytics" onclick="switchTab('analytics')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-chart-line"></i> Thống kê truy cập
             </li>
+
 
         </ul>
 
@@ -2251,6 +2449,97 @@
                     </div>
                 </div>
             </div>
+        </section>
+
+        <!-- INTRO PANEL -->
+        <section id="introPanel" class="intro-panel">
+
+            <!-- THANH ADMIN (chỉ hiện sau khi đăng nhập) -->
+            <div id="introAdminBar" style="display:none; text-align:right; flex-shrink:0;">
+                <button class="intro-btn intro-btn-primary" onclick="showIntroEditMode()">
+                    <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa giới thiệu
+                </button>
+            </div>
+
+            <!-- CHẾ ĐỘ XEM -->
+            <div id="introViewMode">
+                <div id="introViewContent" class="intro-empty">
+                    <i class="fa-solid fa-spinner fa-spin"></i>Đang tải nội dung...
+                </div>
+            </div>
+
+            <!-- CHẾ ĐỘ CHỈNH SỬA (chỉ admin) -->
+            <div id="introEditMode" style="display:none;">
+                <div class="intro-section">
+                    <h3><i class="fa-solid fa-pen-to-square" style="color:var(--has-teal)"></i> Chỉnh sửa nội dung giới thiệu</h3>
+
+                    <!-- Tiêu đề -->
+                    <div style="margin-bottom:16px;">
+                        <div class="intro-field-label">Tiêu đề bài viết</div>
+                        <input type="text" id="introEditTitle" class="intro-field-input" placeholder="Nhập tiêu đề...">
+                    </div>
+
+                    <!-- Hình ảnh -->
+                    <div style="margin-bottom:16px;">
+                        <div class="intro-field-label">Hình ảnh</div>
+                        <div class="intro-img-row" style="margin-bottom:8px;">
+                            <input type="text" id="introEditImageUrl" class="intro-field-input"
+                                placeholder="Dán URL ảnh (https://...)..."
+                                oninput="document.getElementById('introImagePreviewWrap').style.display='none'">
+                            <label for="introImageFilePicker" class="intro-btn intro-btn-secondary" style="cursor:pointer; border:1px solid var(--border-color);" title="Chọn ảnh từ máy để xem trước">
+                                <i class="fa-solid fa-upload"></i> Tải ảnh
+                            </label>
+                            <input type="file" id="introImageFilePicker" accept="image/*" style="display:none" onchange="handleIntroImageFile(this)">
+                            <button class="intro-btn intro-btn-secondary" onclick="previewIntroImage()" title="Xem trước ảnh từ URL">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <div id="introImagePreviewWrap" style="display:none; margin-top:8px;">
+                            <img id="introImagePreview" src="" alt="Xem trước ảnh"
+                                style="max-width:100%; max-height:200px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color); display:block;">
+                            <div id="introImageLocalWarning" style="display:none; margin-top:6px; font-size:12px; color:var(--warning); background:var(--warning-bg); padding:7px 10px; border-radius:5px;">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Ảnh cục bộ chỉ hiển thị tạm thời trên máy bạn và <strong>không thể lưu</strong> vào hệ thống. Vui lòng tải ảnh lên dịch vụ lưu trữ (Google Drive, Imgur...) rồi dán URL vào ô trên.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nội dung bài viết (Rich Text Editor) -->
+                    <div style="margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                            <div class="intro-field-label" style="margin:0;">Nội dung bài viết</div>
+                            <button class="intro-btn intro-btn-secondary" onclick="insertIntroTable()" style="font-size:12px; padding:5px 14px;" title="Chèn bảng 3 cột × 3 hàng vào vị trí con trỏ">
+                                <i class="fa-solid fa-table"></i> Chèn bảng
+                            </button>
+                        </div>
+                        <div id="introEditorContainer" style="border:1px solid var(--border-color); border-radius:6px; overflow:hidden; background:#fff;">
+                            <div id="introQuillEditor"></div>
+                        </div>
+                    </div>
+
+                    <!-- Xem trước nội dung (tự động cập nhật) -->
+                    <div style="margin-bottom:20px;">
+                        <div class="intro-field-label">Xem trước nội dung <span style="font-weight:400;text-transform:none;">(tự động cập nhật)</span></div>
+                        <div id="introPreviewBox" class="intro-preview-box intro-view-body">
+                            <em style="color:#bbb;">Nhập nội dung để xem trước...</em>
+                        </div>
+                    </div>
+
+                    <!-- Nút hành động -->
+                    <div class="intro-btn-row">
+                        <button id="btnSaveIntro" class="intro-btn intro-btn-primary" onclick="saveIntroContent()">
+                            <i class="fa-solid fa-floppy-disk"></i> Lưu
+                        </button>
+                        <button class="intro-btn intro-btn-secondary" onclick="reloadIntroFromServer()">
+                            <i class="fa-solid fa-rotate-right"></i> Tải lại
+                        </button>
+                        <button class="intro-btn intro-btn-secondary" onclick="cancelIntroEdit()">
+                            <i class="fa-solid fa-xmark"></i> Hủy
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </section>
 
         <!-- TABLE AREA -->
@@ -5442,7 +5731,7 @@
         currentTab = tabId;
 
         // 2. Tắt sáng toàn bộ các tab (Dùng mảng ID để quét, KHÔNG bao giờ lỗi null)
-        const allTabIds = ['tab-all', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports', 'tab-analytics'];
+        const allTabIds = ['tab-all', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports', 'tab-analytics', 'tab-intro'];
         allTabIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -5460,10 +5749,13 @@
 
         const isReportTab = tabId === 'reports';
         const isAnalyticsTab = tabId === 'analytics';
+        const isIntroTab = tabId === 'intro';
         if (reportPanel) reportPanel.style.display = isReportTab ? 'flex' : 'none';
         const analyticsPanel = document.getElementById('analyticsPanel');
         if (analyticsPanel) analyticsPanel.style.display = isAnalyticsTab ? 'flex' : 'none';
-        if (recordsPanel) recordsPanel.style.display = (isReportTab || isAnalyticsTab) ? 'none' : 'flex';
+        const introPanel = document.getElementById('introPanel');
+        if (introPanel) introPanel.style.display = isIntroTab ? 'flex' : 'none';
+        if (recordsPanel) recordsPanel.style.display = (isReportTab || isAnalyticsTab || isIntroTab) ? 'none' : 'flex';
         if (mainContent) mainContent.classList.toggle('report-mode', isReportTab);
         if (appContainer) appContainer.classList.toggle('report-mode', isReportTab);
         renderHeaderActions(isReportTab ? 'report' : (tabId === 'pending' ? 'pending' : 'hidden'));
@@ -5519,6 +5811,12 @@
         } else if (tabId === 'analytics') {
             document.getElementById('pageTitle').innerText = 'THỐNG KÊ TRUY CẬP';
             if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+        } else if (tabId === 'intro') {
+            document.getElementById('pageTitle').innerText = 'GIỚI THIỆU HỆ THỐNG';
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            // Cập nhật nút chỉnh sửa admin
+            const introAdminBar = document.getElementById('introAdminBar');
+            if (introAdminBar) introAdminBar.style.display = isAdmin ? 'block' : 'none';
         }
 
         // 5. Xóa khung tìm kiếm & Tải lại dữ liệu
@@ -5533,6 +5831,12 @@
 
         if (tabId === 'analytics') {
             loadAnalyticsData();
+            trackPageAccess(tabId);
+            return;
+        }
+
+        if (tabId === 'intro') {
+            loadIntroContent();
             trackPageAccess(tabId);
             return;
         }
@@ -6748,6 +7052,606 @@ function checkAuthStatus() {
         if (authIcon) authIcon.className = 'fa-solid fa-user-lock';
     }
 }
+
+// ===================================================================
+// TRANG GIỚI THIỆU
+// ===================================================================
+
+let _introCachedData = null;
+let _introQuillEditor = null;
+
+// Khởi tạo Quill editor lần đầu (lazy — chỉ khi mở chế độ chỉnh sửa)
+function getOrInitIntroEditor() {
+    if (_introQuillEditor) return _introQuillEditor;
+
+    // Font family: style-based, áp inline font-family trực tiếp (tên đầy đủ, kể cả dấu cách)
+    const FontStyle = Quill.import('attributors/style/font');
+    FontStyle.whitelist = ['Arial','Times New Roman','Courier New','Georgia','Tahoma','Verdana','Segoe UI'];
+    Quill.register(FontStyle, true);
+
+    // Font size: pt values matching Word sizes
+    const SizeStyle = Quill.import('attributors/style/size');
+    SizeStyle.whitelist = ['8pt','9pt','10pt','11pt','12pt','14pt','16pt','18pt','20pt','24pt','28pt','36pt','48pt','72pt'];
+    Quill.register(SizeStyle, true);
+
+    // Alignment: dùng inline style="text-align:..." thay vì class ql-align-* để hoạt động cả ngoài editor
+    const AlignStyle = Quill.import('attributors/style/align');
+    Quill.register(AlignStyle, true);
+
+    _introQuillEditor = new Quill('#introQuillEditor', {
+        theme: 'snow',
+        placeholder: 'Nhập nội dung giới thiệu hệ thống...',
+        modules: {
+            toolbar: {
+                container: [
+                    [{ font: ['Arial','Times New Roman','Courier New','Georgia','Tahoma','Verdana','Segoe UI'] }],
+                    [{ size: ['8pt','9pt','10pt','11pt','12pt','14pt','16pt','18pt','20pt','24pt','28pt','36pt','48pt','72pt'] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ color: [] }, { background: [] }],
+                    [{ align: [] }],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    [{ indent: '-1' }, { indent: '+1' }],
+                    ['blockquote'],
+                    ['link', 'image'],
+                    ['clean']
+                ],
+                handlers: { image: _showIntroImageDialog }
+            },
+            clipboard: { matchVisual: false }
+        }
+    });
+
+    // Cập nhật preview tự động khi nội dung thay đổi
+    _introQuillEditor.on('text-change', function() {
+        const box = document.getElementById('introPreviewBox');
+        if (!box) return;
+        const html = _introQuillEditor.root.innerHTML;
+        const isEmpty = !html || html.trim() === '<p><br></p>';
+        box.innerHTML = isEmpty ? '<em style="color:#bbb;">Nhập nội dung để xem trước...</em>' : html;
+    });
+
+    // Kéo góc để thay đổi kích thước ảnh
+    _initImageDrag(_introQuillEditor);
+    _fixIntroPickerLabels(_introQuillEditor);
+
+    // Thêm nút "Viền" vào toolbar để bật/tắt viền bảng tại con trỏ
+    (function() {
+        var tbEl = _introQuillEditor.getModule('toolbar').container;
+        var grp = document.createElement('span');
+        grp.className = 'ql-formats';
+        var btn = document.createElement('button');
+        btn.className = 'ql-border-toggle';
+        btn.title = 'Bật/tắt viền bảng (đặt con trỏ vào trong bảng)';
+        btn.innerHTML = '<i class="fa-solid fa-border-all" style="font-size:11px;pointer-events:none;"></i> Viền';
+        btn.addEventListener('click', function(e) { e.preventDefault(); _handleBorderToggle(); });
+        grp.appendChild(btn);
+        tbEl.appendChild(grp);
+    })();
+
+    return _introQuillEditor;
+}
+
+// Dialog chèn ảnh: cho phép dán URL hoặc tải file từ máy
+function _showIntroImageDialog() {
+    const savedRange = _introQuillEditor.getSelection(true);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'intro-img-dialog-overlay';
+
+    overlay.innerHTML = `
+<div class="intro-img-dialog">
+  <h4><i class="fa-solid fa-image" style="color:var(--has-teal);margin-right:7px;"></i>Chèn hình ảnh</h4>
+  <div class="idg-label">Từ URL</div>
+  <div class="idg-url-row">
+    <input type="text" id="_idgUrlInput" placeholder="https://..." autocomplete="off">
+    <button id="_idgUrlBtn"><i class="fa-solid fa-check"></i> Chèn</button>
+  </div>
+  <div class="idg-label">Từ máy tính</div>
+  <label class="idg-file-label">
+    <i class="fa-solid fa-upload"></i> Chọn ảnh
+    <input type="file" accept="image/*" id="_idgFileInput" style="display:none;">
+  </label>
+  <div class="idg-note"><i class="fa-solid fa-circle-info"></i> Ảnh từ máy lưu dạng base64 — khuyến nghị dùng URL (Google Drive, Imgur...) nếu ảnh &gt;1 MB.</div>
+  <div class="idg-footer"><button class="idg-cancel" id="_idgCancel">Hủy</button></div>
+</div>`;
+
+    document.body.appendChild(overlay);
+    const urlInput = overlay.querySelector('#_idgUrlInput');
+    setTimeout(() => urlInput && urlInput.focus(), 50);
+
+    function closeDialog() { document.body.removeChild(overlay); }
+
+    function insertUrl() {
+        const url = (urlInput.value || '').trim();
+        if (!url) { urlInput.focus(); return; }
+        const idx = savedRange ? savedRange.index : _introQuillEditor.getLength();
+        _introQuillEditor.insertEmbed(idx, 'image', url);
+        closeDialog();
+    }
+
+    overlay.querySelector('#_idgUrlBtn').addEventListener('click', insertUrl);
+    urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') insertUrl(); });
+
+    overlay.querySelector('#_idgFileInput').addEventListener('change', function() {
+        const file = this.files && this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const idx = savedRange ? savedRange.index : _introQuillEditor.getLength();
+            _introQuillEditor.insertEmbed(idx, 'image', e.target.result);
+            showToast('Ảnh đã chèn', 'Ảnh được lưu dạng base64. Nếu ảnh lớn (>1 MB) có thể vượt giới hạn lưu trữ — khuyến nghị dùng URL.', 'warning');
+            closeDialog();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    overlay.querySelector('#_idgCancel').addEventListener('click', closeDialog);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeDialog(); });
+}
+
+// Bật/tắt viền của bảng tại vị trí con trỏ
+function _handleBorderToggle() {
+    const editor = _introQuillEditor;
+    const range = editor.getSelection();
+    if (!range) {
+        showToast('Viền bảng', 'Hãy đặt con trỏ vào trong bảng trước.', 'warning');
+        return;
+    }
+    const [leaf] = editor.getLeaf(range.index);
+    let node = leaf && leaf.domNode;
+    let table = null;
+    while (node && node !== editor.root) {
+        if (node.tagName === 'TABLE') { table = node; break; }
+        node = node.parentElement;
+    }
+    if (!table) {
+        showToast('Viền bảng', 'Hãy đặt con trỏ vào trong bảng trước.', 'warning');
+        return;
+    }
+    const noBorder = table.getAttribute('data-no-border') === '1';
+    const cells = table.querySelectorAll('td, th');
+    if (noBorder) {
+        table.removeAttribute('data-no-border');
+        cells.forEach(function(c) { c.style.border = '1px solid #ccc'; });
+    } else {
+        table.setAttribute('data-no-border', '1');
+        cells.forEach(function(c) { c.style.border = 'none'; });
+    }
+    const box = document.getElementById('introPreviewBox');
+    if (box) {
+        const html = editor.root.innerHTML;
+        box.innerHTML = (!html || html.trim() === '<p><br></p>')
+            ? '<em style="color:#bbb;">Nhập nội dung để xem trước...</em>' : html;
+    }
+}
+
+// Chèn span text thực vào font/size picker (thay thế ::before của Quill Snow)
+// và theo dõi thay đổi data-value qua MutationObserver để cập nhật label button
+function _fixIntroPickerLabels(editor) {
+    var container = document.getElementById('introEditorContainer');
+    if (!container) return;
+
+    var FONTS = {
+        '': 'Font chữ',
+        'Arial': 'Arial',
+        'Times New Roman': 'Times New Roman',
+        'Courier New': 'Courier New',
+        'Georgia': 'Georgia',
+        'Tahoma': 'Tahoma',
+        'Verdana': 'Verdana',
+        'Segoe UI': 'Segoe UI'
+    };
+    var FONT_CSS = {
+        'Arial': 'Arial, sans-serif',
+        'Times New Roman': "'Times New Roman', serif",
+        'Courier New': "'Courier New', monospace",
+        'Georgia': 'Georgia, serif',
+        'Tahoma': 'Tahoma, sans-serif',
+        'Verdana': 'Verdana, sans-serif',
+        'Segoe UI': "'Segoe UI', sans-serif"
+    };
+    var SIZES = {
+        '': 'Cỡ chữ',
+        '8pt':'8','9pt':'9','10pt':'10','11pt':'11','12pt':'12',
+        '14pt':'14','16pt':'16','18pt':'18','20pt':'20',
+        '24pt':'24','28pt':'28','36pt':'36','48pt':'48','72pt':'72'
+    };
+
+    function addSpan(el, text, fontCss) {
+        var s = document.createElement('span');
+        s.className = 'ql-label-text';
+        s.textContent = text;
+        if (fontCss) s.style.fontFamily = fontCss;
+        el.appendChild(s);
+        return s;
+    }
+
+    function fontLabel(val) {
+        return FONTS[val] !== undefined ? FONTS[val] : (val || 'Font mặc định');
+    }
+    function sizeLabel(val) {
+        return SIZES[val] !== undefined ? SIZES[val] : (val || 'Cỡ chữ');
+    }
+
+    // Chèn span vào từng item trong dropdown font
+    container.querySelectorAll('.ql-font .ql-picker-item').forEach(function(item) {
+        var val = item.getAttribute('data-value') || '';
+        addSpan(item, fontLabel(val), FONT_CSS[val] || null);
+    });
+
+    // Chèn span vào label (nút) của font picker + theo dõi thay đổi
+    var fontLabelEl = container.querySelector('.ql-font .ql-picker-label');
+    var fontLabelSpan = fontLabelEl ? addSpan(fontLabelEl, 'Font mặc định', null) : null;
+    if (fontLabelEl && fontLabelSpan) {
+        new MutationObserver(function() {
+            var val = fontLabelEl.getAttribute('data-value') || '';
+            fontLabelSpan.textContent = fontLabel(val);
+            fontLabelSpan.style.fontFamily = FONT_CSS[val] || '';
+        }).observe(fontLabelEl, { attributes: true, attributeFilter: ['data-value'] });
+    }
+
+    // Chèn span vào từng item trong dropdown size
+    container.querySelectorAll('.ql-size .ql-picker-item').forEach(function(item) {
+        var val = item.getAttribute('data-value') || '';
+        addSpan(item, sizeLabel(val), null);
+    });
+
+    // Chèn span vào label (nút) của size picker + theo dõi thay đổi
+    var sizeLabelEl = container.querySelector('.ql-size .ql-picker-label');
+    var sizeLabelSpan = sizeLabelEl ? addSpan(sizeLabelEl, 'Cỡ chữ', null) : null;
+    if (sizeLabelEl && sizeLabelSpan) {
+        new MutationObserver(function() {
+            var val = sizeLabelEl.getAttribute('data-value') || '';
+            sizeLabelSpan.textContent = sizeLabel(val);
+        }).observe(sizeLabelEl, { attributes: true, attributeFilter: ['data-value'] });
+    }
+}
+
+// Resize ảnh bằng cách kéo góc — thêm 4 handle khi click vào ảnh
+function _initImageDrag(editor) {
+    var _overlay = null;
+    var _img = null;
+
+    function _positionOverlay() {
+        if (!_img || !_overlay) return;
+        var editorEl = editor.root;
+        var editorRect = editorEl.getBoundingClientRect();
+        var imgRect = _img.getBoundingClientRect();
+        _overlay.style.left = (imgRect.left - editorRect.left + editorEl.scrollLeft) + 'px';
+        _overlay.style.top  = (imgRect.top  - editorRect.top  + editorEl.scrollTop)  + 'px';
+        _overlay.style.width  = imgRect.width  + 'px';
+        _overlay.style.height = imgRect.height + 'px';
+    }
+
+    function _makeHandle(cls, getCursor) {
+        var h = document.createElement('div');
+        h.className = 'intro-img-handle ' + cls;
+        h.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var startX = e.clientX, startY = e.clientY;
+            var startW = _img.offsetWidth  || _img.naturalWidth  || 200;
+            var startH = _img.offsetHeight || _img.naturalHeight || 150;
+            var ratio  = startH / (startW || 1);
+            function onMove(ev) {
+                var dx = ev.clientX - startX;
+                var newW = Math.max(40, startW + getCursor(dx));
+                _img.style.width  = newW + 'px';
+                _img.style.height = (newW * ratio) + 'px';
+                _positionOverlay();
+            }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                // Cập nhật preview sau khi resize xong
+                var box = document.getElementById('introPreviewBox');
+                if (box) {
+                    var html = editor.root.innerHTML;
+                    var isEmpty = !html || html.trim() === '<p><br></p>';
+                    box.innerHTML = isEmpty ? '<em style="color:#bbb;">Nhập nội dung để xem trước...</em>' : html;
+                }
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+        return h;
+    }
+
+    function _showOverlay(img) {
+        _removeOverlay();
+        _img = img;
+        var editorEl = editor.root;
+        editorEl.style.position = 'relative';
+        _overlay = document.createElement('div');
+        _overlay.className = 'intro-img-overlay';
+        // 4 góc: se=phải-dưới, sw=trái-dưới, ne=phải-trên, nw=trái-trên
+        _overlay.appendChild(_makeHandle('se', function(dx){ return  dx; }));
+        _overlay.appendChild(_makeHandle('sw', function(dx){ return -dx; }));
+        _overlay.appendChild(_makeHandle('ne', function(dx){ return  dx; }));
+        _overlay.appendChild(_makeHandle('nw', function(dx){ return -dx; }));
+        editorEl.appendChild(_overlay);
+        _positionOverlay();
+    }
+
+    function _removeOverlay() {
+        if (_overlay && _overlay.parentNode) _overlay.parentNode.removeChild(_overlay);
+        _overlay = null;
+        _img = null;
+    }
+
+    editor.root.addEventListener('click', function(e) {
+        if (e.target.tagName === 'IMG') {
+            _showOverlay(e.target);
+        } else if (!_overlay || !_overlay.contains(e.target)) {
+            _removeOverlay();
+        }
+    });
+
+    document.addEventListener('mousedown', function(e) {
+        if (!_overlay) return;
+        if (!editor.root.contains(e.target) && !_overlay.contains(e.target)) {
+            _removeOverlay();
+        }
+    });
+}
+
+// Chèn bảng 3×3 vào vị trí con trỏ trong editor
+function insertIntroTable() {
+    const editor = _introQuillEditor;
+    if (!editor) {
+        showToast('Editor chưa sẵn sàng', 'Vui lòng mở chế độ chỉnh sửa trước.', 'warning');
+        return;
+    }
+    const tableHtml = `<table style="border-collapse:collapse;width:100%;margin:12px 0;">
+<thead><tr>
+  <th style="border:1px solid #ccc;padding:8px 12px;background:#f5f7fa;text-align:left;font-weight:600;">Tiêu đề 1</th>
+  <th style="border:1px solid #ccc;padding:8px 12px;background:#f5f7fa;text-align:left;font-weight:600;">Tiêu đề 2</th>
+  <th style="border:1px solid #ccc;padding:8px 12px;background:#f5f7fa;text-align:left;font-weight:600;">Tiêu đề 3</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td style="border:1px solid #ccc;padding:8px 12px;">Ô 1</td>
+  <td style="border:1px solid #ccc;padding:8px 12px;">Ô 2</td>
+  <td style="border:1px solid #ccc;padding:8px 12px;">Ô 3</td>
+</tr>
+<tr>
+  <td style="border:1px solid #ccc;padding:8px 12px;">Ô 4</td>
+  <td style="border:1px solid #ccc;padding:8px 12px;">Ô 5</td>
+  <td style="border:1px solid #ccc;padding:8px 12px;">Ô 6</td>
+</tr>
+</tbody></table><p><br></p>`;
+    const range = editor.getSelection(true);
+    editor.clipboard.dangerouslyPasteHTML(range ? range.index : editor.getLength(), tableHtml);
+}
+
+// Chuyển ql-align-* class (định dạng cũ) sang inline style để Quill style-attributor nhận đúng
+function _normalizeAlignToInlineStyle(html) {
+    if (!html || html.indexOf('ql-align') === -1) return html;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const MAP = { 'ql-align-center': 'center', 'ql-align-right': 'right', 'ql-align-justify': 'justify' };
+    tmp.querySelectorAll('[class]').forEach(function(el) {
+        Object.keys(MAP).forEach(function(cls) {
+            if (el.classList.contains(cls)) {
+                if (!el.style.textAlign) el.style.textAlign = MAP[cls];
+                el.classList.remove(cls);
+            }
+        });
+        if (!el.className) el.removeAttribute('class');
+    });
+    return tmp.innerHTML;
+}
+
+async function loadIntroContent() {
+    const viewContent = document.getElementById('introViewContent');
+    if (!viewContent) return;
+
+    const editMode = document.getElementById('introEditMode');
+    const viewMode = document.getElementById('introViewMode');
+    if (editMode) editMode.style.display = 'none';
+    if (viewMode) viewMode.style.display = 'block';
+
+    viewContent.innerHTML = '<div class="intro-empty"><i class="fa-solid fa-spinner fa-spin"></i>Đang tải nội dung...</div>';
+
+    try {
+        const response = await fetch(WEBAPP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ token: TOKEN, action: 'get_intro_content' })
+        });
+        const result = await response.json();
+        if (result.ok && result.data) {
+            _introCachedData = result.data;
+            renderIntroView(result.data);
+        } else {
+            renderIntroEmpty();
+        }
+    } catch (e) {
+        viewContent.innerHTML = '<div class="intro-empty"><i class="fa-solid fa-circle-exclamation"></i>Không tải được nội dung. Vui lòng thử lại.</div>';
+    }
+}
+
+function renderIntroView(data) {
+    const viewContent = document.getElementById('introViewContent');
+    if (!viewContent) return;
+
+    if (!data || (!data.title && !data.content && !data.image_url)) {
+        renderIntroEmpty();
+        return;
+    }
+
+    let html = '<div class="intro-section">';
+    if (data.image_url) {
+        html += `<img src="${escapeHtml(data.image_url)}" alt="Ảnh giới thiệu" class="intro-view-image" onerror="this.style.display='none'">`;
+    }
+    if (data.title) html += `<h2>${escapeHtml(data.title)}</h2>`;
+    if (data.updated_at) {
+        try {
+            const d = new Date(data.updated_at);
+            if (!isNaN(d)) {
+                html += `<p style="margin:0 0 16px;font-size:12px;color:var(--text-muted);">Cập nhật lúc: ${d.toLocaleDateString('vi-VN')} ${d.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</p>`;
+            }
+        } catch(e) {}
+    }
+    if (data.content) html += `<div class="intro-view-body">${data.content}</div>`;
+    html += '</div>';
+    viewContent.innerHTML = html;
+}
+
+function renderIntroEmpty() {
+    const viewContent = document.getElementById('introViewContent');
+    if (!viewContent) return;
+    viewContent.innerHTML = '<div class="intro-empty"><i class="fa-solid fa-file-circle-question"></i>Chưa có nội dung giới thiệu. Vui lòng liên hệ quản trị viên để cập nhật.</div>';
+}
+
+function showIntroEditMode() {
+    if (localStorage.getItem('isAdminAccess') !== 'true') return;
+
+    const viewMode = document.getElementById('introViewMode');
+    const editMode = document.getElementById('introEditMode');
+    if (viewMode) viewMode.style.display = 'none';
+    if (editMode) editMode.style.display = 'block';
+
+    const data = _introCachedData || {};
+    const titleEl = document.getElementById('introEditTitle');
+    const imageUrlEl = document.getElementById('introEditImageUrl');
+    if (titleEl) titleEl.value = data.title || '';
+    if (imageUrlEl) imageUrlEl.value = data.image_url || '';
+
+    document.getElementById('introImagePreviewWrap').style.display = 'none';
+
+    // Khởi tạo editor (lazy) và nạp nội dung
+    // _normalizeAlignToInlineStyle: chuyển ql-align-* class cũ → inline style để style-attributor nhận đúng
+    const editor = getOrInitIntroEditor();
+    const normalizedContent = _normalizeAlignToInlineStyle(data.content || '');
+    if (normalizedContent) {
+        editor.clipboard.dangerouslyPasteHTML(0, normalizedContent);
+    } else {
+        editor.setContents([]);
+    }
+
+    // Cập nhật preview lần đầu
+    const box = document.getElementById('introPreviewBox');
+    if (box) {
+        const html = editor.root.innerHTML;
+        const isEmpty = !html || html.trim() === '<p><br></p>';
+        box.innerHTML = isEmpty ? '<em style="color:#bbb;">Nhập nội dung để xem trước...</em>' : html;
+    }
+
+    if (data.image_url) previewIntroImage();
+}
+
+function cancelIntroEdit() {
+    const viewMode = document.getElementById('introViewMode');
+    const editMode = document.getElementById('introEditMode');
+    if (editMode) editMode.style.display = 'none';
+    if (viewMode) viewMode.style.display = 'block';
+}
+
+function previewIntroImage() {
+    const url = (document.getElementById('introEditImageUrl').value || '').trim();
+    const wrap = document.getElementById('introImagePreviewWrap');
+    const img = document.getElementById('introImagePreview');
+    const warn = document.getElementById('introImageLocalWarning');
+    if (!url) { if (wrap) wrap.style.display = 'none'; return; }
+    img.src = url;
+    wrap.style.display = 'block';
+    warn.style.display = url.startsWith('data:') ? 'block' : 'none';
+}
+
+function handleIntroImageFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        document.getElementById('introEditImageUrl').value = dataUrl;
+        const wrap = document.getElementById('introImagePreviewWrap');
+        const img = document.getElementById('introImagePreview');
+        const warn = document.getElementById('introImageLocalWarning');
+        img.src = dataUrl;
+        wrap.style.display = 'block';
+        warn.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+function updateIntroPreview() {
+    const editor = _introQuillEditor;
+    const box = document.getElementById('introPreviewBox');
+    if (!box || !editor) return;
+    const html = editor.root.innerHTML;
+    const isEmpty = !html || html.trim() === '<p><br></p>';
+    box.innerHTML = isEmpty ? '<em style="color:#bbb;">Chưa có nội dung.</em>' : html;
+}
+
+async function reloadIntroFromServer() {
+    await loadIntroContent();
+    showIntroEditMode();
+}
+
+async function saveIntroContent() {
+    if (localStorage.getItem('isAdminAccess') !== 'true') return;
+
+    const title = (document.getElementById('introEditTitle').value || '').trim();
+    const imageUrl = (document.getElementById('introEditImageUrl').value || '').trim();
+
+    // Lấy HTML từ Quill editor; chuẩn hóa ql-align-* class còn sót → inline style trước khi lưu
+    const editor = _introQuillEditor;
+    let content = '';
+    if (editor) {
+        const raw = editor.root.innerHTML;
+        content = (raw.trim() === '<p><br></p>' ? '' : _normalizeAlignToInlineStyle(raw)).trim();
+    }
+
+    if (imageUrl.startsWith('data:')) {
+        showToast('Không thể lưu ảnh cục bộ (ảnh bìa)', 'Vui lòng tải ảnh lên Google Drive, Imgur... và dán URL vào ô URL ảnh.', 'error');
+        return;
+    }
+
+    // Cảnh báo nếu nội dung chứa ảnh nhúng base64
+    if (content.includes('src="data:')) {
+        const ok = confirm(
+            'Nội dung có chứa ảnh nhúng trực tiếp (base64).\n' +
+            'Ảnh dạng này có thể làm nội dung vượt giới hạn lưu trữ (9 KB/property).\n\n' +
+            'Khuyến nghị: Tải ảnh lên Google Drive / Imgur rồi dán URL thay vì nhúng trực tiếp.\n\n' +
+            'Bạn vẫn muốn tiếp tục lưu không?'
+        );
+        if (!ok) return;
+    }
+
+    const btn = document.getElementById('btnSaveIntro');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...'; }
+
+    try {
+        const response = await fetch(WEBAPP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                token: TOKEN,
+                action: 'save_intro_content',
+                payload: { title, content, image_url: imageUrl }
+            })
+        });
+        const result = await response.json();
+        if (result.ok) {
+            _introCachedData = { title, content, image_url: imageUrl, updated_at: result.updated_at || new Date().toISOString() };
+            showToast('Đã lưu thành công', 'Nội dung giới thiệu đã được cập nhật.', 'success');
+            cancelIntroEdit();
+            renderIntroView(_introCachedData);
+        } else {
+            showToast('Lưu thất bại', result.message || 'Không thể lưu nội dung. Vui lòng thử lại.', 'error');
+        }
+    } catch (e) {
+        showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ. Vui lòng thử lại.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu'; }
+    }
+}
+
+// ===================================================================
+
 // 1. TỪ ĐIỂN PHÂN LOẠI (Bạn có thể tự do thêm/sửa danh mục ở đây)
     const danhMucVBQPPL = {
         "Doanh nghiệp - Thương mại": {
