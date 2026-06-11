@@ -1823,6 +1823,9 @@
         /* Modal Xác nhận (Popup thay thế confirm mặc định) */
         #confirmModal .modal-content { width: 420px; text-align: center; padding: 32px 24px; border-radius: 16px; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .modal-overlay.show #confirmModal .modal-content { transform: scale(1); }
+        /* Modal Chi tiết văn bản */
+        #detailModal .modal-content { width: 90vw; max-width: 600px; max-height: 88vh; overflow: hidden; }
+        #detailModal .modal-body { overflow-y: auto; flex: 1; min-height: 0; display: block; }
         /* --- GIAO DIỆN MULTI-SELECT --- */
         .multi-select-container {
             width: 100%; min-height: 40px; padding: 6px 30px 6px 10px; 
@@ -2730,7 +2733,7 @@
 </div>
 <!-- Modal Xem Chi Tiết -->
     <div class="modal-overlay" id="detailModal">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content">
             <div class="modal-header">
                 <h3 id="detailTitle">Chi tiết văn bản</h3>
                 <button class="close-btn" onclick="closeModal('detailModal')">&times;</button>
@@ -4248,9 +4251,9 @@
         if (!text || !text.includes('|')) return null;
 
         const parts = text.split('|').map(item => item.trim());
-        if (parts.length < 4) return null;
+        if (parts.length < 2) return null;
 
-        const dueMatch = parts[2].match(/Hạn hoàn thành\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+        const dueMatch = (parts[2] || '').match(/Hạn hoàn thành\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
         return {
             department: parts[0] || '',
             pic: parts[1] || '',
