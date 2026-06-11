@@ -152,7 +152,9 @@ def build_updates(task: dict, details: dict) -> dict:
         updates["Planner Sync Status"] = "Đang chờ PIC xử lý"
         return updates
 
-    updates["Current PIC"] = active_item["pic_email"]
+    department = active_item["department"]
+    pic_email = active_item["pic_email"]
+    updates["Current PIC"] = f"{department} | {pic_email}" if department else pic_email
     updates["Next Response Due"] = active_item["due_date"]
 
     if not all_checked:

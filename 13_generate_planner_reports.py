@@ -211,8 +211,13 @@ def enrich_record(record: dict) -> dict:
         checkpoint = parsed["checkpoint"] or current_checkpoint
         due_date = parsed["due_date"] or parse_date_value(next_response_due)
     else:
-        department = infer_department_from_current_pic(current_pic)
-        pic = current_pic
+        pic_parts = [p.strip() for p in clean_text(current_pic).split("|")]
+        if len(pic_parts) >= 2:
+            department = pic_parts[0]
+            pic = pic_parts[1]
+        else:
+            department = ""
+            pic = current_pic
         checkpoint = current_checkpoint
         due_date = parse_date_value(next_response_due)
 
