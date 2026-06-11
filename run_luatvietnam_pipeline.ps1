@@ -3,7 +3,7 @@
 # Step07 -> Step08 -> Step09
 # ============================================================
 
-$ProjectDir = "C:\Users\Admin\Desktop\luatvietnam_vbqppl"
+$ProjectDir = $PSScriptRoot
 $PythonExe = "C:\Users\Admin\AppData\Local\Programs\Python\Python313\python.exe"
 
 Set-Location $ProjectDir

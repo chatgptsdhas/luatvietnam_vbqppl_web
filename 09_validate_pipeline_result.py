@@ -37,7 +37,6 @@ SKIP_DOC_TYPES_DEFAULT = {
 }
 
 BLOCKED_URL_KEYWORDS_DEFAULT = [
-    "doanh-nghiep",
     "dat-dai",
     "hinh-su",
     "ke-hoach",
