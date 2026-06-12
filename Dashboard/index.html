@@ -372,6 +372,81 @@
 
         .main-row:hover td { background-color: #f8faff; }
         .main-row td { transition: background-color 0.3s; }
+        .main-row.row-selected td { background-color: #e8f0fe !important; }
+        .main-row.row-selected:hover td { background-color: #d2e3fc !important; }
+
+        /* --- BATCH TOOLBAR (GMAIL-STYLE) --- */
+        .batch-toolbar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 16px;
+            background: #e8f0fe;
+            border-bottom: 1px solid #c5d9fb;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            animation: batchFadeIn 0.15s ease;
+        }
+        .batch-toolbar.visible { display: flex; }
+        @keyframes batchFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .batch-count {
+            font-weight: 700;
+            color: var(--has-navy);
+            font-size: 13px;
+            white-space: nowrap;
+            margin-right: 4px;
+        }
+        .batch-clear-btn {
+            background: transparent;
+            border: 1px solid #aac1f0;
+            color: #1a73e8;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .batch-clear-btn:hover { background: #d2e3fc; }
+        .batch-action-btn {
+            padding: 5px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            border: none;
+        }
+        .batch-action-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .batch-action-transfer { background: var(--success); color: white; }
+        .batch-action-transfer:hover:not(:disabled) { background: #0b8043; }
+        .batch-action-reject { background: white; color: var(--danger); border: 1px solid var(--danger) !important; }
+        .batch-action-reject:hover:not(:disabled) { background: var(--danger); color: white; }
+        .batch-action-restore { background: var(--has-navy); color: white; }
+        .batch-action-restore:hover:not(:disabled) { background: #131e40; }
+        .batch-action-csv { background: #f1f3f4; color: var(--text-main); border: 1px solid #ddd !important; }
+        .batch-action-csv:hover:not(:disabled) { background: #e2e4e7; }
+        .batch-progress {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--has-navy);
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        /* Checkbox styling */
+        .row-checkbox, #selectAllCheckbox {
+            width: 16px; height: 16px;
+            accent-color: var(--has-navy);
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        th.col-checkbox, td.col-checkbox {
+            width: 40px;
+            text-align: center;
+            padding: 8px 10px;
+        }
 
         /* --- ACCORDION DETAILS --- */
         .expand-btn {
@@ -2594,6 +2669,13 @@
                     <option value="">-- Tất cả Loại VB --</option>
                 </select>
             </div>
+            <!-- BATCH ACTION TOOLBAR -->
+            <div class="batch-toolbar" id="batchToolbar">
+                <span class="batch-count" id="batchCount">0 đã chọn</span>
+                <div id="batchActions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"></div>
+                <span class="batch-progress" id="batchProgress" style="display:none;"></span>
+            </div>
+
             <div id="loading" class="loading-state">
                 <i class="fa-solid fa-circle-notch fa-spin"></i>
                 <div>Đang tải dữ liệu ...</div>
@@ -2603,9 +2685,10 @@
                 <table id="dataTable" style="display: none;">
                     <thead>
                         <tr>
+                            <th class="col-checkbox"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" title="Chọn/bỏ chọn tất cả dòng đang hiển thị"></th>
                             <th width="15%" style="text-align: center;">Số hiệu</th>
                             <th width="15%" style="text-align: center;">Loại văn bản</th>
-                            <th width="60%" style="text-align: center;">Tên văn bản</th> <!-- Bù phần trống vào tên văn bản -->
+                            <th width="55%" style="text-align: center;">Tên văn bản</th>
                             <th width="10%" style="text-align: center;">Thao tác</th>
                         </tr>
                     </thead>
@@ -2794,10 +2877,11 @@
 
     let currentRecords = [];
     let reportRecords = [];
-    let globalTotalCount = '--'; 
-    let globalTransferredCount = '--'; 
+    let globalTotalCount = '--';
+    let globalTransferredCount = '--';
     let hasShownWelcome = false;
     let currentTab = 'all';
+    let selectedRows = new Set(); // Lưu _rowNumber của các dòng đang chọn
     let latestReport = null;
     let reportDashboardConfig = null;
     let reportDefaultsApplied = false;
@@ -5725,6 +5809,7 @@
     }
 
     function switchTab(tabId) {
+        clearSelection();
         // 1. Kiểm tra bảo mật
         const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
         if ((tabId === 'pending' || tabId === 'irrelevant' || tabId === 'reports' || tabId === 'transferred' || tabId === 'analytics') && !isAdmin) {
@@ -5849,6 +5934,7 @@
     }
     // --- HÀM TẢI DỮ LIỆU ĐÃ ĐƯỢC LÀM SẠCH ---
     async function loadData() {
+        clearSelection();
         table.style.display = 'none';
         emptyState.style.display = 'none';
         loadingDiv.style.display = 'block';
@@ -5967,6 +6053,82 @@
         renderTable(displayRecords);
     }
 
+    // =====================================================================
+    // MULTI-SELECT: Quản lý chọn nhiều dòng
+    // =====================================================================
+    function clearSelection() {
+        selectedRows.clear();
+        updateBatchToolbar();
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.main-row.row-selected').forEach(tr => tr.classList.remove('row-selected'));
+        const selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll) selectAll.checked = false;
+    }
+
+    function updateBatchToolbar() {
+        const toolbar = document.getElementById('batchToolbar');
+        const countEl = document.getElementById('batchCount');
+        const actionsEl = document.getElementById('batchActions');
+        if (!toolbar || !countEl || !actionsEl) return;
+
+        const count = selectedRows.size;
+        if (count === 0) {
+            toolbar.classList.remove('visible');
+            return;
+        }
+
+        toolbar.classList.add('visible');
+        countEl.textContent = `${count} văn bản đã chọn`;
+
+        let btns = '';
+        if (currentTab === 'pending') {
+            btns += `<button class="batch-action-btn batch-action-transfer" onclick="batchTransfer()" id="btnBatchTransfer"><i class="fa-solid fa-paper-plane"></i> Chuyển đã chọn</button>`;
+            btns += `<button class="batch-action-btn batch-action-reject" onclick="batchReject()" id="btnBatchReject"><i class="fa-solid fa-ban"></i> Đánh dấu Không liên quan</button>`;
+        } else if (currentTab === 'transferred') {
+            btns += `<button class="batch-action-btn batch-action-restore" onclick="batchRestoreTransferred()" id="btnBatchRestore"><i class="fa-solid fa-rotate-left"></i> Khôi phục đã chọn</button>`;
+        }
+        actionsEl.innerHTML = btns;
+
+        // Đồng bộ trạng thái selectAll checkbox
+        const visibleCheckboxes = document.querySelectorAll('.row-checkbox');
+        const selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll && visibleCheckboxes.length > 0) {
+            const checkedCount = [...visibleCheckboxes].filter(cb => cb.checked).length;
+            selectAll.checked = checkedCount === visibleCheckboxes.length;
+            selectAll.indeterminate = checkedCount > 0 && checkedCount < visibleCheckboxes.length;
+        }
+    }
+
+    function toggleRowSelection(rowNumber, checkbox) {
+        const tr = document.getElementById(`row-${rowNumber}`);
+        if (checkbox.checked) {
+            selectedRows.add(rowNumber);
+            if (tr) tr.classList.add('row-selected');
+        } else {
+            selectedRows.delete(rowNumber);
+            if (tr) tr.classList.remove('row-selected');
+        }
+        updateBatchToolbar();
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAllCheckbox');
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+            const rowNum = Number(cb.dataset.row);
+            const tr = document.getElementById(`row-${rowNum}`);
+            if (selectAll.checked) {
+                selectedRows.add(rowNum);
+                if (tr) tr.classList.add('row-selected');
+            } else {
+                selectedRows.delete(rowNum);
+                if (tr) tr.classList.remove('row-selected');
+            }
+        });
+        updateBatchToolbar();
+    }
+
     // --- HÀM VẼ BẢNG DỮ LIỆU ĐÃ ĐƯỢC TÍCH HỢP ĐẦY ĐỦ 4 CỘT ---
     function renderTable(data) {
         // 1. Kiểm tra nếu mảng rỗng thì hiện khung "Trống"
@@ -6047,8 +6209,9 @@
 
             const trMain = document.createElement('tr');
             trMain.id = `row-${rId}`;
-            trMain.className = 'main-row data-row';
+            trMain.className = 'main-row data-row' + (selectedRows.has(rId) ? ' row-selected' : '');
             trMain.innerHTML = `
+                <td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-row="${rId}" ${selectedRows.has(rId) ? 'checked' : ''} onchange="toggleRowSelection(${rId}, this)"></td>
                 <td>${soHieuHtml}</td>
                 <td style="text-align: center;">
                     <span class="badge ${isExpired ? (rawLoai.includes('Chờ xóa') ? 'badge-orange' : 'badge-gray') : getBadgeClass(rawLoai)}">${rawLoai}</span>
@@ -6060,6 +6223,9 @@
             `;
             tableBody.appendChild(trMain);
         });
+
+        // Đồng bộ toolbar sau khi vẽ lại bảng
+        updateBatchToolbar();
     }
 
     function scrollToNextAction() {
@@ -6501,6 +6667,8 @@
     }
 
     function removeRowFromUI(rowNumber) {
+        selectedRows.delete(rowNumber);
+        updateBatchToolbar();
         const rowMain = document.getElementById(`row-${rowNumber}`);
         const rowDetail = document.getElementById(`details-${rowNumber}`);
         
@@ -6532,6 +6700,222 @@
             }, 300);
         }
     }
+    // =====================================================================
+    // BATCH OPERATIONS
+    // =====================================================================
+
+    function setBatchButtonsDisabled(disabled) {
+        ['btnBatchTransfer', 'btnBatchReject', 'btnBatchRestore'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = disabled;
+        });
+    }
+
+    function showBatchProgress(text) {
+        const el = document.getElementById('batchProgress');
+        if (el) { el.textContent = text; el.style.display = text ? 'inline' : 'none'; }
+    }
+
+    function showBatchSummary(success, errors) {
+        const total = success + errors.length;
+        if (errors.length === 0) {
+            showToast('Hoàn tất!', `Đã xử lý thành công <b>${success}/${total}</b> văn bản.`, 'success');
+        } else {
+            const errList = errors.slice(0, 5).map(e => `<li>${escapeHtml(e)}</li>`).join('');
+            const more = errors.length > 5 ? `<li>...và ${errors.length - 5} lỗi khác</li>` : '';
+            showToast(
+                `Hoàn tất với lỗi`,
+                `Thành công: <b>${success}/${total}</b>.<br>Lỗi:<ul style="margin:4px 0 0 16px;padding:0;">${errList}${more}</ul>`,
+                'warning'
+            );
+        }
+    }
+
+    async function batchTransfer() {
+        const rowNumbers = [...selectedRows];
+        if (rowNumbers.length === 0) return;
+        const msg = `Bạn có chắc chắn muốn <b>chuyển ${rowNumbers.length} văn bản đã chọn</b> không?<br><span style="font-size:12px;color:var(--text-muted);">Thao tác sẽ chạy tuần tự, dòng lỗi không làm dừng toàn bộ.</span>`;
+        openConfirmDialog({
+            messageHtml: msg,
+            confirmText: `Chuyển ${rowNumbers.length} văn bản`,
+            onConfirm: () => _executeBatchTransfer(rowNumbers)
+        });
+    }
+
+    async function _executeBatchTransfer(rowNumbers) {
+        setBatchButtonsDisabled(true);
+        let success = 0;
+        const errors = [];
+
+        for (let i = 0; i < rowNumbers.length; i++) {
+            const rowNum = rowNumbers[i];
+            showBatchProgress(`Đang xử lý ${i + 1}/${rowNumbers.length}...`);
+            const rowData = currentRecords.find(r => r._rowNumber === rowNum);
+            const soHieu = rowData ? (rowData['Số hiệu'] || `Dòng ${rowNum}`) : `Dòng ${rowNum}`;
+            try {
+                const response = await fetch(WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ token: TOKEN, action: 'transfer_record', payload: { row_number: rowNum } })
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    success++;
+                    removeRowFromUI(rowNum);
+                    triggerPlannerSyncAfterTransfer(rowNum, result.soHieu || soHieu, result);
+                } else {
+                    const reason = result.reason === 'missing_fields'
+                        ? `${soHieu}: thiếu ${(result.missing || []).join(', ')}`
+                        : `${soHieu}: ${result.message || 'Không rõ lỗi'}`;
+                    errors.push(reason);
+                }
+            } catch (err) {
+                errors.push(`${soHieu}: Lỗi kết nối`);
+            }
+        }
+
+        showBatchProgress('');
+        setBatchButtonsDisabled(false);
+        showBatchSummary(success, errors);
+        clearSelection();
+        loadData();
+    }
+
+    async function batchReject() {
+        const rowNumbers = [...selectedRows];
+        if (rowNumbers.length === 0) return;
+        const msg = `Bạn có chắc chắn muốn đánh dấu <b>${rowNumbers.length} văn bản đã chọn</b> là <b>KHÔNG LIÊN QUAN</b>?`;
+        openConfirmDialog({
+            messageHtml: msg,
+            confirmText: `Đánh dấu ${rowNumbers.length} văn bản`,
+            onConfirm: () => _executeBatchReject(rowNumbers)
+        });
+    }
+
+    async function _executeBatchReject(rowNumbers) {
+        setBatchButtonsDisabled(true);
+        let success = 0;
+        const errors = [];
+
+        for (let i = 0; i < rowNumbers.length; i++) {
+            const rowNum = rowNumbers[i];
+            showBatchProgress(`Đang xử lý ${i + 1}/${rowNumbers.length}...`);
+            const rowData = currentRecords.find(r => r._rowNumber === rowNum);
+            const soHieu = rowData ? (rowData['Số hiệu'] || `Dòng ${rowNum}`) : `Dòng ${rowNum}`;
+            try {
+                const response = await fetch(WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ token: TOKEN, action: 'update_record', payload: { row_number: rowNum, updates: { 'Trạng thái duyệt': 'Không liên quan' } } })
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    success++;
+                    removeRowFromUI(rowNum);
+                } else {
+                    errors.push(`${soHieu}: ${result.message || 'Không rõ lỗi'}`);
+                }
+            } catch (err) {
+                errors.push(`${soHieu}: Lỗi kết nối`);
+            }
+        }
+
+        showBatchProgress('');
+        setBatchButtonsDisabled(false);
+        showBatchSummary(success, errors);
+        clearSelection();
+        loadData();
+    }
+
+    async function batchRestoreTransferred() {
+        const rowNumbers = [...selectedRows];
+        if (rowNumbers.length === 0) return;
+        const msg = `Bạn có chắc chắn muốn <b>khôi phục ${rowNumbers.length} văn bản đã chọn</b>?<br><span style="font-size:12px;color:var(--text-muted);">Thao tác này sẽ xóa các dòng tương ứng khỏi sheet <b>VBQPPL</b>. Task Planner (nếu có) sẽ không bị xóa.</span>`;
+        openConfirmDialog({
+            messageHtml: msg,
+            confirmText: `Khôi phục ${rowNumbers.length} văn bản`,
+            onConfirm: () => _executeBatchRestore(rowNumbers)
+        });
+    }
+
+    async function _executeBatchRestore(rowNumbers) {
+        setBatchButtonsDisabled(true);
+        let success = 0;
+        const errors = [];
+
+        for (let i = 0; i < rowNumbers.length; i++) {
+            const rowNum = rowNumbers[i];
+            showBatchProgress(`Đang xử lý ${i + 1}/${rowNumbers.length}...`);
+            const rowData = currentRecords.find(r => r._rowNumber === rowNum);
+            const soHieu = String(rowData?.['Số hiệu'] || '').trim();
+            const idVanBan = String(rowData?.['ID VĂN BẢN'] || rowData?.['ID Văn bản'] || '').trim();
+            const vbqpplRowNumber = rowData?._vbqpplRowNumber || '';
+            const soHieuLabel = soHieu || idVanBan || `Dòng ${rowNum}`;
+            try {
+                const response = await fetch(WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        token: TOKEN,
+                        action: 'restore_transferred_record',
+                        payload: {
+                            source_row_number: rowNum,
+                            vbqppl_row_number: vbqpplRowNumber,
+                            so_hieu: soHieu,
+                            id_van_ban: idVanBan,
+                            delete_planner_task: false,
+                            planner_delete_result: null
+                        }
+                    })
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    success++;
+                    removeRowFromUI(rowNum);
+                } else {
+                    errors.push(`${soHieuLabel}: ${result.message || 'Không rõ lỗi'}`);
+                }
+            } catch (err) {
+                errors.push(`${soHieuLabel}: Lỗi kết nối`);
+            }
+        }
+
+        showBatchProgress('');
+        setBatchButtonsDisabled(false);
+        showBatchSummary(success, errors);
+        clearSelection();
+        loadData();
+    }
+
+    function exportSelectedToCSV() {
+        const rowNumbers = [...selectedRows];
+        if (rowNumbers.length === 0) return;
+        const rows = currentRecords.filter(r => rowNumbers.includes(r._rowNumber));
+        if (rows.length === 0) return;
+
+        const headers = ['_rowNumber', 'Số hiệu', 'Tên văn bản', 'Loại văn bản', 'Lĩnh vực', 'Chủ đề', 'Mục', 'Bộ phận chủ trì', 'Mức độ tác động', 'Trạng thái duyệt', 'Link Văn bản'];
+        const csvLines = [headers.join(',')];
+        rows.forEach(row => {
+            const line = headers.map(h => {
+                const val = String(row[h] || '').replace(/"/g, '""');
+                return `"${val}"`;
+            });
+            csvLines.push(line.join(','));
+        });
+
+        const bom = '﻿';
+        const blob = new Blob([bom + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `VBQPPL_${currentTab}_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Đã xuất CSV', `Xuất <b>${rows.length}</b> văn bản thành công.`, 'success');
+    }
+
     // Hàm hiển thị thông tin chi tiết
     function viewDetail(rowNum) {
         const rowData = currentRecords.find(r => r._rowNumber === rowNum);
@@ -6894,6 +7278,7 @@
 
     // Hàm 2: Xử lý hiển thị dữ liệu khi người dùng chọn Bộ lọc hoặc gõ Tìm kiếm
     function applyFilters() {
+        clearSelection();
         const textSearch = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
         const btnExt = document.getElementById('btnExtendedSearch');
         if (btnExt) btnExt.style.display = textSearch.trim() ? 'inline-block' : 'none';
