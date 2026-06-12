@@ -6194,11 +6194,19 @@
                     </button>
                 `;
             } else if (currentTab === 'transferred') {
-                actionsHtml = `
-                    <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreTransferredRow(${rId})" title="Xóa khỏi sheet VBQPPL">
-                        <i class="fa-solid fa-rotate-left"></i> Khôi phục
-                    </button>
-                `;
+                if (row._vbqpplMatch) {
+                    actionsHtml = `
+                        <button class="btn-outline-primary" id="btn-restore-${rId}" onclick="restoreTransferredRow(${rId})" title="Xóa khỏi sheet VBQPPL">
+                            <i class="fa-solid fa-rotate-left"></i> Khôi phục
+                        </button>
+                    `;
+                } else {
+                    actionsHtml = `
+                        <button class="btn-outline-primary" disabled title="Không tìm thấy bản ghi tương ứng trong VBQPPL" style="opacity:0.5;cursor:not-allowed;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Không khớp
+                        </button>
+                    `;
+                }
             } else if (currentTab === 'all') {
                 actionsHtml = `
                     <button class="btn-detail" onclick="viewDetail(${rId})" title="Xem chi tiết văn bản">
