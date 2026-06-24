@@ -2224,6 +2224,60 @@
             border-radius: 6px; cursor: pointer; font-size: 13px; color: #444;
         }
         .intro-img-dialog .idg-cancel:hover { background: #e0e0e0; }
+
+        /* --- TOOLTIP NHÃN QUAN HỆ PHÁP LÝ --- */
+        .relation-label-trigger {
+            position: relative;
+            display: inline;
+            cursor: default;
+        }
+        .relation-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            left: calc(100% + 8px);
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 9999;
+            background: #fff8e1;
+            color: #222;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.5;
+            padding: 7px 10px;
+            border-radius: 5px;
+            border: 1px solid #e0c97f;
+            max-width: 320px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
+        .relation-tooltip::before {
+            content: '';
+            position: absolute;
+            right: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: #e0c97f;
+        }
+        .relation-tooltip::after {
+            content: '';
+            position: absolute;
+            right: calc(100% - 1px);
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: #fff8e1;
+        }
+        .relation-label-trigger:hover .relation-tooltip,
+        .relation-label-trigger:focus-within .relation-tooltip,
+        .relation-label-trigger.tooltip-open .relation-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -2242,6 +2296,9 @@
 
             <li id="tab-all" onclick="switchTab('all')" class="active" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
                 <i class="fa-solid fa-list"></i> Danh sách tổng hợp
+            </li>
+            <li id="tab-incoming" onclick="switchTab('incoming')" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+                <i class="fa-solid fa-envelope-open-text"></i> Văn bản đến
             </li>
 
             <li id="tab-pending" onclick="switchTab('pending')" class="admin-only locked" style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #ffffff;">
@@ -2622,52 +2679,139 @@
 
         <!-- TABLE AREA -->
         <div class="table-wrapper" id="recordsPanel">
-            <div class="table-toolbar">
-                <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="table-toolbar" style="flex-direction: column; align-items: stretch; gap: 0; padding: 12px 20px 10px;">
+                <!-- Hàng 1: Sắp xếp + Số lượng -->
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                     <i class="fa-solid fa-filter"></i> Sắp xếp danh sách:
                     <select id="sortSelect" onchange="applySort()" style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; color: var(--has-navy); font-size: 13px; font-weight: 500; cursor: pointer;">
                         <option value="row_desc">Dòng (Mới nhất trước)</option>
                         <option value="row_asc">Dòng (Cũ nhất trước)</option>
                         <option value="priority">Mức độ ưu tiên xử lý</option>
                     </select>
+                    <span style="margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500;" id="recordCount">-- văn bản</span>
                 </div>
-                
-                <!-- Ô TÌM KIẾM MỚI BỔ SUNG -->
-                <div style="margin-left: 24px; display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: white;">
-                    <span style="background: #1a73e8; color: white; padding: 6px 12px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-magnifying-glass"></i> Tra cứu
-                    </span>
-                    <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Nhập số hiệu hoặc tên văn bản..." style="border: none; padding: 6px 12px; outline: none; width: 260px; font-size: 13px; font-family: inherit; color: var(--text-main);">
-                    <button id="btnExtendedSearch" onclick="openExtendedSearch()" title="Tìm kiếm trên Google" style="display:none; border:none; border-left:1px solid var(--border-color); background:#f1f3f4; color:#1a73e8; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:inherit;">
+
+                <!-- Hàng 2: Ô tìm kiếm + nút -->
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 7px;">
+                    <div style="flex: 1; min-width: 200px; display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: white;">
+                        <span style="background: #1a73e8; color: white; padding: 6px 12px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="searchInput" oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()" placeholder="Nhập từ khóa, số hiệu hoặc tên văn bản..." style="border: none; padding: 6px 12px; outline: none; flex: 1; min-width: 0; font-size: 13px; font-family: inherit; color: var(--text-main);">
+                    </div>
+                    <button onclick="applyFilters()" style="padding:6px 16px; background:#1a73e8; color:white; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+                    </button>
+                    <button id="btnAdvancedToggle" onclick="toggleAdvancedSearch()" style="padding:6px 14px; background:white; color:var(--has-navy); border:1px solid var(--border-color); border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                        <i class="fa-solid fa-sliders"></i> Tìm kiếm nâng cao
+                    </button>
+                    <button id="btnExtendedSearch" onclick="openExtendedSearch()" title="Tìm kiếm trên Google" style="display:none; border:none; background:#f1f3f4; color:#1a73e8; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:inherit; border-radius:6px; flex-shrink:0;">
                         <i class="fa-brands fa-google"></i> Tìm kiếm mở rộng
                     </button>
                 </div>
 
-                <div style="margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500;" id="recordCount">
-                    -- văn bản
+            </div>
+            <div id="filterContainer" style="display: none; margin-bottom: 15px; padding: 14px 16px; background: #f0f4ff; border: 1px solid #c5d9fb; border-top: 3px solid #1a73e8; border-radius: 0 0 8px 8px;">
+                <!-- Header panel -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 13px; font-weight: 700; color: var(--has-navy); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-sliders"></i> Tìm kiếm nâng cao
+                    </span>
+                    <button onclick="toggleAdvancedSearch()" style="padding:3px 12px; background:white; color:var(--has-navy); border:1px solid var(--border-color); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-chevron-up"></i> Thu gọn
+                    </button>
+                </div>
+                <!-- Grid 2 hàng, 3 cột -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <select id="filterLinhVuc" onchange="handleLinkedFilters('linhvuc')" class="filter-select">
+                        <option value="">-- Tất cả Lĩnh vực --</option>
+                    </select>
+                    <select id="filterChuDe" onchange="handleLinkedFilters('chude')" class="filter-select">
+                        <option value="">-- Tất cả Chủ đề --</option>
+                    </select>
+                    <select id="filterMuc" onchange="handleLinkedFilters('muc')" class="filter-select">
+                        <option value="">-- Tất cả Mục --</option>
+                    </select>
+                    <select id="filterBoPhan" onchange="applyFilters()" class="filter-select">
+                        <option value="">-- Tất cả Bộ phận Chủ trì --</option>
+                    </select>
+                    <select id="filterMucDo" onchange="applyFilters()" class="filter-select">
+                        <option value="">-- Tất cả Mức độ --</option>
+                    </select>
+                    <select id="filterLoaiVB" onchange="applyFilters()" class="filter-select">
+                        <option value="">-- Tất cả Loại VB --</option>
+                    </select>
+                </div>
+                <!-- Footer: bộ lọc ngày bên trái, nút action bên phải -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px solid #c5d9fb;">
+                    <div style="position: relative; flex-shrink: 0;">
+                        <button type="button" id="vbqpplDateRangeControl" onclick="toggleVbqpplDateDropdown()"
+                            style="display:flex; align-items:center; gap:6px; padding:6px 12px; background:white; border:1px solid #c5d9fb; border-radius:4px; font-size:13px; cursor:pointer; font-family:inherit; white-space:nowrap; color:var(--text-main);">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span id="vbqpplDateRangeDisplay">Tất cả thời gian</span>
+                            <i class="fa-solid fa-chevron-down" style="font-size:10px; color:#5f6368;"></i>
+                        </button>
+                        <div id="vbqpplDateDropdown" class="report-date-popover">
+                            <label>Ngày bắt đầu<input type="date" id="vbqpplDateStart" onchange="updateVbqpplDateDisplay(); applyFilters();"></label>
+                            <label>Ngày kết thúc<input type="date" id="vbqpplDateEnd" onchange="updateVbqpplDateDisplay(); applyFilters();"></label>
+                            <div class="report-date-popover-actions">
+                                <button type="button" class="report-clear-btn" onclick="clearVbqpplDateRange()">Xóa ngày</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                        <button onclick="clearAdvancedFilters()" style="padding:6px 14px; background:white; color:#d32f2f; border:1px solid #d32f2f; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px;">
+                            <i class="fa-solid fa-xmark"></i> Xóa dữ liệu tìm kiếm
+                        </button>
+                        <button onclick="applyFilters()" style="padding:6px 16px; background:#1a73e8; color:white; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px;">
+                            <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div id="filterContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px;">
-                <select id="filterLinhVuc" onchange="handleLinkedFilters('linhvuc')" class="filter-select">
-                    <option value="">-- Tất cả Lĩnh vực --</option>
-                </select>
-                
-                <select id="filterChuDe" onchange="handleLinkedFilters('chude')" class="filter-select">
-                    <option value="">-- Tất cả Chủ đề --</option>
-                </select>
-                
-                <select id="filterMuc" onchange="handleLinkedFilters('muc')" class="filter-select">
-                    <option value="">-- Tất cả Mục --</option>
-                </select>
-                <select id="filterBoPhan" onchange="applyFilters()" class="filter-select">
-                    <option value="">-- Tất cả Bộ phận Chủ trì --</option>
-                </select>
-                <select id="filterMucDo" onchange="applyFilters()" class="filter-select">
-                    <option value="">-- Tất cả Mức độ --</option>
-                </select>
-                <select id="filterLoaiVB" onchange="applyFilters()" class="filter-select">
-                    <option value="">-- Tất cả Loại VB --</option>
-                </select>
+            <div id="filterContainerIncoming" style="display: none; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <!-- Bộ lọc khoảng thời gian -->
+                    <div style="position: relative; flex-shrink: 0;">
+                        <button type="button" id="incomingDateRangeControl" onclick="toggleIncomingDateDropdown()"
+                            style="display:flex; align-items:center; gap:6px; padding:6px 12px; background:white; border:1px solid #ccc; border-radius:4px; font-size:13px; cursor:pointer; font-family:inherit; white-space:nowrap; color:var(--text-main);">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span id="incomingDateRangeDisplay">Tất cả thời gian</span>
+                            <i class="fa-solid fa-chevron-down" style="font-size:10px; color:#5f6368;"></i>
+                        </button>
+                        <div id="incomingDateDropdown" class="report-date-popover">
+                            <label>Ngày bắt đầu<input type="date" id="incomingDateStart" onchange="updateIncomingDateDisplay(); applyIncomingFilters();"></label>
+                            <label>Ngày kết thúc<input type="date" id="incomingDateEnd" onchange="updateIncomingDateDisplay(); applyIncomingFilters();"></label>
+                            <div class="report-date-popover-actions">
+                                <button type="button" class="report-clear-btn" onclick="clearIncomingDateRange()">Xóa ngày</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Nhóm checkbox Đơn vị pháp nhân -->
+                    <div style="background: white; border: 1px solid #ccc; border-radius: 4px; padding: 6px 12px; font-size: 13px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; flex: 1; min-width: 0;">
+                        <span style="font-size: 12px; color: #5f6368; font-weight: 600; white-space: nowrap;">Đơn vị pháp nhân:</span>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap;">
+                            <input type="checkbox" class="filter-donvi-check" value="COMPANY_HAS" onchange="applyIncomingFilters()">
+                            Công ty
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap;">
+                            <input type="checkbox" class="filter-donvi-check" value="PRIMARY_HAS" onchange="applyIncomingFilters()">
+                            Trường Tiểu học H.A.S
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap;">
+                            <input type="checkbox" class="filter-donvi-check" value="THCS_HAS" onchange="applyIncomingFilters()">
+                            Trường THCS H.A.S
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap;">
+                            <input type="checkbox" class="filter-donvi-check" value="THPT_HAS" onchange="applyIncomingFilters()">
+                            Trường THPT H.A.S
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap;">
+                            <input type="checkbox" class="filter-donvi-check" value="PRIMARY_THCS_HANOI_ADELAIDE" onchange="applyIncomingFilters()">
+                            Trường TH&amp;THCS HAS
+                        </label>
+                    </div>
+                </div>
             </div>
             <!-- BATCH ACTION TOOLBAR -->
             <div class="batch-toolbar" id="batchToolbar">
@@ -2875,6 +3019,14 @@
     const PLANNER_SYNC_SERVER_URL = localStorage.getItem('plannerSyncServerUrl') || "http://127.0.0.1:8765/sync-webapp-to-planner";
     const PLANNER_SYNC_SERVER_BASE_URL = PLANNER_SYNC_SERVER_URL.replace(/\/sync-webapp-to-planner\/?$/, '');
 
+    const INCOMING_ENTITY_LABELS = {
+        'COMPANY_HAS':                  'Công ty CPTGD H.A.S',
+        'PRIMARY_HAS':                  'Trường Tiểu học H.A.S',
+        'THCS_HAS':                     'Trường THCS H.A.S',
+        'THPT_HAS':                     'Trường THPT H.A.S',
+        'PRIMARY_THCS_HANOI_ADELAIDE':  'Trường Tiểu học và Trung học Cơ sở Hanoi Adelaide School'
+    };
+
     let currentRecords = [];
     let reportRecords = [];
     let globalTotalCount = '--';
@@ -2887,6 +3039,42 @@
     let reportDefaultsApplied = false;
     let reportCustomizeMode = false;
     let activeReportResize = null;
+
+    // --- TOOLTIP NHÃN QUAN HỆ PHÁP LÝ ---
+    const RELATION_TOOLTIP_TEXTS = {
+        'Căn cứ pháp lý': 'Các văn bản ban hành trước, được nêu làm cơ sở để ban hành văn bản đang xem.',
+        'Hướng dẫn thực hiện': 'Các văn bản hướng dẫn, quy định chi tiết hoặc hỗ trợ triển khai văn bản đang xem.',
+        'Sửa đổi, bổ sung cho': 'Các văn bản bị văn bản đang xem sửa đổi, bổ sung.',
+        'Sửa đổi, bổ sung bởi': 'Các văn bản sửa đổi, bổ sung văn bản đang xem.'
+    };
+
+    function renderRelationLabelWithTooltip(label) {
+        const tip = RELATION_TOOLTIP_TEXTS[label];
+        if (!tip) return `<strong>${label}:</strong>`;
+        return `<span class="relation-label-trigger">` +
+            `<strong>${label}:</strong>` +
+            `<span class="relation-tooltip" role="tooltip">${tip}</span>` +
+            `</span>`;
+    }
+
+    // Mobile: tap vào nhãn để toggle tooltip; tap ra ngoài để đóng
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.relation-label-trigger')) {
+            document.querySelectorAll('.relation-label-trigger.tooltip-open').forEach(function(el) {
+                el.classList.remove('tooltip-open');
+            });
+        }
+    });
+    document.addEventListener('click', function(e) {
+        const trigger = e.target.closest('.relation-label-trigger');
+        if (!trigger) return;
+        e.stopPropagation();
+        const isOpen = trigger.classList.contains('tooltip-open');
+        document.querySelectorAll('.relation-label-trigger.tooltip-open').forEach(function(el) {
+            el.classList.remove('tooltip-open');
+        });
+        if (!isOpen) trigger.classList.add('tooltip-open');
+    }, true);
 
     const REPORT_CONFIG_STORAGE_KEY = 'has_report_dashboard_config_v1';
     const REPORT_TABLE_HEADER_DEFAULTS = {
@@ -5819,7 +6007,7 @@
         currentTab = tabId;
 
         // 2. Tắt sáng toàn bộ các tab (Dùng mảng ID để quét, KHÔNG bao giờ lỗi null)
-        const allTabIds = ['tab-all', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports', 'tab-analytics', 'tab-intro'];
+        const allTabIds = ['tab-all', 'tab-incoming', 'tab-pending', 'tab-transferred', 'tab-irrelevant', 'tab-expired', 'tab-reports', 'tab-analytics', 'tab-intro'];
         allTabIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -5844,6 +6032,23 @@
         const introPanel = document.getElementById('introPanel');
         if (introPanel) introPanel.style.display = isIntroTab ? 'flex' : 'none';
         if (recordsPanel) recordsPanel.style.display = (isReportTab || isAnalyticsTab || isIntroTab) ? 'none' : 'flex';
+        const filterContainer = document.getElementById('filterContainer');
+        const filterContainerIncoming = document.getElementById('filterContainerIncoming');
+        const isIncomingTab = tabId === 'incoming';
+        // Đóng panel VBQPPL khi không cần thiết
+        if (filterContainer && (isReportTab || isAnalyticsTab || isIntroTab || isIncomingTab)) {
+            filterContainer.style.display = 'none';
+        }
+        // Luôn đóng panel Văn bản đến khi chuyển tab; người dùng mở lại bằng nút
+        if (filterContainerIncoming) filterContainerIncoming.style.display = 'none';
+        // Reset toggle button mỗi lần chuyển tab
+        const btnAdv = document.getElementById('btnAdvancedToggle');
+        if (btnAdv) btnAdv.innerHTML = '<i class="fa-solid fa-sliders"></i> Tìm kiếm nâng cao';
+        if (isIncomingTab) {
+            updateIncomingTableHeader();
+        } else {
+            restoreDefaultTableHeader();
+        }
         if (mainContent) mainContent.classList.toggle('report-mode', isReportTab);
         if (appContainer) appContainer.classList.toggle('report-mode', isReportTab);
         renderHeaderActions(isReportTab ? 'report' : (tabId === 'pending' ? 'pending' : 'hidden'));
@@ -5905,6 +6110,15 @@
             // Cập nhật nút chỉnh sửa admin
             const introAdminBar = document.getElementById('introAdminBar');
             if (introAdminBar) introAdminBar.style.display = isAdmin ? 'block' : 'none';
+        } else if (tabId === 'incoming') {
+            document.getElementById('pageTitle').innerText = 'CỔNG TRA CỨU PHÁP LÝ - VĂN BẢN ĐẾN';
+            if(document.getElementById('statsGrid')) document.getElementById('statsGrid').style.display = 'none';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').innerHTML = `
+                <i class="fa-solid fa-envelope-open-text"></i>
+                <h3>Trống!</h3>
+                <p>Chưa có văn bản đến nào được ghi nhận.</p>
+            `;
+            updateIncomingTableHeader();
         }
 
         // 5. Xóa khung tìm kiếm & Tải lại dữ liệu
@@ -5946,6 +6160,7 @@
         if (currentTab === 'expired') actionName = "get_expired_records";
         if (currentTab === 'all') actionName = "get_all_records";
         if (currentTab === 'transferred') actionName = "get_transferred_records";
+        if (currentTab === 'incoming') actionName = "get_incoming_documents";
 
         try {
             const response = await fetch(WEBAPP_URL, {
@@ -5974,9 +6189,13 @@
                         document.getElementById('stat-transferred').innerText = globalTransferredCount;
                     }
                 }
-                handleLinkedFilters('init'); 
-                renderTable(currentRecords);
-                applySort(); 
+                if (currentTab === 'incoming') {
+                    applyIncomingFilters();
+                } else {
+                    handleLinkedFilters('init');
+                    renderTable(currentRecords);
+                    applySort();
+                }
             } else {
                 showToast("Lỗi Máy Chủ", result.message, "error");
             }
@@ -6009,6 +6228,7 @@
         }
     }
     function applySort() {
+        if (currentTab === 'incoming') { applyIncomingFilters(); return; }
         if (!currentRecords || currentRecords.length === 0) {
             document.getElementById('recordCount').innerText = "0 văn bản";
             tableBody.innerHTML = '';
@@ -6213,22 +6433,43 @@
                         <i class="fa-solid fa-eye"></i> Xem
                     </button>
                 `;
+            } else if (currentTab === 'incoming') {
+                actionsHtml = `
+                    <button class="btn-detail" onclick="viewIncomingDetail(${rId})" title="Xem chi tiết văn bản đến">
+                        <i class="fa-solid fa-eye"></i> Xem
+                    </button>
+                `;
             }
 
             const trMain = document.createElement('tr');
             trMain.id = `row-${rId}`;
             trMain.className = 'main-row data-row' + (selectedRows.has(rId) ? ' row-selected' : '');
-            trMain.innerHTML = `
-                <td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-row="${rId}" ${selectedRows.has(rId) ? 'checked' : ''} onchange="toggleRowSelection(${rId}, this)"></td>
-                <td>${soHieuHtml}</td>
-                <td style="text-align: center;">
-                    <span class="badge ${isExpired ? (rawLoai.includes('Chờ xóa') ? 'badge-orange' : 'badge-gray') : getBadgeClass(rawLoai)}">${rawLoai}</span>
-                </td>
-                <td><div class="doc-title">${rawTenVanBan}</div></td>
-                <td style="text-align: right; white-space: nowrap;">
-                    ${actionsHtml}
-                </td>
-            `;
+            if (currentTab === 'incoming') {
+                const soHieuVD = String(row['Số hiệu văn bản'] || '').trim() || '—';
+                const tenVanBanVD = String(row['Tên văn bản'] || '').trim() || '—';
+                const diinhKemRaw = String(row['Đính kèm văn bản (định dạng pdf)'] || '').trim();
+                const firstLink = diinhKemRaw ? diinhKemRaw.split(/[\n,;]+/)[0].trim() : '';
+                const tenVanBanHtml = firstLink
+                    ? `<a href="${firstLink}" target="_blank" rel="noopener noreferrer" class="doc-link" title="Mở file đính kèm">${tenVanBanVD}</a>`
+                    : `<div class="doc-title">${tenVanBanVD}</div>`;
+                trMain.innerHTML = `
+                    <td>${soHieuVD}</td>
+                    <td>${tenVanBanHtml}</td>
+                    <td style="text-align: right; white-space: nowrap;">${actionsHtml}</td>
+                `;
+            } else {
+                trMain.innerHTML = `
+                    <td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-row="${rId}" ${selectedRows.has(rId) ? 'checked' : ''} onchange="toggleRowSelection(${rId}, this)"></td>
+                    <td>${soHieuHtml}</td>
+                    <td style="text-align: center;">
+                        <span class="badge ${isExpired ? (rawLoai.includes('Chờ xóa') ? 'badge-orange' : 'badge-gray') : getBadgeClass(rawLoai)}">${rawLoai}</span>
+                    </td>
+                    <td><div class="doc-title">${rawTenVanBan}</div></td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        ${actionsHtml}
+                    </td>
+                `;
+            }
             tableBody.appendChild(trMain);
         });
 
@@ -7011,10 +7252,10 @@
         let suaDoiBoi = rowData['Sửa đổi, bổ sung bởi'] ? rowData['Sửa đổi, bổ sung bởi'].replace(/\n/g, '<br>') : emptyText;
 
         let vanBanLienQuanHtml = `
-            <p style="margin: 5px 0 10px 0;"><strong>Căn cứ pháp lý:</strong><br>${canCuPhapLy}</p>
-            <p style="margin: 5px 0 10px 0;"><strong>Hướng dẫn thực hiện:</strong><br>${huongDanThucHien}</p>
-            <p style="margin: 5px 0 10px 0;"><strong>Sửa đổi, bổ sung cho:</strong><br>${suaDoiCho}</p>
-            <p style="margin: 5px 0;"><strong>Sửa đổi, bổ sung bởi:</strong><br>${suaDoiBoi}</p>
+            <p style="margin: 5px 0 10px 0;">${renderRelationLabelWithTooltip('Căn cứ pháp lý')}<br>${canCuPhapLy}</p>
+            <p style="margin: 5px 0 10px 0;">${renderRelationLabelWithTooltip('Hướng dẫn thực hiện')}<br>${huongDanThucHien}</p>
+            <p style="margin: 5px 0 10px 0;">${renderRelationLabelWithTooltip('Sửa đổi, bổ sung cho')}<br>${suaDoiCho}</p>
+            <p style="margin: 5px 0;">${renderRelationLabelWithTooltip('Sửa đổi, bổ sung bởi')}<br>${suaDoiBoi}</p>
         `;
 
         const detailHtml = `
@@ -7042,7 +7283,7 @@
             ${plannerHtml}
             <div>
                 <p style="margin: 0 0 5px 0; color: #5f6368; font-size: 12px;">Văn bản liên quan</p>
-                <div style="background: #fff3e0; padding: 10px; border-radius: 6px; font-size: 13px; max-height: 250px; overflow-y: auto;">
+                <div style="background: #fff3e0; padding: 10px; border-radius: 6px; font-size: 13px; overflow: visible;">
                     ${vanBanLienQuanHtml}
                 </div>
             </div>
@@ -7054,6 +7295,7 @@
     }
     // Hàm 1: Tự động gom nhóm các giá trị vào thẻ Select Dropdown
     function populateFilters() {
+        if (currentTab === 'incoming') { populateIncomingFilters(); return; }
         const filters = ['Lĩnh vực', 'Chủ đề', 'Mục', 'Bộ phận chủ trì', 'Mức độ tác động', 'Loại văn bản'];
         const filterIds = ['filterLinhVuc', 'filterChuDe', 'filterMuc', 'filterBoPhan', 'filterMucDo', 'filterLoaiVB'];
 
@@ -7190,7 +7432,8 @@
     }
 
     function calculateSearchScore(row, queryInfo) {
-        const { rawQuery, normalizedQuery, tokens } = queryInfo;
+        const { rawQuery, normalizedQuery, tokens, scope } = queryInfo;
+        const scopeMode = scope || 'noidung';
 
         const tenVB = String(row['Tên văn bản'] || '');
         const soHieu = String(row['Số hiệu'] || '');
@@ -7201,37 +7444,41 @@
 
         let score = 0;
 
-        // --- Số hiệu matching ---
-        if (rawSoHieu === rawNormQuery || normSoHieu === normalizedQuery) {
-            score += 1200;
-        } else if (rawSoHieu.includes(rawNormQuery) || rawNormQuery.includes(rawSoHieu)) {
-            score += 1200;
-        } else if (normSoHieu.includes(normalizedQuery) || normalizedQuery.includes(normSoHieu)) {
-            score += 1200;
-        } else if (tokens.some(t => rawSoHieu.includes(t) || normSoHieu.includes(t))) {
-            score += 600;
-        }
-
-        // --- Tên văn bản matching ---
-        if (normTenVB.includes(normalizedQuery)) {
-            score += 1000;
-        }
-
-        let matchedTokens = 0;
-        for (const token of tokens) {
-            if (normTenVB.includes(token)) {
-                matchedTokens++;
-                let pos = 0, occ = 0;
-                while ((pos = normTenVB.indexOf(token, pos)) !== -1) { occ++; pos += token.length; }
-                score += Math.min(occ, 3) * 20;
+        // --- Số hiệu matching (bỏ qua nếu scope chỉ tìm Tiêu đề) ---
+        if (scopeMode !== 'tieude') {
+            if (rawSoHieu === rawNormQuery || normSoHieu === normalizedQuery) {
+                score += 1200;
+            } else if (rawSoHieu.includes(rawNormQuery) || rawNormQuery.includes(rawSoHieu)) {
+                score += 1200;
+            } else if (normSoHieu.includes(normalizedQuery) || normalizedQuery.includes(normSoHieu)) {
+                score += 1200;
+            } else if (tokens.some(t => rawSoHieu.includes(t) || normSoHieu.includes(t))) {
+                score += 600;
             }
         }
-        if (matchedTokens === tokens.length && tokens.length > 0) score += 700;
-        score += matchedTokens * 100;
 
-        // Position bonus
-        for (const token of tokens) {
-            if (normTenVB.startsWith(token + ' ') || normTenVB === token) score += 80;
+        // --- Tên văn bản matching (bỏ qua nếu scope chỉ tìm Số hiệu) ---
+        if (scopeMode !== 'soHieu') {
+            if (normTenVB.includes(normalizedQuery)) {
+                score += 1000;
+            }
+
+            let matchedTokens = 0;
+            for (const token of tokens) {
+                if (normTenVB.includes(token)) {
+                    matchedTokens++;
+                    let pos = 0, occ = 0;
+                    while ((pos = normTenVB.indexOf(token, pos)) !== -1) { occ++; pos += token.length; }
+                    score += Math.min(occ, 3) * 20;
+                }
+            }
+            if (matchedTokens === tokens.length && tokens.length > 0) score += 700;
+            score += matchedTokens * 100;
+
+            // Position bonus
+            for (const token of tokens) {
+                if (normTenVB.startsWith(token + ' ') || normTenVB === token) score += 80;
+            }
         }
 
         return score;
@@ -7240,13 +7487,16 @@
     function applySmartSearchAndSort(records, query) {
         if (!query || !query.trim()) return records;
 
+        const scopeEl = document.querySelector('input[name="searchScope"]:checked');
+        const scope = scopeEl ? scopeEl.value : 'noidung';
+        // Tìm kiếm thông minh (smart search có scoring)
         const rawQuery = query.trim();
         const normalizedQuery = normalizeSearchText(rawQuery);
         const tokens = tokenizeSearchQuery(rawQuery);
 
         if (!normalizedQuery || tokens.length === 0) return records;
 
-        const queryInfo = { rawQuery, normalizedQuery, tokens };
+        const queryInfo = { rawQuery, normalizedQuery, tokens, scope };
 
         const scored = records.map(row => ({ ...row, _searchScore: calculateSearchScore(row, queryInfo) }));
         const filtered = scored.filter(row => row._searchScore > 0);
@@ -7284,9 +7534,263 @@
         }
     }
 
+    function toggleAdvancedSearch() {
+        const isIncoming = (typeof currentTab !== 'undefined') && currentTab === 'incoming';
+        const panelId = isIncoming ? 'filterContainerIncoming' : 'filterContainer';
+        const panel = document.getElementById(panelId);
+        const btn = document.getElementById('btnAdvancedToggle');
+        if (!panel) return;
+        const isOpen = panel.style.display !== 'none' && panel.style.display !== '';
+        panel.style.display = isOpen ? 'none' : 'block';
+        if (btn) {
+            btn.innerHTML = isOpen
+                ? '<i class="fa-solid fa-sliders"></i> Tìm kiếm nâng cao'
+                : '<i class="fa-solid fa-chevron-up"></i> Thu gọn';
+        }
+    }
+
+    function clearAdvancedFilters() {
+        ['filterLinhVuc', 'filterChuDe', 'filterMuc', 'filterBoPhan', 'filterMucDo', 'filterLoaiVB'].forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        applyFilters();
+    }
+
+    function updateIncomingTableHeader() {
+        const thead = document.querySelector('#dataTable thead tr');
+        if (!thead) return;
+        thead.innerHTML = `
+            <th width="20%" style="text-align: center;">Số hiệu văn bản</th>
+            <th width="65%" style="text-align: center;">Tên văn bản</th>
+            <th width="15%" style="text-align: center;">Thao tác</th>
+        `;
+    }
+
+    function restoreDefaultTableHeader() {
+        const thead = document.querySelector('#dataTable thead tr');
+        if (!thead) return;
+        thead.innerHTML = `
+            <th class="col-checkbox"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" title="Chọn/bỏ chọn tất cả dòng đang hiển thị"></th>
+            <th width="15%" style="text-align: center;">Số hiệu</th>
+            <th width="15%" style="text-align: center;">Loại văn bản</th>
+            <th width="55%" style="text-align: center;">Tên văn bản</th>
+            <th width="10%" style="text-align: center;">Thao tác</th>
+        `;
+    }
+
+    // --- BỘ LỌC KHOẢNG THỜI GIAN (dùng chung cho tất cả tab) ---
+
+    function parseTabDate(rawValue) {
+        if (rawValue === null || rawValue === undefined || rawValue === '') return null;
+        if (typeof rawValue === 'number' && rawValue > 10000) {
+            // Excel serial date
+            return new Date(new Date(1899, 11, 30).getTime() + rawValue * 86400000);
+        }
+        const s = String(rawValue).trim();
+        if (!s) return null;
+        // dd/MM/yyyy hoặc dd/MM/yyyy HH:mm:ss
+        const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (dmy) return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+        // yyyy-MM-dd
+        const ymd = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (ymd) return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function getTabDateValue(row) {
+        let fields;
+        if (currentTab === 'pending') {
+            fields = ['Ngày Python quét', 'Ngày hiệu lực', 'Ngày cập nhật', 'created_at'];
+        } else if (currentTab === 'transferred') {
+            fields = ['Ngày chuyển trạng thái', 'Ngày chuyển xử lý', 'Ngày Python quét', 'Ngày hiệu lực'];
+        } else if (currentTab === 'irrelevant') {
+            fields = ['Ngày cập nhật', 'Ngày chuyển trạng thái', 'Ngày Python quét', 'Ngày hiệu lực'];
+        } else {
+            fields = ['Ngày hiệu lực', 'Ngày Python quét', 'Ngày cập nhật', 'created_at'];
+        }
+        for (const f of fields) {
+            const v = parseTabDate(row[f]);
+            if (v) return v;
+        }
+        return null;
+    }
+
+    function isWithinTabDateRange(dateVal, startIso, endIso) {
+        if (!startIso && !endIso) return true;
+        if (!dateVal) return false;
+        const start = parseReportInputDate(startIso);
+        const end = parseReportInputDate(endIso);
+        const d = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate());
+        if (start) {
+            const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            if (d < s) return false;
+        }
+        if (end) {
+            const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            if (d > e) return false;
+        }
+        return true;
+    }
+
+    function updateIncomingDateDisplay() {
+        const display = document.getElementById('incomingDateRangeDisplay');
+        if (!display) return;
+        const s = formatReportInputDateLabel(document.getElementById('incomingDateStart')?.value);
+        const e = formatReportInputDateLabel(document.getElementById('incomingDateEnd')?.value);
+        if (s && e) display.textContent = `${s} - ${e}`;
+        else if (s) display.textContent = `Từ ${s}`;
+        else if (e) display.textContent = `Đến ${e}`;
+        else display.textContent = 'Tất cả thời gian';
+    }
+
+    function toggleIncomingDateDropdown() {
+        const dd = document.getElementById('incomingDateDropdown');
+        if (!dd) return;
+        const wasOpen = dd.classList.contains('open');
+        document.querySelectorAll('.report-date-popover.open').forEach(el => el.classList.remove('open'));
+        if (!wasOpen) dd.classList.add('open');
+    }
+
+    function clearIncomingDateRange() {
+        const s = document.getElementById('incomingDateStart');
+        const e = document.getElementById('incomingDateEnd');
+        if (s) s.value = '';
+        if (e) e.value = '';
+        updateIncomingDateDisplay();
+        applyIncomingFilters();
+    }
+
+    function updateVbqpplDateDisplay() {
+        const display = document.getElementById('vbqpplDateRangeDisplay');
+        if (!display) return;
+        const s = formatReportInputDateLabel(document.getElementById('vbqpplDateStart')?.value);
+        const e = formatReportInputDateLabel(document.getElementById('vbqpplDateEnd')?.value);
+        if (s && e) display.textContent = `${s} - ${e}`;
+        else if (s) display.textContent = `Từ ${s}`;
+        else if (e) display.textContent = `Đến ${e}`;
+        else display.textContent = 'Tất cả thời gian';
+    }
+
+    function toggleVbqpplDateDropdown() {
+        const dd = document.getElementById('vbqpplDateDropdown');
+        if (!dd) return;
+        const wasOpen = dd.classList.contains('open');
+        document.querySelectorAll('.report-date-popover.open').forEach(el => el.classList.remove('open'));
+        if (!wasOpen) dd.classList.add('open');
+    }
+
+    function clearVbqpplDateRange() {
+        const s = document.getElementById('vbqpplDateStart');
+        const e = document.getElementById('vbqpplDateEnd');
+        if (s) s.value = '';
+        if (e) e.value = '';
+        updateVbqpplDateDisplay();
+        applyFilters();
+    }
+
+    function populateIncomingFilters() {
+        // Pháp nhân: danh mục cố định, đã render trong HTML — không cần populate động
+    }
+
+    function applyIncomingFilters() {
+        updateIncomingDateDisplay();
+        const dateStart = document.getElementById('incomingDateStart')?.value || '';
+        const dateEnd = document.getElementById('incomingDateEnd')?.value || '';
+        const selectedDonVi = [...document.querySelectorAll('.filter-donvi-check:checked')].map(cb => cb.value);
+        const searchInput = document.getElementById('searchInput');
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+        let filtered = currentRecords.filter(function(row) {
+            // Lọc khoảng thời gian theo Timestamp
+            const dateVal = parseTabDate(String(row['Timestamp'] || ''));
+            if (!isWithinTabDateRange(dateVal, dateStart, dateEnd)) return false;
+            // Lọc pháp nhân (AND)
+            if (selectedDonVi.length > 0) {
+                const donViValues = Array.isArray(row._donViPhapNhanValues) ? row._donViPhapNhanValues : [];
+                if (!selectedDonVi.every(v => donViValues.includes(v))) return false;
+            }
+            // Tìm kiếm từ khóa
+            if (query) {
+                const haystack = [
+                    row['Tên văn bản'], row['Số hiệu văn bản'],
+                    row['ID-Văn bản đến'], row['Lưu ý']
+                ].map(v => String(v || '').toLowerCase()).join(' ');
+                if (!haystack.includes(query)) return false;
+            }
+            return true;
+        });
+
+        const sortType = (document.getElementById('sortSelect') || {}).value || 'row_desc';
+        filtered.sort((a, b) => sortType === 'row_asc' ? a._rowNumber - b._rowNumber : b._rowNumber - a._rowNumber);
+
+        renderTable(filtered);
+        const countEl = document.getElementById('recordCount');
+        if (countEl) countEl.innerText = filtered.length + ' văn bản';
+    }
+
+    function viewIncomingDetail(rowId) {
+        const row = currentRecords.find(r => r._rowNumber === rowId);
+        if (!row) return;
+
+        const diinhKemRaw = String(row['Đính kèm văn bản (định dạng pdf)'] || '').trim();
+        const links = diinhKemRaw ? diinhKemRaw.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean) : [];
+        const attachmentHtml = links.length > 0
+            ? links.map((lnk, i) => `<a href="${escapeHtml(lnk)}" target="_blank" rel="noopener noreferrer" style="color:#1a73e8; display:inline-block; margin-right:8px;">Mở file đính kèm${links.length > 1 ? ' ' + (i + 1) : ''}</a>`).join('')
+            : '<span style="color: red; font-weight: 500;">Không có</span>';
+
+        const detailHtml = `
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: #d32f2f; margin: 0 0 10px 0; font-size: 16px;">
+                    <i class="fa-solid fa-envelope-open-text"></i> ${escapeHtml(String(row['Tên văn bản'] || 'Không có tên'))}
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                    <div>
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">ID Văn bản đến</p>
+                        <p style="margin: 2px 0 10px 0; font-weight: 500;">${escapeHtml(String(row['ID-Văn bản đến'] || '--'))}</p>
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Số hiệu văn bản</p>
+                        <p style="margin: 2px 0 0 0; font-weight: 500;">${escapeHtml(String(row['Số hiệu văn bản'] || '—'))}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Ngày ban hành</p>
+                        <p style="margin: 2px 0 10px 0; font-weight: 500;">${escapeHtml(String(row['Ngày ban hành'] || '--'))}</p>
+                        <p style="margin: 0; color: #5f6368; font-size: 12px;">Thời gian ghi nhận</p>
+                        <p style="margin: 2px 0 0 0; font-weight: 500;">${escapeHtml(String(row['Timestamp'] || '--'))}</p>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <p style="margin: 0 0 5px 0; color: #5f6368; font-size: 12px;">Đơn vị pháp nhân liên quan</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    ${(Array.isArray(row._donViPhapNhanValues) && row._donViPhapNhanValues.length > 0
+                        ? row._donViPhapNhanValues.map(v => `<span style="background:#e8f0fe; color:#1b2a59; border:1px solid #c5d9fb; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600;">${escapeHtml(INCOMING_ENTITY_LABELS[v] || v)}</span>`).join('')
+                        : `<span style="color:#999; font-size:13px;">${escapeHtml(String(row['Đơn vị pháp nhân liên quan'] || '--'))}</span>`
+                    )}
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <p style="margin: 0 0 5px 0; color: #5f6368; font-size: 12px;">Lưu ý</p>
+                <div style="background: #fff3e0; padding: 8px 12px; border-radius: 6px; font-size: 13px; min-height: 36px;">
+                    ${escapeHtml(String(row['Lưu ý'] || '--'))}
+                </div>
+            </div>
+            <div>
+                <p style="margin: 0 0 5px 0; color: #5f6368; font-size: 12px;">File đính kèm</p>
+                <div style="font-size: 13px;">${attachmentHtml}</div>
+            </div>
+        `;
+
+        document.getElementById('detailTitle').innerText = 'Chi tiết văn bản đến';
+        document.getElementById('detailBody').innerHTML = detailHtml;
+        document.getElementById('detailModal').classList.add('show');
+    }
+
     // Hàm 2: Xử lý hiển thị dữ liệu khi người dùng chọn Bộ lọc hoặc gõ Tìm kiếm
     function applyFilters() {
         clearSelection();
+        if (currentTab === 'incoming') { applyIncomingFilters(); return; }
+        updateVbqpplDateDisplay();
         const textSearch = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
         const btnExt = document.getElementById('btnExtendedSearch');
         if (btnExt) btnExt.style.display = textSearch.trim() ? 'inline-block' : 'none';
@@ -7296,8 +7800,9 @@
         const fBoPhan = document.getElementById('filterBoPhan').value;
         const fMucDo = document.getElementById('filterMucDo').value;
         const fLoaiVB = document.getElementById('filterLoaiVB').value;
+        const dateStart = document.getElementById('vbqpplDateStart')?.value || '';
+        const dateEnd = document.getElementById('vbqpplDateEnd')?.value || '';
 
-        // Tiến hành lọc dữ liệu theo bộ lọc dropdown
         let filteredData = currentRecords.filter(row => {
             const matchLinhVuc = !fLinhVuc || row['Lĩnh vực'] === fLinhVuc;
             const matchChuDe = !fChuDe || row['Chủ đề'] === fChuDe;
@@ -7305,16 +7810,15 @@
             const matchBoPhan = !fBoPhan || row['Bộ phận chủ trì'] === fBoPhan;
             const matchMucDo = !fMucDo || row['Mức độ tác động'] === fMucDo;
             const matchLoaiVB = !fLoaiVB || row['Loại văn bản'] === fLoaiVB;
-            return matchLinhVuc && matchChuDe && matchMuc && matchBoPhan && matchMucDo && matchLoaiVB;
+            if (!(matchLinhVuc && matchChuDe && matchMuc && matchBoPhan && matchMucDo && matchLoaiVB)) return false;
+            // Lọc khoảng thời gian (trường ngày ưu tiên theo tab)
+            const dateVal = getTabDateValue(row);
+            if (!isWithinTabDateRange(dateVal, dateStart, dateEnd)) return false;
+            return true;
         });
 
-        // Áp dụng smart search nếu có query
         filteredData = applySmartSearchAndSort(filteredData, textSearch);
-
-        // Vẽ lại bảng với dữ liệu đã lọc
         renderTable(filteredData);
-
-        // Cập nhật số đếm văn bản
         const countEle = document.getElementById('recordCount');
         if (countEle) countEle.innerText = `${filteredData.length} văn bản`;
     }
