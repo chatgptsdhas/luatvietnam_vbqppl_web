@@ -3018,6 +3018,7 @@
     const TOKEN = "T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0";
     const PLANNER_SYNC_SERVER_URL = localStorage.getItem('plannerSyncServerUrl') || "http://127.0.0.1:8765/sync-webapp-to-planner";
     const PLANNER_SYNC_SERVER_BASE_URL = PLANNER_SYNC_SERVER_URL.replace(/\/sync-webapp-to-planner\/?$/, '');
+    const PLANNER_SYNC_DOWN_MESSAGE = 'Planner Sync Server chưa chạy. Văn bản đã chuyển vào VBQPPL nhưng chưa tạo task Planner.';
 
     const INCOMING_ENTITY_LABELS = {
         'COMPANY_HAS':                  'Công ty CPTGD H.A.S',
@@ -6422,8 +6423,14 @@
                     `;
                 } else {
                     actionsHtml = `
-                        <button class="btn-outline-primary" disabled title="Không tìm thấy bản ghi tương ứng trong VBQPPL" style="opacity:0.5;cursor:not-allowed;">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Không khớp
+                        <span title="Đã đánh dấu Đã chuyển nhưng không tìm thấy bản ghi tương ứng trong VBQPPL" style="display:inline-block;margin-right:6px;padding:2px 8px;border-radius:4px;background:#fdecea;color:#c0392b;font-size:12px;font-weight:600;white-space:nowrap;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Lệch trạng thái
+                        </span>
+                        <button class="btn-outline-primary" id="btn-retry-${rId}" onclick="retryTransferMismatchedRow(${rId}, '${rawSoHieu}')" title="Chuyển lại vào VBQPPL">
+                            <i class="fa-solid fa-rotate-right"></i> Chuyển lại
+                        </button>
+                        <button class="btn-outline-primary" onclick="resetMismatchedRowToPending(${rId}, '${rawSoHieu}')" title="Reset về Chờ kiểm tra">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Reset
                         </button>
                     `;
                 }
@@ -6601,13 +6608,22 @@
             limit: 1
         };
 
+        let response;
         try {
-            const response = await fetch(PLANNER_SYNC_SERVER_URL, {
+            response = await fetch(PLANNER_SYNC_SERVER_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+        } catch (networkError) {
+            // fetch() chỉ throw ở tầng network (không kết nối được cổng 8765) — đây đúng là
+            // trường hợp Planner Sync Server chưa chạy, không phải lỗi nghiệp vụ từ server.
+            console.warn('[Planner sync] Không kết nối được Planner Sync Server:', networkError);
+            showToast('Chưa tạo task Planner', PLANNER_SYNC_DOWN_MESSAGE, 'warning');
+            return;
+        }
 
+        try {
             const result = await response.json().catch(() => ({}));
             if (!response.ok || !result.ok) {
                 throw new Error(result.message || `HTTP ${response.status}`);
@@ -6622,10 +6638,11 @@
 
             showToast('Chưa tạo task Planner', escapeHtml(getPlannerSyncSkipMessage(result)), 'warning');
         } catch (error) {
-            console.warn('[Planner sync] Không gọi được server local:', error);
+            // Server đã phản hồi (đang chạy) nhưng xử lý đồng bộ gặp lỗi nghiệp vụ.
+            console.warn('[Planner sync] Lỗi xử lý phản hồi từ Planner Sync Server:', error);
             showToast(
                 'Chưa tạo task Planner',
-                `Đã chuyển văn bản nhưng chưa kết nối được server local tại <b>${escapeHtml(PLANNER_SYNC_SERVER_URL)}</b>.`,
+                `Văn bản đã chuyển vào VBQPPL nhưng đồng bộ Planner gặp lỗi: ${escapeHtml(error.message || String(error))}`,
                 'warning'
             );
         }
@@ -6668,6 +6685,73 @@
             if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`; }
             showToast("Lỗi Mạng", "Không kết nối được máy chủ khi chuyển dữ liệu.", "error");
             console.error("[transferRow] Lỗi:", error);
+        }
+    }
+
+    // Retry cho các dòng "Đã chuyển" trong VBQPPL_Nhap nhưng KHÔNG tìm thấy trong VBQPPL
+    // (lệch trạng thái do transfer trước đó thất bại giữa chừng).
+    async function retryTransferMismatchedRow(rowNumber, soHieu) {
+        const btn = document.getElementById(`btn-retry-${rowNumber}`);
+        if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
+
+        try {
+            const response = await fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    token: TOKEN,
+                    action: "transfer_record",
+                    payload: { row_number: rowNumber }
+                })
+            });
+
+            const result = await response.json();
+            if (result.ok) {
+                showToast("Đã chuyển lại!", `Văn bản <strong>${escapeHtml(soHieu)}</strong> đã được chuyển lại vào VBQPPL.`, "success");
+                triggerPlannerSyncAfterTransfer(rowNumber, result.soHieu || soHieu, result);
+                loadData();
+            } else {
+                if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Chuyển lại`; }
+                showToast("Chưa chuyển lại được", result.message || "Không rõ lỗi.", "error");
+            }
+        } catch (error) {
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Chuyển lại`; }
+            showToast("Lỗi Mạng", "Không kết nối được máy chủ khi chuyển lại dữ liệu.", "error");
+        }
+    }
+
+    function resetMismatchedRowToPending(rowNumber, soHieu) {
+        openConfirmDialog({
+            messageHtml: `Bạn có chắc muốn reset văn bản <br><strong style="color: var(--has-navy); font-size: 16px;">[${escapeHtml(soHieu)}]</strong><br> về trạng thái <b>Chờ kiểm tra</b>? Văn bản sẽ quay lại danh sách chờ duyệt.`,
+            confirmText: 'Đồng ý reset',
+            onConfirm: () => executeResetMismatchedRow(rowNumber, soHieu)
+        });
+    }
+
+    async function executeResetMismatchedRow(rowNumber, soHieu) {
+        try {
+            const response = await fetch(WEBAPP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    token: TOKEN,
+                    action: "update_record",
+                    payload: {
+                        row_number: rowNumber,
+                        updates: { "Trạng thái duyệt": "Chờ kiểm tra", "Trạng thái xử lý": "Chờ kiểm tra" }
+                    }
+                })
+            });
+
+            const result = await response.json();
+            if (result.ok) {
+                showToast("Đã reset!", `Văn bản <strong>${escapeHtml(soHieu)}</strong> đã về trạng thái Chờ kiểm tra.`, "success");
+                loadData();
+            } else {
+                showToast("Lỗi reset", result.message || "Không rõ lỗi.", "error");
+            }
+        } catch (error) {
+            showToast("Lỗi Mạng", "Không kết nối được máy chủ khi reset trạng thái.", "error");
         }
     }
 
