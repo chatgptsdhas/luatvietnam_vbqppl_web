@@ -28,7 +28,8 @@ DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost,http://localhost:*,"
     "http://127.0.0.1,http://127.0.0.1:*,"
     "https://script.google.com,"
-    "https://*.googleusercontent.com"
+    "https://*.googleusercontent.com,"
+    "https://tracuuphaply.vercel.app"
 )
 
 sync_lock = threading.Lock()
