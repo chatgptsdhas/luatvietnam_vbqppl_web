@@ -182,6 +182,18 @@ def resolve_apps_script_token(config: dict) -> str:
     return ""
 
 
+def resolve_apps_script_service_token(config: dict) -> str:
+    """
+    P0: token riêng cho action máy-máy (import_vbqppl_nhap). KHÔNG fallback về APPS_SCRIPT_TOKEN
+    — WebApp.js (Security.js::validateServiceToken_) chỉ còn chấp nhận đúng
+    APPS_SCRIPT_SERVICE_TOKEN cho action nhóm B, nên thiếu biến này script sẽ dừng ngay tại đây
+    thay vì gửi request chắc chắn bị từ chối.
+    """
+    return normalize_text(
+        config.get("APPS_SCRIPT_SERVICE_TOKEN", "") or os.getenv("APPS_SCRIPT_SERVICE_TOKEN", "")
+    )
+
+
 
 def save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -786,10 +798,13 @@ def sleep_before_apps_script_retry(attempt: int, base_delay_seconds: float, max_
 def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_save_request_body: bool = False) -> dict:
     url = normalize_text(config.get("APPS_SCRIPT_WEBAPP_URL", "") or os.getenv("APPS_SCRIPT_WEBAPP_URL", ""))
     token = resolve_apps_script_token(config)
+    service_token = resolve_apps_script_service_token(config)
     if not url:
         return {"ok": False, "error": "Thiếu APPS_SCRIPT_WEBAPP_URL"}
     if not token:
         return {"ok": False, "error": "Thiếu APPS_SCRIPT_TOKEN"}
+    if not service_token:
+        return {"ok": False, "error": "Thiếu APPS_SCRIPT_SERVICE_TOKEN (bắt buộc cho action import_vbqppl_nhap từ P0)"}
     max_attempts = get_positive_int(config, "apps_script_send_max_attempts", 3, minimum=1)
     timeout_seconds = get_positive_int(config, "apps_script_timeout_seconds", 60, minimum=10)
     base_delay_seconds = get_positive_float(config, "apps_script_retry_base_delay_seconds", 2.0, minimum=0.0)
@@ -818,6 +833,7 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
 
     body = {
         "token": token,
+        "service_token": service_token,
         "action": "import_vbqppl_nhap",
         "payload": payload,
         "luoc_do_data": luoc_do_data,
@@ -946,9 +962,11 @@ def main():
     apps_script_enabled = bool(config.get("apps_script_enabled", True))
     webapp_url = normalize_text(config.get("APPS_SCRIPT_WEBAPP_URL", "") or os.getenv("APPS_SCRIPT_WEBAPP_URL", ""))
     webapp_token = resolve_apps_script_token(config)
+    webapp_service_token = resolve_apps_script_service_token(config)
     print(f"Apps Script enabled: {apps_script_enabled} | dry_run: {dry_run}")
     print(f"APPS_SCRIPT_WEBAPP_URL: {'OK' if webapp_url else 'MISSING'}")
     print(f"APPS_SCRIPT_TOKEN: {'OK' if webapp_token else 'MISSING'}")
+    print(f"APPS_SCRIPT_SERVICE_TOKEN: {'OK' if webapp_service_token else 'MISSING'}")
 
     docs = batch_input.get("documents", []) or []
     debug_save_request_body = bool(config.get("debug_save_request_body", False))

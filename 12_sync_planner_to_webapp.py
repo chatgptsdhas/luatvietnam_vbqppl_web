@@ -50,7 +50,10 @@ def now_text() -> str:
 def webapp_post(action: str, payload: dict) -> dict:
     url = get_required_env("APPS_SCRIPT_WEBAPP_URL")
     token = get_required_env("APPS_SCRIPT_TOKEN")
-    body = {"token": token, "action": action, "payload": payload or {}}
+    # P0: update_vbqppl_record là action máy-máy (nhóm B) — WebApp.js chỉ còn chấp nhận đúng
+    # APPS_SCRIPT_SERVICE_TOKEN cho nhóm này (đã bỏ fallback về APPS_SCRIPT_TOKEN cũ).
+    service_token = get_required_env("APPS_SCRIPT_SERVICE_TOKEN")
+    body = {"token": token, "service_token": service_token, "action": action, "payload": payload or {}}
     response = requests.post(url, json=body, timeout=WEBAPP_TIMEOUT_SECONDS)
     if not response.ok:
         print(f"WebApp API error status_code={response.status_code}")

@@ -50,8 +50,13 @@ def now_text() -> str:
 def webapp_post(action: str, payload: dict) -> dict:
     url = get_required_env("APPS_SCRIPT_WEBAPP_URL")
     token = get_required_env("APPS_SCRIPT_TOKEN")
+    # P0: update_vbqppl_record là action máy-máy (nhóm B) — WebApp.js chỉ còn chấp nhận đúng
+    # APPS_SCRIPT_SERVICE_TOKEN cho nhóm này (đã bỏ fallback về APPS_SCRIPT_TOKEN cũ). Luôn gửi
+    # kèm service_token kể cả với action đọc (get_all_records) để dùng chung 1 hàm gọi API.
+    service_token = get_required_env("APPS_SCRIPT_SERVICE_TOKEN")
     body = {
         "token": token,
+        "service_token": service_token,
         "action": action,
         "payload": payload or {},
     }

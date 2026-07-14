@@ -1,0 +1,70 @@
+name: Security Checks
+
+# P0 security hardening — kiểm tra tĩnh + unit test khi có push/PR. KHÔNG deploy Apps Script,
+# KHÔNG deploy Vercel, KHÔNG cần secret production để chạy (chỉ dùng giá trị test cục bộ).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  security-checks:
+    name: P0 security checks
+    runs-on: ubuntu-latest
+    steps:
+      # Pin theo major version ổn định (actions/checkout, actions/setup-python đều do GitHub
+      # duy trì chính thức). Nếu muốn khóa cứng theo commit SHA cụ thể, tra SHA hiện hành trên
+      # trang release của action rồi thay vào đây — không tự đoán SHA khi không truy cập được
+      # mạng để xác minh (tránh trỏ tới SHA sai/không tồn tại).
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node.js (chạy test hành vi apps_script/WebApp.js + Security.js)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install test dependencies (nếu có requirements.txt)
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+
+      - name: Compile check (py_compile toàn repo)
+        run: python -m compileall -q .
+
+      - name: Syntax check Apps Script (node --check)
+        run: |
+          node --check apps_script/WebApp.js
+          node --check apps_script/Security.js
+
+      - name: Run unit tests (tests/test_*.py)
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Run WebApp security boundary test (token công khai không gọi được service/write/repair)
+        run: node tests/test_webapp_security_boundaries.js
+
+      - name: Run P0 Script Property management test (install/audit không lộ secret, không lộ qua doPost)
+        run: node tests/test_p0_script_property_management.js
+
+      - name: Reject forbidden files being tracked by Git
+        shell: bash
+        run: |
+          set -e
+          PATTERN='(^|/)\.env$|token_cache\.json$|msal_cache\.json$|msal_device_flow\.json$|browser_session(_.*)?\.json$|luatvietnam_state\.json$|\.pem$|\.key$|\.pfx$|credentials.*\.json$|\.pyc$|(^|/)__pycache__/'
+          MATCHES=$(git ls-files | grep -E "$PATTERN" || true)
+          if [ -n "$MATCHES" ]; then
+            echo "Các file sau KHÔNG được phép có mặt trong Git (secret/session/credential/cache):"
+            echo "$MATCHES"
+            exit 1
+          fi
+          echo "OK: không có file cấm nào đang được Git track."
+
+      - name: Scan for hardcoded secret patterns (giá trị phát hiện được che, không in đầy đủ)
+        run: python scripts/ci_secret_scan.py
