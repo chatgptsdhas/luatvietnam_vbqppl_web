@@ -29,9 +29,9 @@ const IRRELEVANT_RETENTION_DAYS = 90;
  * SECURITY / TOKEN 
  * ========================= */
 function setupWebAppToken(tokenInput) {
-  const defaultToken = 'T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0';
-  const token = String(tokenInput || defaultToken).trim();
-  if (!token) throw new Error('Token rỗng. Hãy truyền token vào setupWebAppToken(token).');
+  // P0: KHÔNG còn token mặc định — phải truyền token thật (sinh bằng scripts/generate_p0_secrets.py).
+  const token = String(tokenInput || '').trim();
+  if (!token) throw new Error('Token rỗng. Hãy truyền token vào setupWebAppToken(token) — không còn giá trị mặc định vì lý do bảo mật, xem SECURITY.md.');
   PropertiesService.getScriptProperties().setProperty(WEBAPP_CONFIG.TOKEN_PROPERTY_NAME, token);
   return { ok: true, message: 'Đã lưu token vào Script Properties.' };
 }
@@ -48,33 +48,106 @@ function validateToken_(inputToken) {
 }
 
 /** =========================
- * LOGGING 
+ * LOGGING
  * ========================= */
+
+// Correlation ID của request hiện tại (đặt bởi doPost) — jsonResponse_ và appendDebugLog_
+// dùng chung để mọi response/log của cùng 1 request có thể truy vết bằng cùng 1 ID.
+let CURRENT_CORRELATION_ID_ = '';
+
+/**
+ * P0: mọi dữ liệu ghi log đều được redact qua Security.redactSensitiveData_ trước khi
+ * stringify (không ghi password/token/session/secret...), và lỗi ghi log không bao giờ
+ * làm hỏng request nghiệp vụ đang xử lý.
+ */
 function appendDebugLog_(stage, data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(WEBAPP_CONFIG.SHEET_LOG);
-  if (!sheet) {
-    sheet = ss.insertSheet(WEBAPP_CONFIG.SHEET_LOG);
-    sheet.appendRow(['Thời gian', 'Stage', 'Số hiệu', 'Tên văn bản', 'Loại văn bản', 'Data JSON']);
-  }
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(WEBAPP_CONFIG.SHEET_LOG);
+    if (!sheet) {
+      sheet = ss.insertSheet(WEBAPP_CONFIG.SHEET_LOG);
+      sheet.appendRow(['Thời gian', 'Stage', 'Số hiệu', 'Tên văn bản', 'Loại văn bản', 'Data JSON']);
+    }
 
-  const payload = (data && data.payload) ? data.payload : {};
-  const timeText = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-  let jsonText = JSON.stringify(data || {}, null, 2) || '{}';
-  if (jsonText.length > WEBAPP_CONFIG.MAX_LOG_JSON_LEN) {
-    jsonText = jsonText.substring(0, WEBAPP_CONFIG.MAX_LOG_JSON_LEN) + '\n...<trimmed_to_prevent_error>';
-  }
+    const rawData = data || {};
+    const payload = rawData.payload || {};
+    const timeText = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
 
-  sheet.appendRow([
-    timeText, String(stage || ''), payload['Số hiệu'] || '',
-    payload['Tên văn bản'] || '', payload['Loại văn bản'] || '', jsonText
-  ]);
+    const dataWithCorrelation = Object.assign({}, rawData);
+    if (CURRENT_CORRELATION_ID_ && dataWithCorrelation.correlationId === undefined) {
+      dataWithCorrelation.correlationId = CURRENT_CORRELATION_ID_;
+    }
+    const sanitized = redactSensitiveData_(dataWithCorrelation);
+
+    let jsonText = JSON.stringify(sanitized, null, 2) || '{}';
+    if (jsonText.length > WEBAPP_CONFIG.MAX_LOG_JSON_LEN) {
+      jsonText = jsonText.substring(0, WEBAPP_CONFIG.MAX_LOG_JSON_LEN) + '\n...<trimmed_to_prevent_error>';
+    }
+
+    sheet.appendRow([
+      timeText, String(stage || ''), payload['Số hiệu'] || '',
+      payload['Tên văn bản'] || '', payload['Loại văn bản'] || '', jsonText
+    ]);
+  } catch (logErr) {
+    // Không log lại lỗi này qua appendDebugLog_ (tránh vòng lặp) và không để lỗi ghi log
+    // làm hỏng request nghiệp vụ đang xử lý.
+    try { Logger.log('appendDebugLog_ failed: ' + (logErr && logErr.message ? logErr.message : logErr)); } catch (ignored) {}
+  }
+}
+
+// Phân loại action theo P0 security hardening (xem SECURITY.md):
+//  A. Public read  — chỉ đọc, không đổi Sheet/Planner/config. Chỉ cần token dự án (validateToken_).
+//  B. Service      — action máy-máy (Python pipeline / Planner sync). Cần service token
+//                    (validateServiceToken_ — tạm fallback về token dự án cũ, xem lộ trình migrate).
+//  C. Admin/write  — mọi action làm thay đổi dữ liệu từ Dashboard. Bắt buộc admin session hợp lệ
+//                    (requireAdminSession_) — KHÔNG dựa vào việc frontend ẩn nút.
+const ACTION_SECURITY_GROUP_ = {
+  // A. Public read actions
+  get_pending_records: 'A',
+  get_irrelevant_records: 'A',
+  get_expired_records: 'A',
+  get_transferred_records: 'A',
+  get_all_records: 'A',
+
+  // B. Service actions (máy-máy)
+  import_vbqppl_nhap: 'B',
+  update_vbqppl_record: 'B',
+
+  // C. Admin/write actions (từ Dashboard, cần đăng nhập quản trị viên)
+  transfer_record: 'C',
+  update_record: 'C',
+  request_planner_sync_envelope: 'C'
+
+  // verify_admin không nằm trong bảng này — đây là action ĐĂNG NHẬP, tự xử lý riêng.
+};
+
+// P0 mục XIV: schema whitelist cho từng path Planner Sync Server được phép ký envelope —
+// không ký payload tùy ý, chỉ giữ lại đúng các field đã khai báo cho path tương ứng.
+const PLANNER_SYNC_PAYLOAD_SCHEMAS_ = {
+  '/sync-webapp-to-planner': ['source', 'source_row_number', 'vbqppl_row_number', 'so_hieu', 'limit', 'dry_run'],
+  '/delete-planner-task': ['planner_task_id', 'task_id', 'so_hieu', 'ten_van_ban']
+};
+
+function sanitizePlannerSyncEnvelopePayload_(path, rawPayload) {
+  const allowedKeys = PLANNER_SYNC_PAYLOAD_SCHEMAS_[path];
+  if (!allowedKeys) {
+    throw new SecurityAuthError_('INVALID_REQUEST', 'Path không được hỗ trợ ký envelope: ' + path);
+  }
+  const clean = {};
+  allowedKeys.forEach(function(key) {
+    if (rawPayload && Object.prototype.hasOwnProperty.call(rawPayload, key)) {
+      clean[key] = rawPayload[key];
+    }
+  });
+  return clean;
 }
 
 /**
  * TRUNG TÂM XỬ LÝ REQUEST TỪ WEBAPP
  */
 function doPost(e) {
+  CURRENT_CORRELATION_ID_ = generateCorrelationId_();
+
   try {
     const request = parseRequest_(e);
     appendDebugLog_('REQUEST_RECEIVED', {
@@ -85,9 +158,17 @@ function doPost(e) {
 
     validateToken_(request.token);
 
-    // PHÂN LUỒNG XỬ LÝ API 
+    // P0: bắt buộc service token / admin session theo nhóm action — không dựa vào frontend ẩn nút.
+    const securityGroup = ACTION_SECURITY_GROUP_[request.action];
+    if (securityGroup === 'B') {
+      validateServiceToken_(request.service_token, request.token);
+    } else if (securityGroup === 'C') {
+      requireAdminSession_(request);
+    }
+
+    // PHÂN LUỒNG XỬ LÝ API
     switch (request.action) {
-      
+
       // Luồng 1: Giữ nguyên logic Import cũ từ file Python
       case 'import_vbqppl_nhap': {
         const payload = request.payload || {};
@@ -101,30 +182,30 @@ function doPost(e) {
       // Luồng 2: Lấy danh sách văn bản chờ duyệt cho Dashboard
       case 'get_pending_records': {
         const result = apiGetPendingRecords_();
-        return jsonResponse_({ 
-          ok: true, 
-          data: result.data, 
-          total: result.total, 
+        return jsonResponse_({
+          ok: true,
+          data: result.data,
+          total: result.total,
           transferred: result.transferred,
           irrelevant: result.irrelevant,
           pending: result.pending
         });
       }
 
-      // Luồng 3: Thực hiện chuyển văn bản khi bấm nút trên Dashboard
+      // Luồng 3: Thực hiện chuyển văn bản khi bấm nút trên Dashboard (nhóm C — cần admin session)
       case 'transfer_record': {
         const transferResult = apiTransferRecord_(request.payload);
         return jsonResponse_(transferResult);
       }
 
-      // Luồng 4: Cập nhật thông tin (Nút Sửa và Nút Bỏ qua)
+      // Luồng 4: Cập nhật thông tin (Nút Sửa và Nút Bỏ qua) (nhóm C — cần admin session)
       case 'update_record': {
         const updateResult = apiUpdateRecord_(request.payload);
         appendDebugLog_('SUCCESS', { action: 'update_record', result: updateResult });
         return jsonResponse_(updateResult);
       }
 
-      // Luồng 4b: Cập nhật thông tin Planner vào sheet VBQPPL chính
+      // Luồng 4b: Cập nhật thông tin Planner vào sheet VBQPPL chính (nhóm B — service, gọi từ Python)
       case 'update_vbqppl_record': {
         const updateResult = apiUpdateRecord_(request.payload, WEBAPP_CONFIG.SHEET_VBQPPL);
         appendDebugLog_('SUCCESS', { action: 'update_vbqppl_record', result: updateResult });
@@ -147,35 +228,53 @@ function doPost(e) {
         const transferredResult = apiGetTransferredRecords_();
         return jsonResponse_({ ok: true, data: transferredResult, total: transferredResult.length });
       }
- 
+
       // Bổ sung case này vào danh sách các action trong hàm doPost
       case 'get_all_records': {
         const allData = apiGetAllRecords_();
         return jsonResponse_({ ok: true, data: allData });
       }
-      // Luồng kiểm tra bảo mật đăng nhập
+
+      // Luồng kiểm tra bảo mật đăng nhập — P0: PBKDF2 qua Security.js + signed session, không còn
+      // mật khẩu plaintext, không còn sessionToken kiểu "AUTHORIZED_<timestamp>" đoán được.
       case 'verify_admin': {
-        const inputPass = request.payload.password;
-        // Mật khẩu thực sự nằm ở ĐÂY - Trên server của Google
-        const REAL_PASSWORD = "HASEDU2019@"; 
-        
-        if (inputPass === REAL_PASSWORD) {
-          // Trả về một mã token ngẫu nhiên để trình duyệt lưu lại
-          return jsonResponse_({ 
-            ok: true, 
-            sessionToken: "AUTHORIZED_" + new Date().getTime() 
+        const inputPass = (request.payload && request.payload.password) || '';
+
+        if (verifyAdminPassword_(inputPass)) {
+          const session = createAdminSession_();
+          return jsonResponse_({
+            ok: true,
+            adminSession: session.token,
+            expiresAt: session.expiresAt,
+            ttlSeconds: session.ttlSeconds
           });
-        } else {
-          return jsonResponse_({ ok: false });
         }
+
+        // Không trả lý do chi tiết khi sai — tránh lộ thông tin cho kẻ tấn công dò mật khẩu.
+        return jsonResponse_({ ok: false, error: 'ADMIN_LOGIN_FAILED', message: 'Sai mật khẩu hoặc tài khoản không hợp lệ.' });
+      }
+
+      // P0 mục XIV: Dashboard xin envelope đã ký để tự gọi Planner Sync Server cục bộ —
+      // frontend KHÔNG BAO GIỜ biết PLANNER_SYNC_SHARED_SECRET. Nhóm C — cần admin session.
+      case 'request_planner_sync_envelope': {
+        const payload = request.payload || {};
+        const path = String(payload.path || '');
+        const cleanPayload = sanitizePlannerSyncEnvelopePayload_(path, payload.envelope_payload || {});
+        const ttlSeconds = parseInt(getOptionalScriptProperty_('PLANNER_SYNC_REQUEST_TTL_SECONDS', '300'), 10) || 300;
+        const envelope = createPlannerSyncEnvelope_(path, cleanPayload, ttlSeconds);
+        return jsonResponse_({ ok: true, envelope: envelope });
       }
       default: {
         return jsonResponse_({ ok: false, error: 'ACTION_NOT_SUPPORTED', message: 'Action không được hỗ trợ: ' + request.action });
       }
     }
   } catch (err) {
+    // Server-side: log đầy đủ (đã redact tự động trong appendDebugLog_). Client: KHÔNG BAO GIỜ
+    // trả stack trace — chỉ trả error code ổn định + message an toàn + correlationId.
     appendDebugLog_('ERROR', { payload: {}, error_name: err.name || 'ERROR', error_message: err.message || String(err), stack: err.stack || '' });
-    return jsonResponse_({ ok: false, error: err.name || 'ERROR', message: err.message || String(err), stack: err.stack || '' });
+    return jsonResponse_(sanitizeErrorForClient_(err, CURRENT_CORRELATION_ID_));
+  } finally {
+    CURRENT_CORRELATION_ID_ = '';
   }
 }
 
@@ -787,7 +886,11 @@ function shouldSkipPayloadBeforeWrite_(payload) {
 }
 
 function jsonResponse_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+  const body = Object.assign({}, obj);
+  if (CURRENT_CORRELATION_ID_ && body.correlationId === undefined) {
+    body.correlationId = CURRENT_CORRELATION_ID_;
+  }
+  return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // Hàm lấy TOÀN BỘ dữ liệu từ Kho VBQPPL chính
@@ -1084,4 +1187,66 @@ function uniqueList_(array) {
   return [...new Set(array.filter(function(item) {
     return item != null && item.toString().trim() !== '';
   }))];
+}
+
+/* =========================================================================================
+ * P0 mục X — bảo trì WEBAPP_DEBUG_LOG ở mức tối thiểu (chỉ chặn phình vô hạn số dòng).
+ * KHÔNG phải hệ thống retention/archive/summary đầy đủ — nằm ngoài phạm vi P0 security
+ * hardening, xem P0_SECURITY_IMPLEMENTATION_REPORT.md mục "Nội dung chưa hoàn thành".
+ * ========================================================================================= */
+
+const LOG_MAINTENANCE_TRIGGER_HANDLER_ = 'executeWebAppDebugLogMaintenance_';
+const LOG_MAINTENANCE_MAX_ROWS_ = 5000;
+
+function executeWebAppDebugLogMaintenance_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(WEBAPP_CONFIG.SHEET_LOG);
+  if (!sheet) {
+    return { ok: true, message: 'Sheet ' + WEBAPP_CONFIG.SHEET_LOG + ' chưa tồn tại, không có gì để dọn.', deleted_count: 0 };
+  }
+
+  const dataRowCount = sheet.getLastRow() - 1;
+  if (dataRowCount <= LOG_MAINTENANCE_MAX_ROWS_) {
+    return { ok: true, message: 'Số dòng log (' + dataRowCount + ') chưa vượt ngưỡng ' + LOG_MAINTENANCE_MAX_ROWS_ + '.', deleted_count: 0 };
+  }
+
+  const excess = dataRowCount - LOG_MAINTENANCE_MAX_ROWS_;
+  // Xóa 1 block liên tiếp các dòng cũ nhất (ngay sau header) — KHÔNG deleteRow() lặp từng dòng.
+  sheet.deleteRows(2, excess);
+  SpreadsheetApp.flush();
+
+  return { ok: true, message: 'Đã xóa ' + excess + ' dòng log cũ nhất để giữ dưới ' + LOG_MAINTENANCE_MAX_ROWS_ + ' dòng.', deleted_count: excess };
+}
+
+function installWebAppDebugLogMaintenanceTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === LOG_MAINTENANCE_TRIGGER_HANDLER_) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  ScriptApp.newTrigger(LOG_MAINTENANCE_TRIGGER_HANDLER_).timeBased().everyDays(1).atHour(5).create();
+
+  return { ok: true, message: 'Đã cài trigger dọn ' + WEBAPP_CONFIG.SHEET_LOG + ' chạy hằng ngày khoảng 05:00.' };
+}
+
+function removeWebAppDebugLogMaintenanceTrigger_() {
+  let removedCount = 0;
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === LOG_MAINTENANCE_TRIGGER_HANDLER_) {
+      ScriptApp.deleteTrigger(trigger);
+      removedCount++;
+    }
+  });
+
+  return { ok: true, removed_count: removedCount, message: 'Đã xóa ' + removedCount + ' trigger dọn log.' };
+}
+
+// Public wrapper (không dấu gạch dưới) — chạy thủ công từ Apps Script Editor / menu.
+function installWebAppDebugLogMaintenanceTrigger() {
+  return installWebAppDebugLogMaintenanceTrigger_();
+}
+
+function removeWebAppDebugLogMaintenanceTrigger() {
+  return removeWebAppDebugLogMaintenanceTrigger_();
 }

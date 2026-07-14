@@ -3015,10 +3015,55 @@
 <script>
     // --- CẤU HÌNH KẾT NỐI ---
     const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDES8M8mTjzpeIZJ78QqZYz1cDo5ODNzU2DGMbZDSRVzH-yXLh7ashwHh8CeDQwXnwww/exec"; 
-    const TOKEN = "T2j_crJJ10h8RSuhPzJT4ERCF3jNfNHSVsAcw1LZXq0";
+    const TOKEN = "Rex-m_Hnok22bDBpKp4CukKiZ--HL7s6ry4yvEHDR68C0xGMasHZQ1_skrmLvKrd";
     const PLANNER_SYNC_SERVER_URL = localStorage.getItem('plannerSyncServerUrl') || "http://127.0.0.1:8765/sync-webapp-to-planner";
     const PLANNER_SYNC_SERVER_BASE_URL = PLANNER_SYNC_SERVER_URL.replace(/\/sync-webapp-to-planner\/?$/, '');
     const PLANNER_SYNC_DOWN_MESSAGE = 'Planner Sync Server chưa chạy. Văn bản đã chuyển vào VBQPPL nhưng chưa tạo task Planner.';
+
+    // ===== P0 security hardening: admin session (sessionStorage, KHÔNG dùng localStorage) =====
+    // localStorage.isAdminAccess === 'true' KHÔNG còn là bằng chứng quyền admin — chỉ là cờ UI.
+    // Quyền admin thật được backend (apps_script/WebApp.js requireAdminSession_) xác minh bằng
+    // admin_session (session đã ký HMAC, TTL ngắn) đính kèm mọi request ghi dữ liệu.
+    const ADMIN_SESSION_STORAGE_KEY = 'adminSession';
+    const LEGACY_ADMIN_LOCALSTORAGE_KEYS = ['isAdminAccess', 'adminSessionToken'];
+
+    function getAdminSessionToken() {
+        try { return sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY) || ''; }
+        catch (e) { return ''; }
+    }
+
+    function isAdminLoggedIn() {
+        return Boolean(getAdminSessionToken());
+    }
+
+    function setAdminSession(sessionToken) {
+        try { sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, sessionToken || ''); } catch (e) {}
+    }
+
+    function clearAdminSession() {
+        try { sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY); } catch (e) {}
+        // Dọn key admin cũ (P0 trước đây) khỏi localStorage — không còn dùng để xác thực nữa.
+        LEGACY_ADMIN_LOCALSTORAGE_KEYS.forEach(function(key) {
+            try { localStorage.removeItem(key); } catch (e) {}
+        });
+    }
+
+    // Đính kèm admin_session vào body request ghi dữ liệu (transfer_record, update_record...).
+    function withAdminSession(bodyObj) {
+        return Object.assign({}, bodyObj, { admin_session: getAdminSessionToken() });
+    }
+
+    // Gọi sau khi nhận response từ WebApp: nếu backend từ chối vì session admin hết hạn/không hợp
+    // lệ, xóa session cục bộ + đóng giao diện admin + yêu cầu đăng nhập lại (không tự đoán lý do).
+    function handleAdminSessionResponse(result) {
+        if (result && result.ok === false && result.error === 'ADMIN_SESSION_REQUIRED') {
+            clearAdminSession();
+            if (typeof checkAuthStatus === 'function') { try { checkAuthStatus(); } catch (e) {} }
+            showToast('Phiên quản trị đã hết hạn', 'Vui lòng đăng nhập lại để tiếp tục thao tác.', 'warning');
+            return true;
+        }
+        return false;
+    }
 
     const INCOMING_ENTITY_LABELS = {
         'COMPANY_HAS':                  'Công ty CPTGD H.A.S',
@@ -3765,7 +3810,7 @@
     }
 
     function openReportConfigModal() {
-        if (localStorage.getItem('isAdminAccess') !== 'true') {
+        if (!isAdminLoggedIn()) {
             showToast('Chưa có quyền admin', 'Vui lòng đăng nhập quản trị viên để tùy chỉnh báo cáo.', 'error');
             return;
         }
@@ -4009,7 +4054,7 @@
     }
 
     function isReportAdmin() {
-        return localStorage.getItem('isAdminAccess') === 'true';
+        return isAdminLoggedIn();
     }
 
     function toggleReportCustomizeMode(force) {
@@ -5952,7 +5997,7 @@
     }
 
     async function loadReportData() {
-        if (localStorage.getItem('isAdminAccess') !== 'true') return;
+        if (!isAdminLoggedIn()) return;
 
         setReportLoading();
 
@@ -6000,7 +6045,7 @@
     function switchTab(tabId) {
         clearSelection();
         // 1. Kiểm tra bảo mật
-        const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
+        const isAdmin = isAdminLoggedIn();
         if ((tabId === 'pending' || tabId === 'irrelevant' || tabId === 'reports' || tabId === 'transferred' || tabId === 'analytics') && !isAdmin) {
             return; 
         }
@@ -6554,10 +6599,11 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ token: TOKEN, action: "update_record", payload: { row_number: rowNum, updates: updates } })
+                body: JSON.stringify(withAdminSession({ token: TOKEN, action: "update_record", payload: { row_number: rowNum, updates: updates } }))
             });
 
             const result = await response.json();
+            if (handleAdminSessionResponse(result)) return;
 
             // 4. Xử lý kết quả trả về
             if (result.ok) {
@@ -6599,6 +6645,29 @@
         return summary.raw_skip_reason || summary.skip_reason || result?.raw_skip_reason || result?.skip_reason || 'Không có record đủ điều kiện để tạo task.';
     }
 
+    // P0 mục XIV: Apps Script ký sẵn envelope (HMAC, TTL ngắn) cho Planner Sync Server cục bộ —
+    // frontend KHÔNG BAO GIỜ biết secret dùng để ký Planner Sync, chỉ chuyển tiếp envelope đã ký.
+    // Yêu cầu admin session hợp lệ (backend requireAdminSession_ tự kiểm tra).
+    async function fetchPlannerSyncEnvelope_(path, envelopePayload) {
+        const response = await fetch(WEBAPP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(withAdminSession({
+                token: TOKEN,
+                action: 'request_planner_sync_envelope',
+                payload: { path: path, envelope_payload: envelopePayload }
+            }))
+        });
+        const result = await response.json();
+        if (handleAdminSessionResponse(result)) {
+            throw new Error('Phiên quản trị đã hết hạn, vui lòng đăng nhập lại.');
+        }
+        if (!result.ok || !result.envelope) {
+            throw new Error(result.message || 'Không lấy được envelope ký cho Planner Sync Server.');
+        }
+        return result.envelope;
+    }
+
     async function triggerPlannerSyncAfterTransfer(sourceRowNumber, soHieu, transferResult = {}) {
         const payload = {
             source: 'dashboard_transfer',
@@ -6610,10 +6679,16 @@
 
         let response;
         try {
+            const envelope = await fetchPlannerSyncEnvelope_('/sync-webapp-to-planner', payload);
             response = await fetch(PLANNER_SYNC_SERVER_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-P0-Timestamp': envelope.timestamp,
+                    'X-P0-Request-Id': envelope.requestId,
+                    'X-P0-Signature': envelope.signature
+                },
+                body: envelope.body
             });
         } catch (networkError) {
             // fetch() chỉ throw ở tầng network (không kết nối được cổng 8765) — đây đúng là
@@ -6656,14 +6731,15 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
+                body: JSON.stringify(withAdminSession({
                     token: TOKEN,
                     action: "transfer_record",
                     payload: { row_number: rowNumber }
-                })
+                }))
             });
 
             const result = await response.json();
+            if (handleAdminSessionResponse(result)) return;
 
             if (result.ok) {
                 showToast("Đã chuyển!", `Văn bản <strong>${soHieu}</strong> đã được chuyển thành công.`, "success");
@@ -6698,14 +6774,15 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
+                body: JSON.stringify(withAdminSession({
                     token: TOKEN,
                     action: "transfer_record",
                     payload: { row_number: rowNumber }
-                })
+                }))
             });
 
             const result = await response.json();
+            if (handleAdminSessionResponse(result)) return;
             if (result.ok) {
                 showToast("Đã chuyển lại!", `Văn bản <strong>${escapeHtml(soHieu)}</strong> đã được chuyển lại vào VBQPPL.`, "success");
                 triggerPlannerSyncAfterTransfer(rowNumber, result.soHieu || soHieu, result);
@@ -6733,17 +6810,18 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
+                body: JSON.stringify(withAdminSession({
                     token: TOKEN,
                     action: "update_record",
                     payload: {
                         row_number: rowNumber,
                         updates: { "Trạng thái duyệt": "Chờ kiểm tra", "Trạng thái xử lý": "Chờ kiểm tra" }
                     }
-                })
+                }))
             });
 
             const result = await response.json();
+            if (handleAdminSessionResponse(result)) return;
             if (result.ok) {
                 showToast("Đã reset!", `Văn bản <strong>${escapeHtml(soHieu)}</strong> đã về trạng thái Chờ kiểm tra.`, "success");
                 loadData();
@@ -6777,12 +6855,13 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ 
-                    token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: { "Trạng thái duyệt": "Không liên quan" } } 
-                })
+                body: JSON.stringify(withAdminSession({
+                    token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: { "Trạng thái duyệt": "Không liên quan" } }
+                }))
             });
 
             const result = await response.json();
+            if (handleAdminSessionResponse(result)) return;
             if (result.ok) {
                 showToast("Đã loại bỏ!", `Đã đánh dấu ${soHieu} là Không liên quan.`, "success");
                 removeRowFromUI(rowNumber);
@@ -6810,12 +6889,13 @@
             const response = await fetch(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
+                body: JSON.stringify(withAdminSession({
                     token: TOKEN, action: "update_record", payload: { row_number: rowNumber, updates: restoreUpdates }
-                })
+                }))
             });
 
             const result = await response.json();
+            if (handleAdminSessionResponse(result)) return;
             if (result.ok) {
                 showToast("Đã khôi phục!", `Đã khôi phục ${soHieu} về danh sách chờ xử lý.`, "success");
                 removeRowFromUI(rowNumber);
@@ -6923,15 +7003,21 @@
             return { ok: true, deleted: false, planner_task_id: '', message: 'Không có Planner Task ID để xóa.' };
         }
 
+        const envelope = await fetchPlannerSyncEnvelope_('/delete-planner-task', {
+            planner_task_id: plannerTaskId,
+            so_hieu: soHieu,
+            ten_van_ban: tenVanBan
+        });
+
         const response = await fetch(`${PLANNER_SYNC_SERVER_BASE_URL}/delete-planner-task`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                planner_task_id: plannerTaskId,
-                so_hieu: soHieu,
-                ten_van_ban: tenVanBan,
-                source: 'dashboard_restore_transferred'
-            })
+            headers: {
+                'Content-Type': 'application/json',
+                'X-P0-Timestamp': envelope.timestamp,
+                'X-P0-Request-Id': envelope.requestId,
+                'X-P0-Signature': envelope.signature
+            },
+            body: envelope.body
         });
 
         const result = await response.json().catch(() => ({}));
@@ -7089,9 +7175,10 @@
                 const response = await fetch(WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ token: TOKEN, action: 'transfer_record', payload: { row_number: rowNum } })
+                    body: JSON.stringify(withAdminSession({ token: TOKEN, action: 'transfer_record', payload: { row_number: rowNum } }))
                 });
                 const result = await response.json();
+                if (handleAdminSessionResponse(result)) return;
                 if (result.ok) {
                     success++;
                     removeRowFromUI(rowNum);
@@ -7139,9 +7226,10 @@
                 const response = await fetch(WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ token: TOKEN, action: 'update_record', payload: { row_number: rowNum, updates: { 'Trạng thái duyệt': 'Không liên quan' } } })
+                    body: JSON.stringify(withAdminSession({ token: TOKEN, action: 'update_record', payload: { row_number: rowNum, updates: { 'Trạng thái duyệt': 'Không liên quan' } } }))
                 });
                 const result = await response.json();
+                if (handleAdminSessionResponse(result)) return;
                 if (result.ok) {
                     success++;
                     removeRowFromUI(rowNum);
@@ -7910,12 +7998,11 @@
 function toggleAuth() {
     console.log("Bước 1: Đã bấm nút Đăng nhập ở menu");
 
-    const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
+    const isAdmin = isAdminLoggedIn();
 
     if (isAdmin) {
         if (confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-            localStorage.removeItem('isAdminAccess');
-            localStorage.removeItem('adminSessionToken');
+            clearAdminSession();
             checkAuthStatus();
             switchTab('all');
         }
@@ -7986,14 +8073,11 @@ async function submitLogin() {
         });
 
         const result = await response.json();
-        console.log("Kết quả xác thực:", result);
+        // P0: KHÔNG log adminSession/token ra console — chỉ log kết quả ok/error đã redact.
+        console.log("Kết quả xác thực:", { ok: result.ok, error: result.error, correlationId: result.correlationId });
 
-        if (result.ok) {
-            localStorage.setItem('isAdminAccess', 'true');
-
-            if (result.sessionToken) {
-                localStorage.setItem('adminSessionToken', result.sessionToken);
-            }
+        if (result.ok && result.adminSession) {
+            setAdminSession(result.adminSession);
 
             closeLoginModal();
             checkAuthStatus();
@@ -8018,7 +8102,7 @@ async function submitLogin() {
 }
 
 function checkAuthStatus() {
-    const isAdmin = localStorage.getItem('isAdminAccess') === 'true';
+    const isAdmin = isAdminLoggedIn();
     const adminElements = document.querySelectorAll('.admin-only');
     const authText = document.getElementById('authText');
     const authIcon = document.getElementById('authIcon');
@@ -8489,7 +8573,7 @@ function renderIntroEmpty() {
 }
 
 function showIntroEditMode() {
-    if (localStorage.getItem('isAdminAccess') !== 'true') return;
+    if (!isAdminLoggedIn()) return;
 
     const viewMode = document.getElementById('introViewMode');
     const editMode = document.getElementById('introEditMode');
@@ -8576,7 +8660,7 @@ async function reloadIntroFromServer() {
 }
 
 async function saveIntroContent() {
-    if (localStorage.getItem('isAdminAccess') !== 'true') return;
+    if (!isAdminLoggedIn()) return;
 
     const title = (document.getElementById('introEditTitle').value || '').trim();
     const imageUrl = (document.getElementById('introEditImageUrl').value || '').trim();

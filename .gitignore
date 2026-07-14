@@ -7,3 +7,40 @@ __pycache__/
 apps_script/.clasp.json
 config/browser_session.json
 config/browser_session_*.json
+
+# ===== P0 security hardening additions =====
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.secret.json
+config/*.secret.json
+
+# Microsoft authentication
+msal_device_flow.json
+config/token_cache.json
+config/msal_cache.json
+config/*token*.json
+
+# Sessions and credentials
+config/browser_session.json
+config/browser_session_*.json
+luatvietnam_state.json
+auth/
+credentials/
+
+# Runtime files
+__pycache__/
+*.pyc
+.pytest_cache/
+output/
+logs/
+*.log
+
+# Apps Script local config
+apps_script/.clasp.json
+.clasp.json
