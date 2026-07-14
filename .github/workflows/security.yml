@@ -50,6 +50,9 @@ jobs:
       - name: Run WebApp security boundary test (token công khai không gọi được service/write/repair)
         run: node tests/test_webapp_security_boundaries.js
 
+      - name: Run P0 Script Property management test (install/audit không lộ secret, không lộ qua doPost)
+        run: node tests/test_p0_script_property_management.js
+
       - name: Reject forbidden files being tracked by Git
         shell: bash
         run: |

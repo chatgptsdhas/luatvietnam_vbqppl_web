@@ -98,7 +98,8 @@ function appendDebugLog_(stage, data) {
 // Phân loại action theo P0 security hardening (xem SECURITY.md):
 //  A. Public read  — chỉ đọc, không đổi Sheet/Planner/config. Chỉ cần token dự án (validateToken_).
 //  B. Service      — action máy-máy (Python pipeline / Planner sync). Cần service token
-//                    (validateServiceToken_ — tạm fallback về token dự án cũ, xem lộ trình migrate).
+//                    (validateServiceToken_ — CHỈ chấp nhận APPS_SCRIPT_SERVICE_TOKEN, không còn
+//                    fallback về token dự án công khai APPS_SCRIPT_TOKEN).
 //  C. Admin/write  — mọi action làm thay đổi dữ liệu từ Dashboard. Bắt buộc admin session hợp lệ
 //                    (requireAdminSession_) — KHÔNG dựa vào việc frontend ẩn nút.
 const ACTION_SECURITY_GROUP_ = {

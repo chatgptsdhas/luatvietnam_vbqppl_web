@@ -52,15 +52,43 @@ cần trong bất kỳ `.env` nào — chỉ cần trong Script Properties của
 | `APPS_SCRIPT_SERVICE_TOKEN` | Giá trị sinh ở bước 1 |
 | `ADMIN_PASSWORD_SALT` | Giá trị sinh ở bước 1 |
 | `ADMIN_PASSWORD_HASH` | Giá trị sinh ở bước 1 |
-| `ADMIN_PASSWORD_ITERATIONS` | `210000` (hoặc số bạn chọn khi chạy script với `--iterations`) |
+| `ADMIN_PASSWORD_ITERATIONS` | `210000` (mặc định — tự tạo bởi `installP0ScriptPropertyDefaults`, xem bước 4a) |
 | `ADMIN_SESSION_SECRET` | Giá trị sinh ở bước 1 |
-| `ADMIN_SESSION_TTL_SECONDS` | `900` (tùy chọn, mặc định 900 nếu bỏ trống) |
+| `ADMIN_SESSION_TTL_SECONDS` | `900` (mặc định — tự tạo bởi `installP0ScriptPropertyDefaults`) |
 | `PLANNER_SYNC_SHARED_SECRET` | **Giống hệt** giá trị đã điền vào `.env` ở bước 3 |
-| `PLANNER_SYNC_REQUEST_TTL_SECONDS` | `300` (tùy chọn) |
+| `PLANNER_SYNC_REQUEST_TTL_SECONDS` | `300` (mặc định — tự tạo bởi `installP0ScriptPropertyDefaults`) |
+| `WEBAPP_LOG_VERBOSE_DEBUG` | `false` (mặc định — tự tạo bởi `installP0ScriptPropertyDefaults`) |
 
-Có thể set qua code: `setupWebAppToken('<token>')` chạy 1 lần trong Apps Script Editor cho
-`APPS_SCRIPT_TOKEN`; các Script Property còn lại set thủ công qua giao diện Script Properties
-(chưa có hàm setup riêng cho các key này — set trực tiếp trên UI).
+`APPS_SCRIPT_TOKEN` có thể set qua code: `setupWebAppToken('<token>')` chạy 1 lần trong Apps
+Script Editor (không còn giá trị mặc định — bắt buộc truyền token thật). 6 secret bắt buộc còn
+lại (`APPS_SCRIPT_TOKEN`, `APPS_SCRIPT_SERVICE_TOKEN`, `ADMIN_PASSWORD_SALT`,
+`ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `PLANNER_SYNC_SHARED_SECRET`) luôn phải nhập thủ
+công qua giao diện Script Properties — không có hàm nào trong `Security.js` tự sinh hay đặt giá
+trị mặc định cho các key này.
+
+### 4a. Dùng `installP0ScriptPropertyDefaults` / `auditP0ScriptProperties` để thiết lập & kiểm tra
+
+`apps_script/Security.js` có 2 hàm quản lý Script Properties, **chỉ chạy thủ công trong Apps
+Script Editor** (chọn tên hàm ở dropdown trên cùng → bấm ▷ Run) — không gọi được qua `doPost`/
+Dashboard/API:
+
+1. **`installP0ScriptPropertyDefaults`** — chạy trước, ngay sau khi `clasp push` (bước 6). Tự
+   điền 4 giá trị mặc định an toàn (`ADMIN_PASSWORD_ITERATIONS=210000`,
+   `ADMIN_SESSION_TTL_SECONDS=900`, `PLANNER_SYNC_REQUEST_TTL_SECONDS=300`,
+   `WEBAPP_LOG_VERBOSE_DEBUG=false`) **chỉ khi property đó chưa tồn tại** — không bao giờ ghi đè
+   giá trị đã có, không đụng tới `INTRO_*` hay property khác, không tự sinh/đặt placeholder cho 6
+   secret bắt buộc. Xem kết quả trả về trong **Execution log** (View → Logs hoặc panel dưới cùng
+   sau khi Run): `defaults_created` (property vừa tạo), `defaults_preserved` (property đã có, giữ
+   nguyên), `missing_required_secrets` (secret còn thiếu — cần nhập thủ công theo bảng trên).
+2. Nhập thủ công 6 secret bắt buộc còn thiếu (theo `missing_required_secrets` ở trên) qua giao
+   diện Script Properties, dùng đúng giá trị đã sinh ở bước 1.
+3. **`auditP0ScriptProperties`** — chạy sau khi đã nhập xong secret, để xác nhận cấu hình đầy đủ
+   và đúng định dạng trước khi deploy (bước 7). Kết quả trả về (xem Execution log): `ok` (true khi
+   sẵn sàng), `configured`/`missing` (tên property, không có giá trị), `invalid` (property đã có
+   giá trị nhưng sai định dạng — ví dụ `ADMIN_PASSWORD_ITERATIONS` < 100000, hoặc
+   `WEBAPP_LOG_VERBOSE_DEBUG` khác `true`/`false`). **Cả 2 hàm không bao giờ in hay trả về giá trị
+   secret thật** — chỉ tên property và trạng thái. Chỉ tiếp tục deploy (bước 7) khi
+   `auditP0ScriptProperties` trả `ok: true`.
 
 ## 5. Secret nào phải giống nhau giữa Apps Script và `.env`
 

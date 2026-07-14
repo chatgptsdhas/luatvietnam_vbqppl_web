@@ -73,6 +73,14 @@ class TestWebAppJsStaticChecks(unittest.TestCase):
         self.assertNotIn("console.log(inputPass", self.src)
         self.assertNotIn("Logger.log(inputPass", self.src)
 
+    def test_p0_property_management_functions_not_exposed_via_doPost(self):
+        # 3 hàm quản lý Script Properties chỉ được chạy thủ công trong Apps Script Editor — WebApp.js
+        # (nơi định nghĩa doPost/switch action) không được nhắc tới tên chúng dưới bất kỳ hình thức
+        # nào, nghĩa là không có case nào trong doPost có thể gọi tới.
+        for fn_name in ("installP0ScriptPropertyDefaults", "auditP0ScriptProperties", "runAuditP0ScriptProperties", "requireP0ScriptProperties_",):
+            with self.subTest(function=fn_name):
+                self.assertNotIn(fn_name, self.src)
+
 
 class TestSecurityJsStaticChecks(unittest.TestCase):
     def setUp(self):
@@ -116,6 +124,48 @@ class TestSecurityJsStaticChecks(unittest.TestCase):
     def test_session_ttl_default_900(self):
         self.assertIn("ADMIN_SESSION_TTL_SECONDS", self.src)
         self.assertIn("'900'", self.src)
+
+    def test_p0_script_property_schema_covers_all_10_properties(self):
+        required_keys = [
+            "APPS_SCRIPT_TOKEN", "APPS_SCRIPT_SERVICE_TOKEN", "ADMIN_PASSWORD_SALT",
+            "ADMIN_PASSWORD_HASH", "ADMIN_PASSWORD_ITERATIONS", "ADMIN_SESSION_SECRET",
+            "ADMIN_SESSION_TTL_SECONDS", "PLANNER_SYNC_SHARED_SECRET",
+            "PLANNER_SYNC_REQUEST_TTL_SECONDS", "WEBAPP_LOG_VERBOSE_DEBUG",
+        ]
+        self.assertIn("P0_SCRIPT_PROPERTY_SCHEMA_", self.src)
+        match = re.search(r"P0_SCRIPT_PROPERTY_SCHEMA_\s*=\s*\{.*?\n\};", self.src, re.S)
+        self.assertIsNotNone(match, "Không tìm thấy khai báo P0_SCRIPT_PROPERTY_SCHEMA_")
+        body = match.group(0)
+        for key in required_keys:
+            with self.subTest(key=key):
+                self.assertIn(key, body)
+
+    def test_p0_property_management_functions_present_with_correct_visibility(self):
+        # Public (không dấu gạch dưới ở cuối) — được phép chạy thủ công trong Apps Script Editor.
+        self.assertIn("function installP0ScriptPropertyDefaults()", self.src)
+        self.assertIn("function auditP0ScriptProperties()", self.src)
+        # Private (dấu gạch dưới ở cuối theo quy ước file này).
+        self.assertIn("function requireP0ScriptProperties_()", self.src)
+
+    def test_install_never_sets_secret_properties_directly(self):
+        # install chỉ được set qua vòng lặp theo schema (schema.defaultValue), không được có bất kỳ
+        # lệnh setProperty('<SECRET_KEY>', ...) hardcode nào cho 6 secret bắt buộc.
+        secret_keys = [
+            "APPS_SCRIPT_TOKEN", "APPS_SCRIPT_SERVICE_TOKEN", "ADMIN_PASSWORD_SALT",
+            "ADMIN_PASSWORD_HASH", "ADMIN_SESSION_SECRET", "PLANNER_SYNC_SHARED_SECRET",
+        ]
+        for key in secret_keys:
+            with self.subTest(key=key):
+                self.assertNotIn(f"setProperty('{key}'", self.src)
+                self.assertNotIn(f'setProperty("{key}"', self.src)
+
+    def test_audit_and_require_do_not_return_raw_property_values(self):
+        match = re.search(r"function auditP0ScriptProperties\(\)\s*\{.*?\n\}", self.src, re.S)
+        self.assertIsNotNone(match, "Không tìm thấy function auditP0ScriptProperties")
+        body = match.group(0)
+        # Không được trả field "value"/"values" chứa giá trị thật của property.
+        self.assertNotIn("value:", body)
+        self.assertNotIn("values:", body)
 
 
 class TestDashboardFrontendStaticChecks(unittest.TestCase):

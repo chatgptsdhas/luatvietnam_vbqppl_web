@@ -386,3 +386,161 @@ function createPlannerSyncEnvelope_(path, payload, ttlSeconds) {
     expiresAt: nowSeconds + ttl
   };
 }
+
+// ===== P0 Script Property schema — audit & install =====
+//
+// installP0ScriptPropertyDefaults / auditP0ScriptProperties KHÔNG được gọi qua doPost (không có
+// case nào cho chúng trong WebApp.js) — chỉ chạy thủ công trong Apps Script Editor (chọn hàm,
+// bấm Run). Cả hai chỉ đọc/ghi đúng 10 property khai báo trong P0_SCRIPT_PROPERTY_SCHEMA_,
+// không bao giờ đụng tới INTRO_* hay property khác của dự án, và không bao giờ trả về/log giá
+// trị secret — chỉ tên property + trạng thái SET/MISSING/hợp lệ hay không.
+
+function validateP0PositiveInt_(rawValue) {
+  const n = Number(rawValue);
+  return (Number.isInteger(n) && n > 0) ? null : 'Phải là số nguyên dương.';
+}
+
+function validateP0PositiveIntAtLeast_(minValue) {
+  return function(rawValue) {
+    const n = Number(rawValue);
+    return (Number.isInteger(n) && n >= minValue) ? null : ('Phải là số nguyên >= ' + minValue + '.');
+  };
+}
+
+function validateP0Boolean_(rawValue) {
+  return (rawValue === 'true' || rawValue === 'false') ? null : 'Chỉ nhận giá trị "true" hoặc "false".';
+}
+
+// secret: true  -> bắt buộc, KHÔNG được tự sinh/hardcode giá trị mặc định (phải nhập thủ công).
+// secret: false -> có giá trị mặc định an toàn, install sẽ tự set nếu property chưa tồn tại.
+const P0_SCRIPT_PROPERTY_SCHEMA_ = {
+  APPS_SCRIPT_TOKEN: { secret: true },
+  APPS_SCRIPT_SERVICE_TOKEN: { secret: true },
+  ADMIN_PASSWORD_SALT: { secret: true },
+  ADMIN_PASSWORD_HASH: { secret: true },
+  ADMIN_SESSION_SECRET: { secret: true },
+  PLANNER_SYNC_SHARED_SECRET: { secret: true },
+  ADMIN_PASSWORD_ITERATIONS: { secret: false, defaultValue: '210000', validate: validateP0PositiveIntAtLeast_(100000) },
+  ADMIN_SESSION_TTL_SECONDS: { secret: false, defaultValue: '900', validate: validateP0PositiveInt_ },
+  PLANNER_SYNC_REQUEST_TTL_SECONDS: { secret: false, defaultValue: '300', validate: validateP0PositiveInt_ },
+  WEBAPP_LOG_VERBOSE_DEBUG: { secret: false, defaultValue: 'false', validate: validateP0Boolean_ }
+};
+
+/**
+ * Thiết lập giá trị mặc định an toàn cho các Script Property KHÔNG nhạy cảm (TTL, số vòng lặp
+ * PBKDF2, cờ log verbose) nếu property đó CHƯA tồn tại. KHÔNG bao giờ ghi đè property đã có,
+ * KHÔNG bao giờ tạo placeholder cho 6 secret bắt buộc (phải nhập thủ công qua
+ * scripts/generate_p0_secrets.py + Script Properties UI), KHÔNG đụng tới property nào ngoài
+ * P0_SCRIPT_PROPERTY_SCHEMA_ (INTRO_* và property khác giữ nguyên).
+ * Chỉ chạy thủ công trong Apps Script Editor — không gọi được qua doPost.
+ */
+function installP0ScriptPropertyDefaults() {
+  const props = PropertiesService.getScriptProperties();
+  const defaultsCreated = [];
+  const defaultsPreserved = [];
+  const missingRequiredSecrets = [];
+
+  Object.keys(P0_SCRIPT_PROPERTY_SCHEMA_).forEach(function(key) {
+    const schema = P0_SCRIPT_PROPERTY_SCHEMA_[key];
+    const current = props.getProperty(key);
+    const isSet = current !== null && current !== undefined && current !== '';
+
+    if (schema.secret) {
+      if (!isSet) missingRequiredSecrets.push(key);
+      return;
+    }
+
+    if (isSet) {
+      defaultsPreserved.push(key);
+    } else {
+      props.setProperty(key, schema.defaultValue);
+      defaultsCreated.push(key);
+    }
+  });
+
+  return {
+    ok: true,
+    defaults_created: defaultsCreated,
+    defaults_preserved: defaultsPreserved,
+    missing_required_secrets: missingRequiredSecrets
+  };
+}
+
+/**
+ * Kiểm tra toàn bộ 10 Script Property trong P0_SCRIPT_PROPERTY_SCHEMA_: SET hay MISSING, và với
+ * 4 property có giá trị mặc định (ADMIN_PASSWORD_ITERATIONS, ADMIN_SESSION_TTL_SECONDS,
+ * PLANNER_SYNC_REQUEST_TTL_SECONDS, WEBAPP_LOG_VERBOSE_DEBUG) — có đúng định dạng không. KHÔNG
+ * BAO GIỜ trả về hay log giá trị thật của property (kể cả property không nhạy cảm) — chỉ tên +
+ * trạng thái. Chỉ chạy thủ công trong Apps Script Editor — không gọi được qua doPost.
+ */
+function auditP0ScriptProperties() {
+  const props = PropertiesService.getScriptProperties();
+  const configured = [];
+  const missing = [];
+  const invalid = [];
+
+  Object.keys(P0_SCRIPT_PROPERTY_SCHEMA_).forEach(function(key) {
+    const schema = P0_SCRIPT_PROPERTY_SCHEMA_[key];
+    const current = props.getProperty(key);
+    const isSet = current !== null && current !== undefined && current !== '';
+
+    if (!isSet) {
+      missing.push(key);
+      return;
+    }
+
+    configured.push(key);
+
+    if (typeof schema.validate === 'function') {
+      const reason = schema.validate(current);
+      if (reason) {
+        invalid.push({ key: key, reason: reason });
+      }
+    }
+  });
+
+  const total = Object.keys(P0_SCRIPT_PROPERTY_SCHEMA_).length;
+  const ok = missing.length === 0 && invalid.length === 0;
+  const summary = ok
+    ? ('OK: đủ ' + total + '/' + total + ' Script Properties, cấu hình hợp lệ.')
+    : ('THIẾU/SAI CẤU HÌNH: ' + missing.length + ' thiếu, ' + invalid.length + ' sai định dạng (xem missing/invalid — chỉ tên property, không có giá trị).');
+
+  return {
+    ok: ok,
+    configured: configured,
+    missing: missing,
+    invalid: invalid,
+    summary: summary
+  };
+}
+
+/**
+ * Bắt buộc toàn bộ Script Property P0 đã cấu hình đúng — throw SecurityConfigError_ với code
+ * P0_SCRIPT_PROPERTIES_INVALID nếu thiếu/sai, message chỉ liệt kê TÊN property, không chứa giá
+ * trị. Dùng làm guard đầu vào cho các thao tác thủ công cần chắc chắn cấu hình đã đầy đủ trước
+ * khi chạy (không tự động chạy trong doPost).
+ */
+function requireP0ScriptProperties_() {
+  const audit = auditP0ScriptProperties();
+  if (!audit.ok) {
+    const problemKeys = audit.missing.concat(audit.invalid.map(function(item) { return item.key; }));
+    throw new SecurityConfigError_(
+      'P0_SCRIPT_PROPERTIES_INVALID',
+      'Script Properties thiếu hoặc sai cấu hình: ' + problemKeys.join(', ') + '. Xem SECURITY.md / P0_MANUAL_ACTIONS.md.'
+    );
+  }
+  return audit;
+}
+function runAuditP0ScriptProperties() {
+  const result = auditP0ScriptProperties();
+
+  console.log(JSON.stringify({
+    ok: result.ok,
+    configured: result.configured,
+    missing: result.missing,
+    invalid: result.invalid,
+    summary: result.summary
+  }, null, 2));
+
+  return result;
+}

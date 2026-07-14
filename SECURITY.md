@@ -89,6 +89,16 @@ Khi nghi ngờ hoặc xác nhận một credential đã bị lộ (token, mật 
 Dùng `python scripts/generate_p0_secrets.py` để sinh giá trị mới cho mục 5.1–5.4. Xem
 `P0_MANUAL_ACTIONS.md` để biết chính xác biến nào điền vào đâu.
 
+**Thiết lập/kiểm tra Script Properties:** `apps_script/Security.js` có `P0_SCRIPT_PROPERTY_SCHEMA_`
+liệt kê đủ 10 Script Property P0 (6 secret bắt buộc + 4 giá trị mặc định an toàn), cùng 2 hàm chỉ
+chạy thủ công trong Apps Script Editor (KHÔNG gọi được qua `doPost`):
+`installP0ScriptPropertyDefaults()` (tự tạo 4 giá trị mặc định — `ADMIN_PASSWORD_ITERATIONS`,
+`ADMIN_SESSION_TTL_SECONDS`, `PLANNER_SYNC_REQUEST_TTL_SECONDS`, `WEBAPP_LOG_VERBOSE_DEBUG` — chỉ
+khi property đó chưa tồn tại, không bao giờ ghi đè, không đụng `INTRO_*`/property khác, không
+tạo placeholder cho secret) và `auditP0ScriptProperties()` (báo cáo SET/MISSING và validate định
+dạng cho 4 property có giá trị mặc định — không bao giờ trả về hay log giá trị secret thật, chỉ
+tên property). Xem hướng dẫn thao tác từng bước ở `P0_MANUAL_ACTIONS.md` mục 4a.
+
 ### 5.1 Apps Script service token (`APPS_SCRIPT_SERVICE_TOKEN`) / token dự án (`APPS_SCRIPT_TOKEN`)
 
 Đây là 2 secret độc lập, không thay thế cho nhau — `APPS_SCRIPT_SERVICE_TOKEN` KHÔNG còn
@@ -159,11 +169,16 @@ Trước khi tạo deployment mới cho Apps Script hoặc deploy frontend:
 
 1. `python -m compileall .` và `python -m unittest discover -s tests -p "test_*.py"` phải PASS.
 2. `node --check apps_script/WebApp.js` và `node --check apps_script/Security.js` phải không lỗi
-   cú pháp; `node tests/test_webapp_security_boundaries.js` phải PASS (không cần cài Node trên
-   máy production, chỉ cần lúc review/CI).
-3. Xác nhận đã tạo đủ Script Properties bắt buộc (`APPS_SCRIPT_TOKEN`, `APPS_SCRIPT_SERVICE_TOKEN`,
-   `ADMIN_PASSWORD_SALT`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`,
-   `PLANNER_SYNC_SHARED_SECRET`...) — thiếu sẽ khiến các action liên quan trả lỗi
+   cú pháp; `node tests/test_webapp_security_boundaries.js` và
+   `node tests/test_p0_script_property_management.js` phải PASS (không cần cài Node trên máy
+   production, chỉ cần lúc review/CI).
+3. Trong Apps Script Editor, chạy thủ công `installP0ScriptPropertyDefaults` rồi
+   `auditP0ScriptProperties` (xem `P0_MANUAL_ACTIONS.md` mục 4a) — chỉ tiếp tục deploy khi kết quả
+   `auditP0ScriptProperties` trả `ok: true` (đủ cả 10 Script Property: `APPS_SCRIPT_TOKEN`,
+   `APPS_SCRIPT_SERVICE_TOKEN`, `ADMIN_PASSWORD_SALT`, `ADMIN_PASSWORD_HASH`,
+   `ADMIN_PASSWORD_ITERATIONS`, `ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_SECONDS`,
+   `PLANNER_SYNC_SHARED_SECRET`, `PLANNER_SYNC_REQUEST_TTL_SECONDS`, `WEBAPP_LOG_VERBOSE_DEBUG`,
+   đúng định dạng). Thiếu property sẽ khiến các action liên quan trả lỗi
    `MISSING_SCRIPT_PROPERTY`/`SERVICE_TOKEN_INVALID`/`SERVER_NOT_CONFIGURED` thay vì mở khoá
    bằng giá trị mặc định hay fallback (đây là hành vi fail-closed CÓ CHỦ ĐÍCH).
 4. Đăng nhập thử với tài khoản admin thật, xác nhận các action ghi dữ liệu (chuyển văn bản, sửa,
