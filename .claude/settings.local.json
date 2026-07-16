@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(playwright install *)",
-      "Bash(python -c \"from playwright.sync_api import sync_playwright; print\\('playwright ok'\\)\")"
+      "Bash(python -c \"from playwright.sync_api import sync_playwright; print\\('playwright ok'\\)\")",
+      "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
+      "mcp__Claude_Code_Remote__delete_trigger"
     ]
   }
 }
