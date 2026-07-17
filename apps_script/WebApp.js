@@ -16,6 +16,13 @@ const WEBAPP_CONFIG = {
   REQUIRED_FOR_TRANSFER: ['Lĩnh vực', 'Mức độ tác động', 'Loại văn bản', 'Tên văn bản', 'Số hiệu', 'Link Văn bản', 'Bộ phận chủ trì']
 };
 
+// "Văn bản đến" (nhập qua Google Form riêng) nằm ở một Spreadsheet khác, không phải
+// Spreadsheet chính đang bind Apps Script này — phải mở bằng SpreadsheetApp.openById().
+const INCOMING_FORM_CONFIG = {
+  SPREADSHEET_ID: '1Xw_T7-nslRjGUoUVHaVr9jtvhxOYhJc-9T7isGtNwWk',
+  SHEET_NAME: 'Form'
+};
+
 const MANUAL_PROTECTED_COLUMNS = [
   'ID VĂN BẢN', 'Lĩnh vực', 'Chủ đề', 'Mục',
   'Mức độ tác động', 'Bộ phận chủ trì', 'Trạng thái duyệt'
@@ -109,6 +116,7 @@ const ACTION_SECURITY_GROUP_ = {
   get_expired_records: 'A',
   get_transferred_records: 'A',
   get_all_records: 'A',
+  get_incoming_documents: 'A',
 
   // B. Service actions (máy-máy)
   import_vbqppl_nhap: 'B',
@@ -234,6 +242,12 @@ function doPost(e) {
       case 'get_all_records': {
         const allData = apiGetAllRecords_();
         return jsonResponse_({ ok: true, data: allData });
+      }
+
+      // Luồng 8: Lấy danh sách "Văn bản đến" (nhập qua Google Form riêng, khác Spreadsheet chính)
+      case 'get_incoming_documents': {
+        const incomingData = apiGetIncomingDocuments_();
+        return jsonResponse_({ ok: true, data: incomingData, total: incomingData.length });
       }
 
       // Luồng kiểm tra bảo mật đăng nhập — P0: PBKDF2 qua Security.js + signed session, không còn
@@ -979,6 +993,63 @@ function apiGetIrrelevantRecords_() {
 
   return irrelevantData;
 }
+// Suy ra mã đơn vị pháp nhân (dùng cho bộ lọc trên Dashboard) từ 1 đoạn text tự do trên Form.
+// Khớp theo từ khóa vì người điền Form gõ tên đơn vị không thống nhất 1 kiểu chữ.
+function classifyDonViPhapNhan_(text) {
+  const lower = String(text || '').toLowerCase();
+  if (lower.indexOf('hanoi adelaide') !== -1) return 'PRIMARY_THCS_HANOI_ADELAIDE';
+  if (lower.indexOf('công ty') !== -1) return 'COMPANY_HAS';
+  if (lower.indexOf('trung học phổ thông') !== -1 || /\bthpt\b/.test(lower)) return 'THPT_HAS';
+  if (lower.indexOf('trung học cơ sở') !== -1 || /\bthcs\b/.test(lower)) return 'THCS_HAS';
+  if (lower.indexOf('tiểu học') !== -1) return 'PRIMARY_HAS';
+  return null;
+}
+
+function mapDonViPhapNhanToCodes_(rawText) {
+  const text = String(rawText || '').trim();
+  if (!text) return [];
+  const segments = text.split(/[;,]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+  const codes = [];
+  segments.forEach(function(seg) {
+    const code = classifyDonViPhapNhan_(seg);
+    if (code && codes.indexOf(code) === -1) codes.push(code);
+  });
+  return codes;
+}
+
+// Hàm lấy danh sách "Văn bản đến" — dữ liệu nằm ở Spreadsheet Google Form riêng
+// (INCOMING_FORM_CONFIG.SPREADSHEET_ID), không phải Spreadsheet chính đang bind script này.
+function apiGetIncomingDocuments_() {
+  const formSs = SpreadsheetApp.openById(INCOMING_FORM_CONFIG.SPREADSHEET_ID);
+  const sheet = formSs.getSheetByName(INCOMING_FORM_CONFIG.SHEET_NAME);
+  if (!sheet) throw new Error('Không tìm thấy sheet: ' + INCOMING_FORM_CONFIG.SHEET_NAME);
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const headers = getHeaderInfo_(sheet).headers;
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  const tz = Session.getScriptTimeZone();
+  const idxDonVi = headers.indexOf('Đơn vị pháp nhân liên quan');
+
+  const result = [];
+  for (let i = 0; i < values.length; i++) {
+    const rowObj = { _rowNumber: i + 2 };
+    headers.forEach(function(h, colIdx) {
+      let val = values[i][colIdx];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, tz, h === 'Timestamp' ? 'dd/MM/yyyy HH:mm:ss' : 'dd/MM/yyyy');
+      }
+      rowObj[h] = val;
+    });
+    if (idxDonVi >= 0) {
+      rowObj._donViPhapNhanValues = mapDonViPhapNhanToCodes_(values[i][idxDonVi]);
+    }
+    result.push(rowObj);
+  }
+  return result;
+}
+
 function onEdit(e) {
   if (!e || !e.range) return;
 
