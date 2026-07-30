@@ -76,6 +76,19 @@ OFFICIAL_RELATIONSHIP_COLUMNS = ["Căn cứ pháp lý", "Hướng dẫn thực h
 HEADING_TO_COLUMN = {"Văn bản căn cứ": "Căn cứ pháp lý", "Văn bản hướng dẫn": "Hướng dẫn thực hiện", "Văn bản sửa đổi, bổ sung": "Sửa đổi, bổ sung cho", "Văn bản bị sửa đổi, bổ sung": "Sửa đổi, bổ sung bởi"}
 
 DATE_PATTERN = re.compile(r"\b\d{1,2}/\d{1,2}/\d{4}\b")
+# LuatVietnam thường ghi ngày hiệu lực bằng chữ trong Điều khoản thi hành
+# (vd: "có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026"), trong khi ô tóm tắt
+# đầu trang (DATE_PATTERN) có thể bị ẩn thành "Đã biết" nếu phiên đăng nhập hết hạn.
+WORD_DATE_PATTERN = re.compile(r"ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})", re.IGNORECASE)
+# Chi khop cau tu tham chieu ("Luat/Nghi dinh/Thong tu ... nay co hieu luc thi hanh"),
+# KHONG khop moi cau co chua "hieu luc thi hanh" noi chung — vi nhieu doan trong
+# than van ban nhac lai cum tu nay khi tham chieu ngay hieu luc cua MOT van ban KHAC
+# (vd trich dan Nghi dinh cu bi thay the), de bi nham neu chi do tim cum tu.
+HIEU_LUC_THI_HANH_HEADING_PATTERN = re.compile(
+    r"(luật|bộ luật|nghị định|nghị quyết|thông tư|pháp lệnh|quyết định)\s+này\s+có\s+hiệu\s+lực"
+    r"(\s+thi\s+hành)?\s+(kể\s+)?từ\s+ngày",
+    re.IGNORECASE,
+)
 SO_HIEU_PATTERN = re.compile(r"\b\d{1,4}/\d{4}/[A-ZÀ-ỸĐ][A-ZÀ-ỸĐ0-9.\-]*\b", re.IGNORECASE)
 SKIP_RELATION_PHRASES = [
     "là văn bản ban hành trước",
@@ -315,6 +328,38 @@ def get_body_lines(page) -> list[str]:
 
 
 
+def extract_date_from_text(text: str) -> str:
+    """Tim ngay dang so (dd/mm/yyyy) truoc, sau do fallback ngay dang chu
+    ("ngay dd thang mm nam yyyy") thuong gap trong Dieu khoan thi hanh."""
+    m = DATE_PATTERN.search(text)
+    if m:
+        return m.group(0)
+    wm = WORD_DATE_PATTERN.search(text)
+    if wm:
+        day, month, year = wm.groups()
+        return f"{int(day):02d}/{int(month):02d}/{year}"
+    return ""
+
+
+def extract_ngay_hieu_luc_from_heading(lines: list[str]) -> str:
+    """
+    Uu tien lay ngay hieu luc tu chinh Dieu khoan "Hieu luc thi hanh" cua
+    van ban (vd: "Dieu 99. Hieu luc thi hanh" -> "... co hieu luc thi hanh
+    tu ngay 01 thang 7 nam 2026.") thay vi doan tom tat dau trang, vi doan
+    tom tat co the bi an thanh "Da biet" khi phien dang nhap luatvietnam.vn
+    het han.
+    """
+    for idx, ln in enumerate(lines):
+        if HIEU_LUC_THI_HANH_HEADING_PATTERN.search(ln):
+            # Ngay hieu luc thuong nam ngay tren dong tu tham chieu nay
+            # (vd: "Nghi dinh nay co hieu luc thi hanh tu ngay 23 thang 7 nam 2026").
+            for follow in [ln] + lines[idx + 1:idx + 5]:
+                found = extract_date_from_text(follow)
+                if found:
+                    return found
+    return ""
+
+
 def extract_current_document_info(lines: list[str]) -> dict:
     text = "\n".join(lines)
 
@@ -357,16 +402,16 @@ def extract_current_document_info(lines: list[str]) -> dict:
         return ""
 
     ngay_ban_hanh = ""
-    ngay_hieu_luc = ""
+    ngay_hieu_luc = extract_ngay_hieu_luc_from_heading(lines)
     for ln in lines:
         if "ban hành" in ln.lower() and not ngay_ban_hanh:
             m = DATE_PATTERN.search(ln)
             if m:
                 ngay_ban_hanh = m.group(0)
         if ("hiệu lực" in ln.lower() or "áp dụng" in ln.lower()) and not ngay_hieu_luc:
-            m = DATE_PATTERN.search(ln)
-            if m:
-                ngay_hieu_luc = m.group(0)
+            found = extract_date_from_text(ln)
+            if found:
+                ngay_hieu_luc = found
 
     return {
         "so_hieu": find_after("Số hiệu") or so_hieu,
@@ -755,7 +800,12 @@ def get_positive_float(config: dict, key: str, default: float, minimum: float = 
 
 def is_retryable_apps_script_error(exc: Exception) -> bool:
     if isinstance(exc, HTTPError):
-        return exc.code in {408, 409, 425, 429, 500, 502, 503, 504}
+        # 401/403 duoc coi la retryable rieng cho webapp Apps Script nay: doPost()
+        # luon tra ve HTTP 200 + JSON {"ok": false, "error": ...} cho moi loi xac
+        # thuc o tang ung dung (xem Security.js/jsonResponse_), nen mot HTTP
+        # 401/403 thuc te chi co the den tu Google Front End (vd do tre lan truyen
+        # sau redeploy) — la loai loi tam thoi, dang de retry.
+        return exc.code in {401, 403, 408, 409, 425, 429, 500, 502, 503, 504}
 
     if isinstance(exc, URLError):
         reason = getattr(exc, "reason", exc)
@@ -896,11 +946,17 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
 def process_document(page, doc: dict, config: dict) -> dict:
     url = normalize_text(doc.get("url", ""))
     safe_goto(page, url)
-    click_luoc_do_tab(page)
-    expand_luoc_do_sections(page)
 
+    # Doc thong tin van ban (so hieu, ngay hieu luc, ngay ban hanh...) TRUOC khi
+    # bam tab "Luoc do" — bam tab se thay noi dung than trang bang danh sach quan
+    # he van ban va lam mat toan bo noi dung Dieu khoan thi hanh (vd "Dieu 99.
+    # Hieu luc thi hanh"), khien current_doc luon thieu Ngay hieu luc du trang
+    # nguon co day du thong tin.
     lines = get_body_lines(page)
     current_doc = extract_current_document_info(lines)
+
+    click_luoc_do_tab(page)
+    expand_luoc_do_sections(page)
 
     # Ưu tiên parser theo block DOM của tab "Lược đồ" để bám sát cấu trúc HTML thật.
     relationships_from_blocks = extract_luoc_do_relationships_from_dom_blocks(page)
