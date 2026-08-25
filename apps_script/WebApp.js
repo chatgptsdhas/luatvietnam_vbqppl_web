@@ -9,6 +9,9 @@ const WEBAPP_CONFIG = {
   SHEET_VBQPPL: 'VBQPPL',
   SHEET_NHAP: 'VBQPPL_Nhap',
   SHEET_LOG: 'WEBAPP_DEBUG_LOG',
+  // "Văn bản đến": spreadsheet phản hồi Google Form riêng, khác với spreadsheet chứa VBQPPL/VBQPPL_Nhap.
+  INCOMING_FORM_SPREADSHEET_ID: '1Xw_T7-nslRjGUoUVHaVr9jtvhxOYhJc-9T7isGtNwWk',
+  INCOMING_FORM_SHEET_NAME: 'Form',
   COL_ID: 'ID VĂN BẢN',
   COL_SO_HIEU: 'Số hiệu',
   TOKEN_PROPERTY_NAME: 'APPS_SCRIPT_TOKEN',
@@ -109,6 +112,7 @@ const ACTION_SECURITY_GROUP_ = {
   get_expired_records: 'A',
   get_transferred_records: 'A',
   get_all_records: 'A',
+  get_incoming_documents: 'A',
 
   // B. Service actions (máy-máy)
   import_vbqppl_nhap: 'B',
@@ -234,6 +238,12 @@ function doPost(e) {
       case 'get_all_records': {
         const allData = apiGetAllRecords_();
         return jsonResponse_({ ok: true, data: allData });
+      }
+
+      // Luồng 7b: Lấy danh sách "Văn bản đến" từ sheet phản hồi Google Form (spreadsheet riêng)
+      case 'get_incoming_documents': {
+        const incomingData = apiGetIncomingDocuments_();
+        return jsonResponse_({ ok: true, data: incomingData });
       }
 
       // Luồng kiểm tra bảo mật đăng nhập — P0: PBKDF2 qua Security.js + signed session, không còn
@@ -587,23 +597,36 @@ function updateStatusInRow_(sheet, headers, row, duyet, xuly, transferTime) {
  * ========================================================================================= */
 
 function processPayload_(payload, luocDoData, options) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetVbqppl = ss.getSheetByName(WEBAPP_CONFIG.SHEET_VBQPPL);
-  const sheetNhap = ss.getSheetByName(WEBAPP_CONFIG.SHEET_NHAP);
-  if (!sheetVbqppl) throw new Error('Không tìm thấy sheet: ' + WEBAPP_CONFIG.SHEET_VBQPPL);
-  if (!sheetNhap) throw new Error('Không tìm thấy sheet: ' + WEBAPP_CONFIG.SHEET_NHAP);
-
-  const vbqpplIndexInfo = buildVbqpplIndex_(sheetVbqppl);
-  const matchResult = matchRelationships_(luocDoData, vbqpplIndexInfo.index);
-  const finalPayload = applyMatchResultToPayload_(payload, matchResult, options || {});
-  syncReverseGuidanceLinks_(sheetNhap, finalPayload, options || {});
-
-  const skipCheck = shouldSkipPayloadBeforeWrite_(payload);
-  if (skipCheck.skip) {
-    return { write_result: { action: 'skipped', reason_code: skipCheck.code, reason_message: skipCheck.message, so_hieu: payload['Số hiệu'] || '' } };
+  // P0-fix: bọc toàn bộ đường đọc-ghi bằng ScriptLock, giống apiTransferRecord_() /
+  // apiUpdateRecord_() — tránh nhiều execution import_vbqppl_nhap chồng lên nhau
+  // và cùng tính ra "next row" giống nhau (đã xác nhận: cả batch 12 văn bản đều
+  // trả về row_number: 276, không văn bản nào thực sự tồn tại trong sheet).
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    throw new Error('Hệ thống Google đang bận, không lấy được lock để ghi VBQPPL_Nhap. Vui lòng thử lại.');
   }
-  const writeResult = upsertToNhapSheet_(sheetNhap, finalPayload);
-  return { write_result: writeResult, matched_payload: finalPayload, match_report: matchResult.report, vbqppl_index_count: vbqpplIndexInfo.count };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetVbqppl = ss.getSheetByName(WEBAPP_CONFIG.SHEET_VBQPPL);
+    const sheetNhap = ss.getSheetByName(WEBAPP_CONFIG.SHEET_NHAP);
+    if (!sheetVbqppl) throw new Error('Không tìm thấy sheet: ' + WEBAPP_CONFIG.SHEET_VBQPPL);
+    if (!sheetNhap) throw new Error('Không tìm thấy sheet: ' + WEBAPP_CONFIG.SHEET_NHAP);
+
+    const vbqpplIndexInfo = buildVbqpplIndex_(sheetVbqppl);
+    const matchResult = matchRelationships_(luocDoData, vbqpplIndexInfo.index);
+    const finalPayload = applyMatchResultToPayload_(payload, matchResult, options || {});
+    syncReverseGuidanceLinks_(sheetNhap, finalPayload, options || {});
+
+    const skipCheck = shouldSkipPayloadBeforeWrite_(payload);
+    if (skipCheck.skip) {
+      return { write_result: { action: 'skipped', reason_code: skipCheck.code, reason_message: skipCheck.message, so_hieu: payload['Số hiệu'] || '' } };
+    }
+    const writeResult = upsertToNhapSheet_(sheetNhap, finalPayload);
+    SpreadsheetApp.flush(); // bắt buộc commit trước khi trả response / nhả lock
+    return { write_result: writeResult, matched_payload: finalPayload, match_report: matchResult.report, vbqppl_index_count: vbqpplIndexInfo.count };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function parseRelationshipCellValues_(raw) {
@@ -914,6 +937,66 @@ function apiGetAllRecords_() {
   }
   return allData;
 }
+
+// Nhãn hiển thị (đúng như checkbox trên Google Form) -> mã nội bộ dùng chung với Dashboard
+// (INCOMING_ENTITY_LABELS trong Dashboard/index.html). Phải khớp chính xác text của form.
+const INCOMING_ENTITY_LABEL_TO_CODE_ = {
+  'Công ty Cổ phần Phát triển Giáo dục H.A.S': 'COMPANY_HAS',
+  'Trường Tiểu học H.A.S': 'PRIMARY_HAS',
+  'Trường THCS H.A.S': 'THCS_HAS',
+  'Trường THPT H.A.S': 'THPT_HAS',
+  'Trường Tiểu học và Trung học Cơ sở Hanoi Adelaide School': 'PRIMARY_THCS_HANOI_ADELAIDE'
+};
+
+// Hàm lấy danh sách "Văn bản đến" từ sheet phản hồi Google Form — nằm ở một spreadsheet
+// riêng (không phải spreadsheet chứa VBQPPL/VBQPPL_Nhap), cấu hình trong WEBAPP_CONFIG
+// (INCOMING_FORM_SPREADSHEET_ID / INCOMING_FORM_SHEET_NAME).
+function apiGetIncomingDocuments_() {
+  const spreadsheetId = WEBAPP_CONFIG.INCOMING_FORM_SPREADSHEET_ID;
+  const sheetName = WEBAPP_CONFIG.INCOMING_FORM_SHEET_NAME;
+
+  const formSs = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = formSs.getSheetByName(sheetName);
+  if (!sheet) throw new Error('Không tìm thấy sheet: ' + sheetName);
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const headers = getHeaderInfo_(sheet).headers;
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+
+  const results = [];
+  for (let i = 0; i < values.length; i++) {
+    // Bỏ qua dòng trắng nằm ngoài vùng dữ liệu thật — sheet.getLastRow() có thể tính dư
+    // do định dạng/thao tác thủ công từng kéo dài "used range" quá dòng dữ liệu cuối cùng
+    // (đã xác nhận: 100/281 dòng "Văn bản đến" rỗng ở MỌI cột, dồn ở cuối sheet).
+    const isRowEmpty = values[i].every(v => v === '' || v === null || v === undefined);
+    if (isRowEmpty) continue;
+
+    const rowObj = { _rowNumber: i + 2 };
+    headers.forEach((h, colIdx) => {
+      let val = values[i][colIdx];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+      }
+      // Chuẩn hoá tên cột "Lưu ý:" (form) -> "Lưu ý" (khớp key Dashboard đang đọc).
+      const key = h.replace(/:\s*$/, '');
+      rowObj[key] = val;
+    });
+
+    const rawDonVi = String(rowObj['Đơn vị pháp nhân liên quan'] || '');
+    rowObj._donViPhapNhanValues = rawDonVi
+      .split(/[\n,;]+/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(label => INCOMING_ENTITY_LABEL_TO_CODE_[label] || null)
+      .filter(Boolean);
+
+    results.push(rowObj);
+  }
+  return results;
+}
+
 // Hàm lấy danh sách văn bản "Đã chuyển" từ sheet VBQPPL_Nhap
 function apiGetTransferredRecords_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
