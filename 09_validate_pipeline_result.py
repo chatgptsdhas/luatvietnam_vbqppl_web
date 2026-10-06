@@ -39,7 +39,7 @@ SKIP_DOC_TYPES_DEFAULT = {
 BLOCKED_URL_KEYWORDS_DEFAULT = [
     "dat-dai",
     "hinh-su",
-    "ke-hoach",
+    "/ke-hoach/",
     "quyet-dinh",
     "cong-van",
     "chi-thi",

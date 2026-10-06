@@ -3018,6 +3018,43 @@
     const TOKEN = "Rex-m_Hnok22bDBpKp4CukKiZ--HL7s6ry4yvEHDR68C0xGMasHZQ1_skrmLvKrd";
     const PLANNER_SYNC_SERVER_URL = localStorage.getItem('plannerSyncServerUrl') || "http://127.0.0.1:8765/sync-webapp-to-planner";
     const PLANNER_SYNC_SERVER_BASE_URL = PLANNER_SYNC_SERVER_URL.replace(/\/sync-webapp-to-planner\/?$/, '');
+    const WEBAPP_REQUEST_MAX_ATTEMPTS = 3;
+    const WEBAPP_REQUEST_RETRY_DELAY_MS = 500;
+
+    function waitForWebAppRetry(delayMs) {
+        return new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+
+    function shouldRetryWebAppResponse(response) {
+        return response.status === 408 || response.status === 429 || response.status >= 500;
+    }
+
+    // Apps Script trả ContentService qua redirect script.googleusercontent.com. Khi Google trả
+    // lỗi tạm thời ở một chặng redirect, trình duyệt thường chỉ hiện CORS/"Failed to fetch".
+    // Chỉ retry lỗi mạng và HTTP tạm thời; không retry các lỗi xác thực/nghiệp vụ 4xx khác.
+    async function fetchWebApp(url, options) {
+        let lastError = null;
+        let lastResponse = null;
+
+        for (let attempt = 1; attempt <= WEBAPP_REQUEST_MAX_ATTEMPTS; attempt++) {
+            try {
+                const response = await fetch(url, options);
+                if (response.ok || !shouldRetryWebAppResponse(response)) {
+                    return response;
+                }
+                lastResponse = response;
+            } catch (error) {
+                lastError = error;
+            }
+
+            if (attempt < WEBAPP_REQUEST_MAX_ATTEMPTS) {
+                await waitForWebAppRetry(WEBAPP_REQUEST_RETRY_DELAY_MS * attempt);
+            }
+        }
+
+        if (lastResponse) return lastResponse;
+        throw lastError || new Error('Không kết nối được Apps Script.');
+    }
     const PLANNER_SYNC_DOWN_MESSAGE = 'Planner Sync Server chưa chạy. Văn bản đã chuyển vào VBQPPL nhưng chưa tạo task Planner.';
 
     // ===== P0 security hardening: admin session (sessionStorage, KHÔNG dùng localStorage) =====
@@ -3394,7 +3431,7 @@
         const bodyData = { token: TOKEN, action: actionName };
         if (payload && Object.keys(payload).length > 0) bodyData.payload = payload;
 
-        const response = await fetch(WEBAPP_URL, {
+        const response = await fetchWebApp(WEBAPP_URL, {
             method: "POST",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(bodyData)
@@ -6209,7 +6246,7 @@
         if (currentTab === 'incoming') actionName = "get_incoming_documents";
 
         try {
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ token: TOKEN, action: actionName })
@@ -6596,7 +6633,7 @@
             const isTransfer = typeof isTransferMode !== 'undefined' ? isTransferMode : false;
 
             // 3. Gọi API lên Google
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(withAdminSession({ token: TOKEN, action: "update_record", payload: { row_number: rowNum, updates: updates } }))
@@ -6649,7 +6686,7 @@
     // frontend KHÔNG BAO GIỜ biết secret dùng để ký Planner Sync, chỉ chuyển tiếp envelope đã ký.
     // Yêu cầu admin session hợp lệ (backend requireAdminSession_ tự kiểm tra).
     async function fetchPlannerSyncEnvelope_(path, envelopePayload) {
-        const response = await fetch(WEBAPP_URL, {
+        const response = await fetchWebApp(WEBAPP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(withAdminSession({
@@ -6728,7 +6765,7 @@
         if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(withAdminSession({
@@ -6771,7 +6808,7 @@
         if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(withAdminSession({
@@ -6807,7 +6844,7 @@
 
     async function executeResetMismatchedRow(rowNumber, soHieu) {
         try {
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(withAdminSession({
@@ -6852,7 +6889,7 @@
         if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(withAdminSession({
@@ -6886,7 +6923,7 @@
         try {
             const restoreUpdates = { "Trạng thái duyệt": "Chờ kiểm tra" };
             if (currentTab === 'transferred') restoreUpdates["Trạng thái xử lý"] = "Chờ kiểm tra tự động";
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(withAdminSession({
@@ -7047,7 +7084,7 @@
                 await logPlannerTaskDeleteResult(plannerDeleteResult);
             }
 
-            const response = await fetch(WEBAPP_URL, {
+            const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
@@ -7172,7 +7209,7 @@
             const rowData = currentRecords.find(r => r._rowNumber === rowNum);
             const soHieu = rowData ? (rowData['Số hiệu'] || `Dòng ${rowNum}`) : `Dòng ${rowNum}`;
             try {
-                const response = await fetch(WEBAPP_URL, {
+                const response = await fetchWebApp(WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(withAdminSession({ token: TOKEN, action: 'transfer_record', payload: { row_number: rowNum } }))
@@ -7223,7 +7260,7 @@
             const rowData = currentRecords.find(r => r._rowNumber === rowNum);
             const soHieu = rowData ? (rowData['Số hiệu'] || `Dòng ${rowNum}`) : `Dòng ${rowNum}`;
             try {
-                const response = await fetch(WEBAPP_URL, {
+                const response = await fetchWebApp(WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(withAdminSession({ token: TOKEN, action: 'update_record', payload: { row_number: rowNum, updates: { 'Trạng thái duyệt': 'Không liên quan' } } }))
@@ -7273,7 +7310,7 @@
             const vbqpplRowNumber = rowData?._vbqpplRowNumber || '';
             const soHieuLabel = soHieu || idVanBan || `Dòng ${rowNum}`;
             try {
-                const response = await fetch(WEBAPP_URL, {
+                const response = await fetchWebApp(WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
@@ -8058,7 +8095,7 @@ async function submitLogin() {
     if (authText) authText.innerText = "Đang xác thực...";
 
     try {
-        const response = await fetch(WEBAPP_URL, {
+        const response = await fetchWebApp(WEBAPP_URL, {
             method: "POST",
             headers: {
                 "Content-Type": "text/plain;charset=utf-8"
@@ -8095,7 +8132,10 @@ async function submitLogin() {
 
     } catch (e) {
         console.error("Lỗi xác thực:", e);
-        alert("Có lỗi kết nối khi xác thực. Hãy xem Console để kiểm tra chi tiết.");
+        alert(
+            `Không thể kết nối Apps Script để xác thực. Hệ thống đã thử lại ${WEBAPP_REQUEST_MAX_ATTEMPTS} lần. ` +
+            'Vui lòng tải lại trang rồi đăng nhập lại; nếu lỗi tiếp diễn, liên hệ quản trị viên.'
+        );
     } finally {
         checkAuthStatus();
     }
@@ -8522,7 +8562,7 @@ async function loadIntroContent() {
     viewContent.innerHTML = '<div class="intro-empty"><i class="fa-solid fa-spinner fa-spin"></i>Đang tải nội dung...</div>';
 
     try {
-        const response = await fetch(WEBAPP_URL, {
+        const response = await fetchWebApp(WEBAPP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ token: TOKEN, action: 'get_intro_content' })
@@ -8693,7 +8733,7 @@ async function saveIntroContent() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...'; }
 
     try {
-        const response = await fetch(WEBAPP_URL, {
+        const response = await fetchWebApp(WEBAPP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
@@ -8984,7 +9024,7 @@ let _analyticsAccessChart = null;
 let _analyticsLinhVucChart = null;
 
 function _analyticsPost(action, payload) {
-    return fetch(WEBAPP_URL, {
+    return fetchWebApp(WEBAPP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ token: TOKEN, action: action, payload: payload || {} })
