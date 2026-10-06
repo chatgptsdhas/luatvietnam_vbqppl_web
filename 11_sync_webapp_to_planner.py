@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import date, datetime
 from typing import Any
 
@@ -11,6 +12,8 @@ from ms_planner import create_planner_task_from_record, delete_planner_task, par
 
 
 WEBAPP_TIMEOUT_SECONDS = 60
+WEBAPP_REQUEST_MAX_ATTEMPTS = 3
+WEBAPP_REQUEST_RETRY_DELAY_SECONDS = 0.5
 DEFAULT_RECORD_ACTION = "get_all_records"
 VBQPPL_UPDATE_ACTION = "update_vbqppl_record"
 CREATED_SYNC_STATUS = "Đã tạo task Planner"
@@ -61,29 +64,39 @@ def webapp_post(action: str, payload: dict) -> dict:
         "payload": payload or {},
     }
 
-    response = requests.post(url, json=body, timeout=WEBAPP_TIMEOUT_SECONDS)
-    if not response.ok:
+    last_error: Exception | None = None
+    response = None
+
+    for attempt in range(1, WEBAPP_REQUEST_MAX_ATTEMPTS + 1):
+        try:
+            response = requests.post(url, json=body, timeout=WEBAPP_TIMEOUT_SECONDS)
+            if response.ok:
+                try:
+                    data = response.json()
+                except ValueError:
+                    # ContentService dùng URL script.googleusercontent.com tạm thời. URL
+                    # này đôi khi trả HTML/404 ngay sau redirect; POST lại tạo URL mới.
+                    last_error = RuntimeError("WebApp API không trả JSON hợp lệ.")
+                else:
+                    if data.get("ok") is False:
+                        message = data.get("message") or data.get("error") or "WebApp API trả ok=false."
+                        raise RuntimeError(str(message))
+                    return data
+            else:
+                last_error = requests.HTTPError(f"WebApp API HTTP {response.status_code}")
+        except requests.RequestException as exc:
+            last_error = exc
+
+        retryable_status = response is None or response.status_code in (404, 408, 429) or response.status_code >= 500
+        if attempt < WEBAPP_REQUEST_MAX_ATTEMPTS and retryable_status:
+            time.sleep(WEBAPP_REQUEST_RETRY_DELAY_SECONDS * attempt)
+            continue
+        break
+
+    if response is not None:
         print(f"WebApp API error URL: {url}")
         print(f"status_code: {response.status_code}")
-        print(response.text)
-        response.raise_for_status()
-
-    try:
-        data = response.json()
-    except ValueError as exc:
-        print(f"WebApp API returned non-JSON. URL: {url}")
-        print(f"status_code: {response.status_code}")
-        print(response.text)
-        raise RuntimeError("WebApp API không trả JSON hợp lệ.") from exc
-
-    if data.get("ok") is False:
-        print(f"WebApp API logical error URL: {url}")
-        print(f"status_code: {response.status_code}")
-        print(response.text)
-        message = data.get("message") or data.get("error") or "WebApp API trả ok=false."
-        raise RuntimeError(str(message))
-
-    return data
+    raise last_error or RuntimeError("WebApp API không phản hồi.")
 
 
 def extract_records(response: Any) -> list[dict]:
