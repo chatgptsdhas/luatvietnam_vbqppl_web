@@ -3026,7 +3026,15 @@
     }
 
     function shouldRetryWebAppResponse(response) {
-        return response.status === 408 || response.status === 429 || response.status >= 500;
+        // ContentService của Apps Script trả qua URL tạm thời trên
+        // script.googleusercontent.com. URL đó đôi khi trả 404 ngắn hạn ngay sau
+        // redirect dù Web App vẫn hoạt động; lần POST kế tiếp tạo một URL mới.
+        return response.status === 404 || response.status === 408 || response.status === 429 || response.status >= 500;
+    }
+
+    function isWebAppJsonResponse(response) {
+        const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+        return response.ok && contentType.includes('application/json');
     }
 
     // Apps Script trả ContentService qua redirect script.googleusercontent.com. Khi Google trả
@@ -3039,10 +3047,16 @@
         for (let attempt = 1; attempt <= WEBAPP_REQUEST_MAX_ATTEMPTS; attempt++) {
             try {
                 const response = await fetch(url, options);
-                if (response.ok || !shouldRetryWebAppResponse(response)) {
+                if (isWebAppJsonResponse(response)) {
                     return response;
                 }
                 lastResponse = response;
+
+                // Một response 2xx nhưng không phải JSON là trang Google trung gian,
+                // không phải response API hợp lệ; thử lại để lấy URL ContentService mới.
+                if (!response.ok && !shouldRetryWebAppResponse(response)) {
+                    return response;
+                }
             } catch (error) {
                 lastError = error;
             }
@@ -3052,7 +3066,7 @@
             }
         }
 
-        if (lastResponse) return lastResponse;
+        if (lastResponse && isWebAppJsonResponse(lastResponse)) return lastResponse;
         throw lastError || new Error('Không kết nối được Apps Script.');
     }
     const PLANNER_SYNC_DOWN_MESSAGE = 'Planner Sync Server chưa chạy. Văn bản đã chuyển vào VBQPPL nhưng chưa tạo task Planner.';
