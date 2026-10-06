@@ -121,7 +121,10 @@ const ACTION_SECURITY_GROUP_ = {
   // C. Admin/write actions (từ Dashboard, cần đăng nhập quản trị viên)
   transfer_record: 'C',
   update_record: 'C',
-  request_planner_sync_envelope: 'C'
+  request_planner_sync_envelope: 'C',
+  // Vercel backend gọi action này để xác thực admin_session trước các thao tác
+  // Planner nhạy cảm như xóa task. Không trả token/secret về client.
+  validate_admin_session: 'C'
 
   // verify_admin không nằm trong bảng này — đây là action ĐĂNG NHẬP, tự xử lý riêng.
 };
@@ -263,6 +266,12 @@ function doPost(e) {
 
         // Không trả lý do chi tiết khi sai — tránh lộ thông tin cho kẻ tấn công dò mật khẩu.
         return jsonResponse_({ ok: false, error: 'ADMIN_LOGIN_FAILED', message: 'Sai mật khẩu hoặc tài khoản không hợp lệ.' });
+      }
+
+      // Xác nhận session quản trị cho backend công khai. Việc xác thực đã thực
+      // hiện ở requireAdminSession_ trước khi vào switch; chỉ trả xác nhận tối thiểu.
+      case 'validate_admin_session': {
+        return jsonResponse_({ ok: true, message: 'Admin session hợp lệ.' });
       }
 
       // P0 mục XIV: Dashboard xin envelope đã ký để tự gọi Planner Sync Server cục bộ —
@@ -439,6 +448,7 @@ function apiTransferRecord_(payload) {
     const headersVbqppl = getHeaderInfo_(sheetVbqppl).headers;
     const newRowData = headersVbqppl.map(h => rowObj[h] !== undefined ? rowObj[h] : '');
     sheetVbqppl.appendRow(newRowData);
+    const vbqpplRowNumber = sheetVbqppl.getLastRow();
 
     // Bước 4. Cập nhật
     updateStatusInRow_(sheetNhap, headersNhap, rowNum, 'Đã kiểm tra', 'Đã chuyển', transferTime);
@@ -455,7 +465,12 @@ function apiTransferRecord_(payload) {
     }
 
     SpreadsheetApp.flush();
-    return { ok: true, message: 'Chuyển dữ liệu thành công!', soHieu: soHieu };
+    return {
+      ok: true,
+      message: 'Chuyển dữ liệu thành công!',
+      soHieu: soHieu,
+      vbqppl_row_number: vbqpplRowNumber
+    };
 
   } catch (err) {
     return { ok: false, message: 'Lỗi server: ' + err.message };

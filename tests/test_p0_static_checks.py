@@ -195,9 +195,15 @@ class TestDashboardFrontendStaticChecks(unittest.TestCase):
         write_action_count = self.src.count("withAdminSession(")
         self.assertGreaterEqual(write_action_count, 8, "Phải có ít nhất 8 chỗ đính kèm admin_session cho action ghi dữ liệu")
 
-    def test_planner_sync_uses_signed_envelope_not_raw_payload(self):
-        self.assertIn("fetchPlannerSyncEnvelope_(", self.src)
-        self.assertIn("X-P0-Signature", self.src)
+    def test_planner_sync_uses_public_backend_not_localhost_envelope(self):
+        # Luồng mới: Browser -> Vercel Function -> Apps Script + Planner. Chữ ký
+        # HMAC cục bộ chỉ còn ở legacy Planner Sync Server, không được đưa vào UI.
+        self.assertIn('const PLANNER_TRANSFER_API_URL = "/api/transfer-and-create-planner"', self.src)
+        self.assertIn("transferAndCreatePlannerTask(", self.src)
+        self.assertIn('const PLANNER_DELETE_API_URL = "/api/delete-planner-task"', self.src)
+        self.assertNotIn("fetchPlannerSyncEnvelope_(", self.src)
+        self.assertNotIn("X-P0-Signature", self.src)
+        self.assertNotIn("127.0.0.1:8765", self.src)
 
     def test_no_stack_trace_rendered_in_ui(self):
         self.assertNotIn("result.stack", self.src)

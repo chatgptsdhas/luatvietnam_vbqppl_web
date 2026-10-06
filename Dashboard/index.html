@@ -3014,10 +3014,12 @@
 
 <script>
     // --- CẤU HÌNH KẾT NỐI ---
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzt6zTz-RLTJ9e6Bo4MEivON-7m4SjdiNScvG4Cwp8OHlPl4CrqI3dCjUu1CbnWk9XSUA/exec";
-    const TOKEN = "Rex-m_Hnok22bDBpKp4CukKiZ--HL7s6ry4yvEHDR68C0xGMasHZQ1_skrmLvKrd";
-    const PLANNER_SYNC_SERVER_URL = localStorage.getItem('plannerSyncServerUrl') || "http://127.0.0.1:8765/sync-webapp-to-planner";
-    const PLANNER_SYNC_SERVER_BASE_URL = PLANNER_SYNC_SERVER_URL.replace(/\/sync-webapp-to-planner\/?$/, '');
+    // Tất cả request đi qua Vercel Functions cùng origin. Apps Script token và
+    // thông tin Microsoft Graph chỉ tồn tại trong Environment Variables của Vercel.
+    const WEBAPP_URL = "/api/webapp";
+    const TOKEN = "";
+    const PLANNER_TRANSFER_API_URL = "/api/transfer-and-create-planner";
+    const PLANNER_DELETE_API_URL = "/api/delete-planner-task";
     const WEBAPP_REQUEST_MAX_ATTEMPTS = 3;
     const WEBAPP_REQUEST_RETRY_DELAY_MS = 500;
 
@@ -3037,16 +3039,23 @@
         return response.ok && contentType.includes('application/json');
     }
 
-    // Apps Script trả ContentService qua redirect script.googleusercontent.com. Khi Google trả
-    // lỗi tạm thời ở một chặng redirect, trình duyệt thường chỉ hiện CORS/"Failed to fetch".
-    // Chỉ retry lỗi mạng và HTTP tạm thời; không retry các lỗi xác thực/nghiệp vụ 4xx khác.
+    // Vercel gọi Apps Script ở server-side. Retry ở UI vẫn giữ lại cho lỗi mạng tạm thời,
+    // nhưng trình duyệt không còn theo redirect script.googleusercontent.com hay gặp CORS.
     async function fetchWebApp(url, options) {
         let lastError = null;
         let lastResponse = null;
+        // Apps Script từng yêu cầu text/plain để tránh preflight CORS. API Vercel
+        // cùng origin nhận JSON chuẩn; chuyển tập trung tại đây để các call site cũ
+        // không còn gửi Content-Type text/plain sang backend mới.
+        const requestOptions = (url === WEBAPP_URL)
+            ? Object.assign({}, options, {
+                headers: Object.assign({}, (options && options.headers) || {}, { 'Content-Type': 'application/json' })
+            })
+            : options;
 
         for (let attempt = 1; attempt <= WEBAPP_REQUEST_MAX_ATTEMPTS; attempt++) {
             try {
-                const response = await fetch(url, options);
+                const response = await fetch(url, requestOptions);
                 if (isWebAppJsonResponse(response)) {
                     return response;
                 }
@@ -3069,7 +3078,6 @@
         if (lastResponse && isWebAppJsonResponse(lastResponse)) return lastResponse;
         throw lastError || new Error('Không kết nối được Apps Script.');
     }
-    const PLANNER_SYNC_DOWN_MESSAGE = 'Planner Sync Server chưa chạy. Văn bản đã chuyển vào VBQPPL nhưng chưa tạo task Planner.';
 
     // ===== P0 security hardening: admin session (sessionStorage, KHÔNG dùng localStorage) =====
     // localStorage.isAdminAccess === 'true' KHÔNG còn là bằng chứng quyền admin — chỉ là cờ UI.
@@ -6696,82 +6704,40 @@
         return summary.raw_skip_reason || summary.skip_reason || result?.raw_skip_reason || result?.skip_reason || 'Không có record đủ điều kiện để tạo task.';
     }
 
-    // P0 mục XIV: Apps Script ký sẵn envelope (HMAC, TTL ngắn) cho Planner Sync Server cục bộ —
-    // frontend KHÔNG BAO GIỜ biết secret dùng để ký Planner Sync, chỉ chuyển tiếp envelope đã ký.
-    // Yêu cầu admin session hợp lệ (backend requireAdminSession_ tự kiểm tra).
-    async function fetchPlannerSyncEnvelope_(path, envelopePayload) {
-        const response = await fetchWebApp(WEBAPP_URL, {
+    // Một request cùng-origin thực hiện trọn vẹn: xác thực admin tại Apps Script,
+    // chuyển dòng sang VBQPPL, tạo task Microsoft Planner và ghi Task ID về Sheet.
+    // Không còn request nào tới localhost hoặc Google từ trình duyệt.
+    async function transferAndCreatePlannerTask(rowNumber) {
+        const response = await fetch(PLANNER_TRANSFER_API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(withAdminSession({
-                token: TOKEN,
-                action: 'request_planner_sync_envelope',
-                payload: { path: path, envelope_payload: envelopePayload }
-            }))
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                row_number: rowNumber,
+                admin_session: getAdminSessionToken()
+            })
         });
-        const result = await response.json();
+        const result = await response.json().catch(() => ({}));
         if (handleAdminSessionResponse(result)) {
             throw new Error('Phiên quản trị đã hết hạn, vui lòng đăng nhập lại.');
         }
-        if (!result.ok || !result.envelope) {
-            throw new Error(result.message || 'Không lấy được envelope ký cho Planner Sync Server.');
+        if (!response.ok) {
+            throw new Error(result.message || `HTTP ${response.status}`);
         }
-        return result.envelope;
+        return result;
     }
 
-    async function triggerPlannerSyncAfterTransfer(sourceRowNumber, soHieu, transferResult = {}) {
-        const payload = {
-            source: 'dashboard_transfer',
-            source_row_number: sourceRowNumber,
-            vbqppl_row_number: transferResult.vbqppl_row_number || transferResult.vbqpplRowNumber || '',
-            so_hieu: transferResult.soHieu || soHieu || '',
-            limit: 1
-        };
-
-        let response;
-        try {
-            const envelope = await fetchPlannerSyncEnvelope_('/sync-webapp-to-planner', payload);
-            response = await fetch(PLANNER_SYNC_SERVER_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-P0-Timestamp': envelope.timestamp,
-                    'X-P0-Request-Id': envelope.requestId,
-                    'X-P0-Signature': envelope.signature
-                },
-                body: envelope.body
-            });
-        } catch (networkError) {
-            // fetch() chỉ throw ở tầng network (không kết nối được cổng 8765) — đây đúng là
-            // trường hợp Planner Sync Server chưa chạy, không phải lỗi nghiệp vụ từ server.
-            console.warn('[Planner sync] Không kết nối được Planner Sync Server:', networkError);
-            showToast('Chưa tạo task Planner', PLANNER_SYNC_DOWN_MESSAGE, 'warning');
+    function showPlannerTransferResult(result, fallbackSoHieu) {
+        const soHieu = result.soHieu || result.transfer?.soHieu || fallbackSoHieu || '';
+        if (result.planner_ok && result.planner?.created) {
+            showToast('Đã tạo task Planner', `Task cho <strong>${escapeHtml(soHieu)}</strong> đã được tạo.`, 'success');
             return;
         }
-
-        try {
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok || !result.ok) {
-                throw new Error(result.message || `HTTP ${response.status}`);
-            }
-
-            const summary = result.summary || {};
-            const createdTasks = Number(result.created_tasks || summary.created_tasks || 0);
-            if (createdTasks > 0) {
-                showToast('Đã tạo task Planner', `Task cho <strong>${escapeHtml(payload.so_hieu || soHieu || '')}</strong> đã được tạo.`, 'success');
-                return;
-            }
-
-            showToast('Chưa tạo task Planner', escapeHtml(getPlannerSyncSkipMessage(result)), 'warning');
-        } catch (error) {
-            // Server đã phản hồi (đang chạy) nhưng xử lý đồng bộ gặp lỗi nghiệp vụ.
-            console.warn('[Planner sync] Lỗi xử lý phản hồi từ Planner Sync Server:', error);
-            showToast(
-                'Chưa tạo task Planner',
-                `Văn bản đã chuyển vào VBQPPL nhưng đồng bộ Planner gặp lỗi: ${escapeHtml(error.message || String(error))}`,
-                'warning'
-            );
+        if (result.planner_ok) {
+            showToast('Task Planner đã có', `Task cho <strong>${escapeHtml(soHieu)}</strong> đã tồn tại và đã được đồng bộ.`, 'success');
+            return;
         }
+        const plannerMessage = result.planner?.message || result.message || 'Không rõ lỗi đồng bộ Planner.';
+        showToast('Đã chuyển nhưng chưa tạo task', escapeHtml(plannerMessage), 'warning');
     }
 
     async function transferRow(rowNumber, soHieu) {
@@ -6779,23 +6745,12 @@
         if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
-            const response = await fetchWebApp(WEBAPP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(withAdminSession({
-                    token: TOKEN,
-                    action: "transfer_record",
-                    payload: { row_number: rowNumber }
-                }))
-            });
+            const result = await transferAndCreatePlannerTask(rowNumber);
 
-            const result = await response.json();
-            if (handleAdminSessionResponse(result)) return;
-
-            if (result.ok) {
+            if (result.ok && result.transfer?.ok !== false) {
                 showToast("Đã chuyển!", `Văn bản <strong>${soHieu}</strong> đã được chuyển thành công.`, "success");
                 removeRowFromUI(rowNumber);
-                triggerPlannerSyncAfterTransfer(rowNumber, result.soHieu || soHieu, result);
+                showPlannerTransferResult(result, soHieu);
             } else {
                 if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`; }
 
@@ -6822,21 +6777,10 @@
         if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
 
         try {
-            const response = await fetchWebApp(WEBAPP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(withAdminSession({
-                    token: TOKEN,
-                    action: "transfer_record",
-                    payload: { row_number: rowNumber }
-                }))
-            });
-
-            const result = await response.json();
-            if (handleAdminSessionResponse(result)) return;
-            if (result.ok) {
+            const result = await transferAndCreatePlannerTask(rowNumber);
+            if (result.ok && result.transfer?.ok !== false) {
                 showToast("Đã chuyển lại!", `Văn bản <strong>${escapeHtml(soHieu)}</strong> đã được chuyển lại vào VBQPPL.`, "success");
-                triggerPlannerSyncAfterTransfer(rowNumber, result.soHieu || soHieu, result);
+                showPlannerTransferResult(result, soHieu);
                 loadData();
             } else {
                 if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Chuyển lại`; }
@@ -7054,21 +6998,15 @@
             return { ok: true, deleted: false, planner_task_id: '', message: 'Không có Planner Task ID để xóa.' };
         }
 
-        const envelope = await fetchPlannerSyncEnvelope_('/delete-planner-task', {
-            planner_task_id: plannerTaskId,
-            so_hieu: soHieu,
-            ten_van_ban: tenVanBan
-        });
-
-        const response = await fetch(`${PLANNER_SYNC_SERVER_BASE_URL}/delete-planner-task`, {
+        const response = await fetch(PLANNER_DELETE_API_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-P0-Timestamp': envelope.timestamp,
-                'X-P0-Request-Id': envelope.requestId,
-                'X-P0-Signature': envelope.signature
-            },
-            body: envelope.body
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                planner_task_id: plannerTaskId,
+                so_hieu: soHieu,
+                ten_van_ban: tenVanBan,
+                admin_session: getAdminSessionToken()
+            })
         });
 
         const result = await response.json().catch(() => ({}));
@@ -7101,7 +7039,7 @@
             const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
+                body: JSON.stringify(withAdminSession({
                     token: TOKEN,
                     action: "restore_transferred_record",
                     payload: {
@@ -7113,7 +7051,7 @@
                         delete_planner_task: Boolean(deletePlannerTask),
                         planner_delete_result: plannerDeleteResult
                     }
-                })
+                }))
             });
  
             const result = await response.json();
@@ -7223,17 +7161,14 @@
             const rowData = currentRecords.find(r => r._rowNumber === rowNum);
             const soHieu = rowData ? (rowData['Số hiệu'] || `Dòng ${rowNum}`) : `Dòng ${rowNum}`;
             try {
-                const response = await fetchWebApp(WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(withAdminSession({ token: TOKEN, action: 'transfer_record', payload: { row_number: rowNum } }))
-                });
-                const result = await response.json();
-                if (handleAdminSessionResponse(result)) return;
-                if (result.ok) {
-                    success++;
+                const result = await transferAndCreatePlannerTask(rowNum);
+                if (result.ok && result.transfer?.ok !== false) {
                     removeRowFromUI(rowNum);
-                    triggerPlannerSyncAfterTransfer(rowNum, result.soHieu || soHieu, result);
+                    if (result.planner_ok) {
+                        success++;
+                    } else {
+                        errors.push(`${soHieu}: ${result.planner?.message || 'Đã chuyển nhưng chưa tạo task Planner.'}`);
+                    }
                 } else {
                     const reason = result.reason === 'missing_fields'
                         ? `${soHieu}: thiếu ${(result.missing || []).join(', ')}`
@@ -7327,7 +7262,7 @@
                 const response = await fetchWebApp(WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
+                    body: JSON.stringify(withAdminSession({
                         token: TOKEN,
                         action: 'restore_transferred_record',
                         payload: {
@@ -7338,7 +7273,7 @@
                             delete_planner_task: false,
                             planner_delete_result: null
                         }
-                    })
+                    }))
                 });
                 const result = await response.json();
                 if (result.ok) {

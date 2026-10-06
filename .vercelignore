@@ -2,6 +2,9 @@ config/
 logs/
 output/
 auth/
-*.py
+credentials/
+.env
+.env.*
 *.ps1
-requirements.txt
+tests/
+__pycache__/
