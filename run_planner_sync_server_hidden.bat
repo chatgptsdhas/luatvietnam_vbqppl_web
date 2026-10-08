@@ -16,8 +16,19 @@ set PYTHONIOENCODING=utf-8
 set PYTHONUTF8=1
 set PYTHONUNBUFFERED=1
 
-set "PYTHONW_EXE=C:\Users\Admin\AppData\Local\Programs\Python\Python313\pythonw.exe"
-if not exist "%PYTHONW_EXE%" set "PYTHONW_EXE=pythonw.exe"
+REM Uu tien bien moi truong de phu hop voi may co nhieu Python. Neu khong co,
+REM resolve pythonw.exe tren PATH; cuoi cung dung py.exe (VBS da an cua so).
+if not defined PYTHONW_EXE if defined PYTHON_EXE set "PYTHONW_EXE=%PYTHON_EXE%"
+if not defined PYTHONW_EXE (
+    for /f "delims=" %%I in ('where pythonw.exe 2^>nul') do if not defined PYTHONW_EXE set "PYTHONW_EXE=%%I"
+)
+if not defined PYTHONW_EXE (
+    for /f "delims=" %%I in ('where py.exe 2^>nul') do if not defined PYTHONW_EXE set "PYTHONW_EXE=%%I"
+)
+if not defined PYTHONW_EXE (
+    echo ==== %date% %time% Python/pythonw not found on PATH ==== >> "%LOG_FILE%"
+    exit /b 9009
+)
 
 echo ==== %date% %time% Planner Sync Server starting (%PYTHONW_EXE%) ==== >> "%LOG_FILE%"
 "%PYTHONW_EXE%" "planner_sync_server.py" >> "%LOG_FILE%" 2>&1

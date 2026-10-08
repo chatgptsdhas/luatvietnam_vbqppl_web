@@ -327,6 +327,24 @@ def create_task(token: str, record: dict) -> dict:
     return graph_request(token, "POST", "/planner/tasks", body=body) or {}
 
 
+def find_task_by_title(token: str, title: str) -> dict | None:
+    """Return an exact title match in the configured plan, following pagination.
+
+    The Sheet's Planner Task ID is the primary idempotency key.  This lookup is
+    the recovery key if Graph created a task but the process failed before the
+    ID could be written back to that Sheet row.
+    """
+    path = f"/planner/plans/{get_required_env('PLANNER_PLAN_ID')}/tasks"
+    while path:
+        response = graph_request(token, "GET", path) or {}
+        for task in response.get("value", []) if isinstance(response, dict) else []:
+            if str(task.get("title", "") or "").strip() == title:
+                return task
+        next_link = str(response.get("@odata.nextLink", "") or "") if isinstance(response, dict) else ""
+        path = next_link[len(GRAPH_BASE_URL):] if next_link.startswith(GRAPH_BASE_URL) else ""
+    return None
+
+
 def get_task_details(token: str, task_id: str) -> dict:
     return graph_request(token, "GET", f"/planner/tasks/{task_id}/details") or {}
 
@@ -468,6 +486,7 @@ def create_planner_task_from_record(record: dict) -> dict:
     next_response_due = ""
     planner_web_url = ""
     rollback_result = None
+    reused_existing = False
     try:
         token = get_token()
         next_response_due = resolve_next_response_due()
@@ -476,10 +495,30 @@ def create_planner_task_from_record(record: dict) -> dict:
         checklist = build_initial_checklist(next_response_due)
         references = build_references(record)
 
-        created_task = create_task(token, record)
+        # An old task with the same canonical title and no Sheet ID indicates an
+        # interrupted write-back. Reuse it before attempting a new POST.
+        created_task = find_task_by_title(token, title) or {}
+        if created_task:
+            reused_existing = True
+        else:
+            try:
+                created_task = create_task(token, record)
+            except Exception:
+                # A timeout after Graph accepted POST is indistinguishable from a
+                # failed POST. Probe by canonical title before allowing a retry to
+                # create a duplicate task.
+                created_task = find_task_by_title(token, title) or {}
+                if not created_task:
+                    raise
+                reused_existing = True
         task_id = str(created_task.get("id", "") or "")
         if not task_id:
-            raise RuntimeError("Graph đã tạo task nhưng response không có id.")
+            recovered_task = find_task_by_title(token, title) or {}
+            task_id = str(recovered_task.get("id", "") or "")
+            if not task_id:
+                raise RuntimeError("Graph đã tạo task nhưng response không có id.")
+            created_task = recovered_task
+            reused_existing = True
         planner_web_url = build_planner_task_url(task_id)
 
         details = get_task_details(token, task_id)
@@ -508,6 +547,7 @@ def create_planner_task_from_record(record: dict) -> dict:
             "title": title,
             "planner_web_url": planner_web_url,
             "next_response_due": next_response_due,
+            "reused_existing": reused_existing,
             "message": "Đã tạo Planner task và cập nhật details/checklist.",
         }
     except Exception as exc:
@@ -519,6 +559,7 @@ def create_planner_task_from_record(record: dict) -> dict:
             "title": title,
             "planner_web_url": planner_web_url,
             "next_response_due": next_response_due,
+            "reused_existing": reused_existing,
             "message": str(exc),
             "rollback_result": rollback_result,
         }

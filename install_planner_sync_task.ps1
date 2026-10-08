@@ -67,13 +67,6 @@ $principal = New-ScheduledTaskPrincipal `
     -LogonType Interactive `
     -RunLevel Limited
 
-# Neu task da ton tai tu truoc thi go bo de cai lai cho sach
-$existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-if ($existing) {
-    Write-Host "Task '$TaskName' da ton tai, dang go bo de cai dat lai..."
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-}
-
 Register-ScheduledTask `
     -TaskName $TaskName `
     -Action $action `
@@ -81,6 +74,7 @@ Register-ScheduledTask `
     -Settings $settings `
     -Principal $principal `
     -Description "Tu dong chay Planner Sync Server (localhost:8765) an nen khi dang nhap Windows, phuc vu WebApp VBQPPL tao task Planner sau khi chuyen van ban." `
+    -Force `
     | Out-Null
 
 Write-Host "Da cai dat Scheduled Task '$TaskName' thanh cong."

@@ -38,6 +38,7 @@ DEFAULT_ALLOWED_ORIGINS = (
 )
 
 DEFAULT_MAX_BODY_BYTES = 1048576
+MAX_REJECTION_BODY_DRAIN_BYTES = 64 * 1024
 DEFAULT_REQUEST_TTL_SECONDS = 300
 
 sync_lock = threading.Lock()
@@ -200,6 +201,36 @@ class PlannerSyncHandler(BaseHTTPRequestHandler):
         if origin and not is_origin_allowed(origin):
             raise SecurityValidationError("ORIGIN_FORBIDDEN", "Origin is not allowed.", 403)
 
+    def discard_unread_request_body(self) -> None:
+        """Đọc bỏ request body nhỏ trước khi trả lỗi sớm để client vẫn nhận được JSON response.
+
+        Các guard Origin/Content-Type/Content-Length có thể từ chối request trước
+        ``read_raw_body``. Trên Windows, đóng socket khi vẫn còn body trong buffer có
+        thể làm client nhận ``ConnectionAbortedError`` thay vì HTTP 4xx. Chỉ drain
+        body có kích thước nhỏ, đã khai báo; request quá lớn vẫn bị đóng kết nối để
+        không giữ worker đọc dữ liệu không tin cậy quá lâu.
+        """
+        if getattr(self, "_request_body_consumed", False):
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return
+
+        if length <= 0:
+            self._request_body_consumed = True
+            return
+        if length > MAX_REJECTION_BODY_DRAIN_BYTES:
+            self.close_connection = True
+            return
+
+        try:
+            self.rfile.read(length)
+            self._request_body_consumed = True
+        except Exception:
+            self.close_connection = True
+
     def read_raw_body(self) -> bytes:
         length_header = self.headers.get("Content-Length", "0") or "0"
         try:
@@ -208,13 +239,16 @@ class PlannerSyncHandler(BaseHTTPRequestHandler):
             raise SecurityValidationError("INVALID_CONTENT_LENGTH", "Content-Length không hợp lệ.", 400)
 
         if length <= 0:
+            self._request_body_consumed = True
             return b""
 
         max_bytes = get_max_body_bytes()
         if length > max_bytes:
             raise SecurityValidationError("BODY_TOO_LARGE", "Request body vượt giới hạn cho phép.", 413)
 
-        return self.rfile.read(length)
+        raw_body = self.rfile.read(length)
+        self._request_body_consumed = True
+        return raw_body
 
     def parse_json_body(self, raw_body: bytes) -> dict[str, Any]:
         if not raw_body:
@@ -326,6 +360,7 @@ class PlannerSyncHandler(BaseHTTPRequestHandler):
                 },
             )
         except SecurityValidationError as sec_err:
+            self.discard_unread_request_body()
             self.write_security_error(correlation_id, sec_err)
         except Exception as exc:
             self.write_internal_error(correlation_id, exc)
@@ -388,6 +423,7 @@ class PlannerSyncHandler(BaseHTTPRequestHandler):
 
             self.write_json(HTTPStatus.OK, result)
         except SecurityValidationError as sec_err:
+            self.discard_unread_request_body()
             self.write_security_error(correlation_id, sec_err)
         except Exception as exc:
             self.write_internal_error(correlation_id, exc)
@@ -408,6 +444,12 @@ def main() -> None:
     parser.add_argument("--host", default=os.getenv("PLANNER_SYNC_SERVER_HOST", DEFAULT_HOST))
     parser.add_argument("--port", type=int, default=int(os.getenv("PLANNER_SYNC_SERVER_PORT", str(DEFAULT_PORT))))
     args = parser.parse_args()
+
+    # This service is a browser-to-localhost bridge, never a LAN/Internet API.
+    # Reject an accidental environment/CLI override instead of silently binding
+    # to 0.0.0.0 (or any other externally reachable interface).
+    if args.host != DEFAULT_HOST:
+        parser.error(f"--host must remain {DEFAULT_HOST}; Planner Sync Server is localhost-only.")
 
     server = ThreadingHTTPServer((args.host, args.port), PlannerSyncHandler)
     print(f"Planner sync server listening on http://{args.host}:{args.port}")

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "Dashboard",
+  "functions": {
+    "api/*.py": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "excludeFiles": "{tests/**,credentials/**,config/**,auth/**,logs/**,output/**,Dashboard/**,**/__pycache__/**}"
+    }
+  }
+}
