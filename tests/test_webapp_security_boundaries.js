@@ -307,6 +307,44 @@ check("doPost('transfer_record') có admin_session hợp lệ (đăng nhập th�
   assert.strictEqual(res.ok, true, JSON.stringify(res));
 });
 
+// ============================================================
+// 8. Planner envelope: whitelist path + schema filter, signature at Apps Script
+// ============================================================
+check('request_planner_sync_envelope signs only the whitelisted payload schema', () => {
+  resetSheets(); setupScriptProperties();
+  const login = callDoPost({ token: PUBLIC_TOKEN, action: 'verify_admin', payload: { password: 'P0AdminPass!' } });
+  const res = callDoPost({
+    token: PUBLIC_TOKEN,
+    admin_session: login.adminSession,
+    action: 'request_planner_sync_envelope',
+    payload: {
+      path: '/sync-webapp-to-planner',
+      envelope_payload: {
+        source: 'dashboard', vbqppl_row_number: 12, so_hieu: '12/2026/TT-BNV', limit: 1,
+        untrusted_extra: 'must-not-be-signed'
+      }
+    }
+  });
+  assert.strictEqual(res.ok, true, JSON.stringify(res));
+  const signedBody = JSON.parse(res.envelope.body);
+  assert.strictEqual(signedBody.vbqppl_row_number, 12);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(signedBody, 'untrusted_extra'), false);
+  assert.ok(res.envelope.signature, 'Apps Script must sign a valid envelope');
+});
+
+check('request_planner_sync_envelope rejects paths outside the whitelist', () => {
+  resetSheets(); setupScriptProperties();
+  const login = callDoPost({ token: PUBLIC_TOKEN, action: 'verify_admin', payload: { password: 'P0AdminPass!' } });
+  const res = callDoPost({
+    token: PUBLIC_TOKEN,
+    admin_session: login.adminSession,
+    action: 'request_planner_sync_envelope',
+    payload: { path: '/unexpected-write-endpoint', envelope_payload: {} }
+  });
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.error, 'INVALID_REQUEST');
+});
+
 console.log('\n----------------------------------------');
 console.log(`TOTAL: ${pass + fail}, PASS: ${pass}, FAIL: ${fail}`);
 process.exit(fail > 0 ? 1 : 0);

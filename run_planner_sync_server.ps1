@@ -5,11 +5,15 @@ $PythonExe = $env:PYTHON_EXE
 $PythonArgs = @()
 
 if ([string]::IsNullOrWhiteSpace($PythonExe)) {
-    $DefaultPythonExe = "C:\Users\Admin\AppData\Local\Programs\Python\Python313\python.exe"
-    if (Test-Path -LiteralPath $DefaultPythonExe) {
-        $PythonExe = $DefaultPythonExe
+    $PythonCommand = Get-Command python.exe -ErrorAction SilentlyContinue
+    if ($PythonCommand) {
+        $PythonExe = $PythonCommand.Source
     } else {
-        $PythonExe = "py.exe"
+        $PyLauncher = Get-Command py.exe -ErrorAction SilentlyContinue
+        if (-not $PyLauncher) {
+            throw "Khong tim thay Python. Dat bien moi truong PYTHON_EXE hoac cai python.exe/py.exe vao PATH."
+        }
+        $PythonExe = $PyLauncher.Source
         $PythonArgs = @("-3")
     }
 }

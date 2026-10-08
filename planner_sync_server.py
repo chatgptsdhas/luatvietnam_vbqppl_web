@@ -445,6 +445,12 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=int(os.getenv("PLANNER_SYNC_SERVER_PORT", str(DEFAULT_PORT))))
     args = parser.parse_args()
 
+    # This service is a browser-to-localhost bridge, never a LAN/Internet API.
+    # Reject an accidental environment/CLI override instead of silently binding
+    # to 0.0.0.0 (or any other externally reachable interface).
+    if args.host != DEFAULT_HOST:
+        parser.error(f"--host must remain {DEFAULT_HOST}; Planner Sync Server is localhost-only.")
+
     server = ThreadingHTTPServer((args.host, args.port), PlannerSyncHandler)
     print(f"Planner sync server listening on http://{args.host}:{args.port}")
     print("POST /sync-webapp-to-planner and /delete-planner-task require a valid P0 HMAC envelope.")

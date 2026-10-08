@@ -195,15 +195,19 @@ class TestDashboardFrontendStaticChecks(unittest.TestCase):
         write_action_count = self.src.count("withAdminSession(")
         self.assertGreaterEqual(write_action_count, 8, "Phải có ít nhất 8 chỗ đính kèm admin_session cho action ghi dữ liệu")
 
-    def test_planner_sync_uses_public_backend_not_localhost_envelope(self):
-        # Luồng mới: Browser -> Vercel Function -> Apps Script + Planner. Chữ ký
-        # HMAC cục bộ chỉ còn ở legacy Planner Sync Server, không được đưa vào UI.
-        self.assertIn('const PLANNER_TRANSFER_API_URL = "/api/transfer-and-create-planner"', self.src)
-        self.assertIn("transferAndCreatePlannerTask(", self.src)
-        self.assertIn('const PLANNER_DELETE_API_URL = "/api/delete-planner-task"', self.src)
-        self.assertNotIn("fetchPlannerSyncEnvelope_(", self.src)
-        self.assertNotIn("X-P0-Signature", self.src)
-        self.assertNotIn("127.0.0.1:8765", self.src)
+    def test_planner_sync_uses_signed_local_envelope(self):
+        self.assertIn('const WEBAPP_URL = "/api/webapp"', self.src)
+        self.assertIn("fetchPlannerSyncEnvelope_('/sync-webapp-to-planner'", self.src)
+        self.assertIn("fetchPlannerSyncEnvelope_('/delete-planner-task'", self.src)
+        self.assertIn("X-P0-Signature", self.src)
+        self.assertIn("127.0.0.1:8765", self.src)
+        self.assertNotIn("transferAndCreatePlannerTask(", self.src)
+        self.assertNotIn("/api/transfer-and-create-planner", self.src)
+        self.assertNotIn("/api/delete-planner-task", self.src)
+
+    def test_planner_browser_client_has_no_microsoft_credentials(self):
+        self.assertNotIn("MS_GRAPH_CLIENT_SECRET", self.src)
+        self.assertNotIn("client_credentials", self.src)
 
     def test_no_stack_trace_rendered_in_ui(self):
         self.assertNotIn("result.stack", self.src)
@@ -243,6 +247,26 @@ class TestPlannerSyncServerStaticChecks(unittest.TestCase):
     def test_no_origin_alone_does_not_bypass_auth(self):
         # is_origin_allowed(None) phải là False (không còn "if not origin: return True").
         self.assertIn("if not origin:\n        return False", self.src)
+
+    def test_server_rejects_non_loopback_bind_override(self):
+        self.assertIn("if args.host != DEFAULT_HOST:", self.src)
+        self.assertIn("localhost-only", self.src)
+
+
+class TestVercelProxyStaticChecks(unittest.TestCase):
+    def test_webapp_allows_only_admin_envelope_and_still_blocks_service_actions(self):
+        src = read(PROJECT_DIR / "api" / "webapp.py")
+        self.assertIn("if action in SERVICE_ONLY_ACTIONS:", src)
+        self.assertNotIn('or action == "request_planner_sync_envelope"', src)
+        self.assertIn("if action in ADMIN_ACTIONS and not admin_session:", src)
+
+    def test_vercel_has_no_graph_application_backend(self):
+        backend = read(PROJECT_DIR / "api" / "_planner_backend.py")
+        self.assertNotIn("MS_GRAPH_CLIENT_SECRET", backend)
+        self.assertNotIn("client_credentials", backend)
+        self.assertNotIn("GraphPlannerClient", backend)
+        self.assertFalse((PROJECT_DIR / "api" / "transfer-and-create-planner.py").exists())
+        self.assertFalse((PROJECT_DIR / "api" / "delete-planner-task.py").exists())
 
 
 class TestPythonServiceScriptsSendServiceToken(unittest.TestCase):

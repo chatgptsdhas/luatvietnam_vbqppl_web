@@ -20,7 +20,10 @@ class handler(JsonApiHandler):
             action = clean_text(request.get("action"))
             if not action:
                 raise ApiProblem(HTTPStatus.BAD_REQUEST, "INVALID_ACTION", "Thiếu action.")
-            if action in SERVICE_ONLY_ACTIONS or action == "request_planner_sync_envelope":
+            # Service actions are never browser-reachable. An admin may, however,
+            # ask Apps Script to create its already-signed, short-lived Planner
+            # envelope; Apps Script remains the authority for that admin session.
+            if action in SERVICE_ONLY_ACTIONS:
                 raise ApiProblem(HTTPStatus.FORBIDDEN, "ACTION_NOT_ALLOWED", "Action này không được gọi từ trình duyệt.")
 
             payload = request.get("payload") or {}

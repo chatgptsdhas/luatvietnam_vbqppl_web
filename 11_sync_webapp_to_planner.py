@@ -438,6 +438,7 @@ def sync_single_webapp_record_to_planner(
             return summary
 
         update_result = update_record_with_planner_info(record, task_result)
+        reused_existing = bool(task_result.get("reused_existing"))
         summary = {
             "ok": True,
             "dry_run": False,
@@ -445,8 +446,9 @@ def sync_single_webapp_record_to_planner(
             "target_row_number": row_number,
             "target_so_hieu": clean_text(record.get("Số hiệu")),
             "total_records": len(records),
-            "created_tasks": 1,
+            "created_tasks": 0 if reused_existing else 1,
             "failed_records": 0,
+            "reused_existing": reused_existing,
             "created_items": [
                 {
                     "row_number": row_number,
@@ -551,11 +553,13 @@ def sync_webapp_to_planner(
                 continue
 
             update_result = update_record_with_planner_info(record, task_result)
+            reused_existing = bool(task_result.get("reused_existing"))
             created_tasks.append(
                 {
                     "row_number": row_number,
                     "task_id": task_result.get("task_id", ""),
                     "title": task_result.get("title", ""),
+                    "reused_existing": reused_existing,
                     "update_result": update_result,
                 }
             )
@@ -573,6 +577,7 @@ def sync_webapp_to_planner(
                 }
             )
 
+    reused_existing = any(bool(item.get("reused_existing")) for item in created_tasks)
     summary = {
         "ok": len(failed_records) == 0,
         "dry_run": False,
@@ -581,8 +586,9 @@ def sync_webapp_to_planner(
         "skipped_records": len(skipped_records),
         "candidate_records": len(candidate_records),
         "records_to_process": len(records_to_process),
-        "created_tasks": len(created_tasks),
+        "created_tasks": sum(1 for item in created_tasks if not item.get("reused_existing")),
         "failed_records": len(failed_records),
+        "reused_existing": reused_existing,
         "created_items": created_tasks,
         "failed_items": failed_records,
     }

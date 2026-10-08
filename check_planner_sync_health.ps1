@@ -10,8 +10,8 @@ try {
     if ($result.ok) {
         Write-Host "OK - Planner Sync Server dang chay." -ForegroundColor Green
         Write-Host ("  service: {0}" -f $result.service)
-        Write-Host ("  sync_endpoint: {0}" -f $result.sync_endpoint)
-        Write-Host ("  delete_endpoint: {0}" -f $result.delete_endpoint)
+        Write-Host ("  version: {0}" -f $result.version)
+        Write-Host ("  server_time: {0}" -f $result.server_time)
         exit 0
     } else {
         Write-Host "CANH BAO - Server phan hoi nhung ok=false." -ForegroundColor Yellow
