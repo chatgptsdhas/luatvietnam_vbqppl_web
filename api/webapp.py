@@ -6,10 +6,28 @@ on the server.  Apps Script remains the authority for its own admin session.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from http import HTTPStatus
 from typing import Any
 
-from _planner_backend import ADMIN_ACTIONS, SERVICE_ONLY_ACTIONS, ApiProblem, AppsScriptClient, JsonApiHandler, clean_text, correlation_id, error_payload
+# Vercel có thể load api/webapp.py như một serverless module từ repository root.
+# Bảo đảm thư mục api/ luôn nằm trong sys.path để import sibling module ổn định
+# cả khi chạy local lẫn trên Vercel.
+API_DIR = Path(__file__).resolve().parent
+if str(API_DIR) not in sys.path:
+    sys.path.insert(0, str(API_DIR))
+
+from _planner_backend import (
+    ADMIN_ACTIONS,
+    SERVICE_ONLY_ACTIONS,
+    ApiProblem,
+    AppsScriptClient,
+    JsonApiHandler,
+    clean_text,
+    correlation_id,
+    error_payload,
+)
 
 
 class handler(JsonApiHandler):
