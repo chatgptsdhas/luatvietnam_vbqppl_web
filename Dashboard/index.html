@@ -3043,7 +3043,11 @@
 
     // Vercel gọi Apps Script ở server-side. Retry ở UI vẫn giữ lại cho lỗi mạng tạm thời,
     // nhưng trình duyệt không còn theo redirect script.googleusercontent.com hay gặp CORS.
-    async function fetchWebApp(url, options) {
+    async function fetchWebApp(
+        url,
+        options,
+        maxAttempts = WEBAPP_REQUEST_MAX_ATTEMPTS
+    ) {
         let lastError = null;
         let lastResponse = null;
         // Apps Script từng yêu cầu text/plain để tránh preflight CORS. API Vercel
@@ -3055,7 +3059,7 @@
             })
             : options;
 
-        for (let attempt = 1; attempt <= WEBAPP_REQUEST_MAX_ATTEMPTS; attempt++) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 const response = await fetch(url, requestOptions);
                 if (isWebAppJsonResponse(response)) {
@@ -3072,7 +3076,7 @@
                 lastError = error;
             }
 
-            if (attempt < WEBAPP_REQUEST_MAX_ATTEMPTS) {
+            if (attempt < maxAttempts) {
                 await waitForWebAppRetry(WEBAPP_REQUEST_RETRY_DELAY_MS * attempt);
             }
         }
@@ -8127,7 +8131,7 @@ async function submitLogin() {
                     password: inputPass
                 }
             })
-        });
+        }, 1);
 
         const result = await response.json();
         // P0: KHÔNG log adminSession/token ra console — chỉ log kết quả ok/error đã redact.
@@ -8153,8 +8157,8 @@ async function submitLogin() {
     } catch (e) {
         console.error("Lỗi xác thực:", e);
         alert(
-            `Không thể kết nối Apps Script để xác thực. Hệ thống đã thử lại ${WEBAPP_REQUEST_MAX_ATTEMPTS} lần. ` +
-            'Vui lòng tải lại trang rồi đăng nhập lại; nếu lỗi tiếp diễn, liên hệ quản trị viên.'
+            'Không thể hoàn tất xác thực trong thời gian cho phép. ' +
+            'Vui lòng thử lại sau ít phút; nếu lỗi tiếp diễn, liên hệ quản trị viên.'
         );
     } finally {
         checkAuthStatus();

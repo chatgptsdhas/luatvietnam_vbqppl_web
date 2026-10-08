@@ -19,6 +19,7 @@ import requests
 
 
 WEBAPP_TIMEOUT_SECONDS = 45
+WEBAPP_ADMIN_TIMEOUT_SECONDS = 240
 WEBAPP_MAX_ATTEMPTS = 3
 MAX_REQUEST_BYTES = 256 * 1024
 
@@ -83,12 +84,21 @@ class AppsScriptClient:
 
         last_error: Exception | None = None
         response = None
-        for attempt in range(1, WEBAPP_MAX_ATTEMPTS + 1):
+        is_admin_login = action == "verify_admin"
+
+        request_timeout = (
+            WEBAPP_ADMIN_TIMEOUT_SECONDS
+            if is_admin_login
+            else WEBAPP_TIMEOUT_SECONDS
+        )
+
+        max_attempts = 1 if is_admin_login else WEBAPP_MAX_ATTEMPTS
+        for attempt in range(1, max_attempts + 1):
             try:
                 response = self.http.post(
                     env_value("APPS_SCRIPT_WEBAPP_URL"),
                     json=body,
-                    timeout=WEBAPP_TIMEOUT_SECONDS,
+                    timeout=request_timeout,
                 )
                 if response.ok:
                     data = response.json()
@@ -101,7 +111,7 @@ class AppsScriptClient:
                 last_error = exc
 
             retryable = response is None or response.status_code in (404, 408, 429) or response.status_code >= 500
-            if attempt < WEBAPP_MAX_ATTEMPTS and retryable:
+            if attempt < max_attempts and retryable:
                 time.sleep(0.5 * attempt)
                 continue
             break
