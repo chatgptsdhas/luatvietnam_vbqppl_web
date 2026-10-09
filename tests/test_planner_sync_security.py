@@ -281,13 +281,20 @@ function computeHmacSha256Signature(messageBytesOrStr, keyBytesOrStr) {
   const digest = crypto.createHmac('sha256', keyBuf).update(msgBuf).digest();
   return Array.from(digest).map(b => (b > 127 ? b - 256 : b));
 }
-function computeDigest(algorithm, messageStr) {
-  const digest = crypto.createHash('sha256').update(Buffer.from(String(messageStr), 'utf8')).digest();
+function computeDigest(algorithm, messageBytesOrStr) {
+  const messageBuf = Array.isArray(messageBytesOrStr)
+    ? Buffer.from(messageBytesOrStr.map(b => b < 0 ? b + 256 : b))
+    : Buffer.from(String(messageBytesOrStr), 'utf8');
+  const digest = crypto.createHash('sha256').update(messageBuf).digest();
   return Array.from(digest).map(b => (b > 127 ? b - 256 : b));
 }
 const scriptProps = { PLANNER_SYNC_SHARED_SECRET: process.argv[2] };
+class FixedDate extends Date {
+  constructor(...args) { super(...(args.length ? args : [1700000000000])); }
+}
 const ctx = {
   console,
+  Date: FixedDate,
   Utilities: {
     newBlob(input) {
       const buf = Array.isArray(input) ? Buffer.from(input.map(b => (b < 0 ? b + 256 : b))) : Buffer.from(String(input), 'utf8');
@@ -295,7 +302,7 @@ const ctx = {
     },
     computeHmacSha256Signature, computeDigest,
     DigestAlgorithm: { SHA_256: 'SHA_256' },
-    getUuid() { return 'js-uuid-' + crypto.randomBytes(8).toString('hex'); },
+    getUuid() { return 'fixed-request-id'; },
     base64EncodeWebSafe(str) { return Buffer.from(String(str), 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_'); },
     base64DecodeWebSafe(str) {
       let s = String(str).replace(/-/g, '+').replace(/_/g, '/');
@@ -309,17 +316,25 @@ ctx.global = ctx;
 vm.createContext(ctx);
 vm.runInContext(source, ctx, { filename: 'Security.js' });
 
-const envelope = ctx.createPlannerSyncEnvelope_('/sync-webapp-to-planner', { so_hieu: '12/2026/TT-BNV', limit: 1 }, 300);
+const envelope = ctx.createPlannerSyncEnvelope_(
+  '/sync-webapp-to-planner',
+  { so_hieu: '288/2026/NĐ-CP', dry_run: true },
+  300
+);
 process.stdout.write(JSON.stringify(envelope));
 """
         security_js_path = str(PROJECT_DIR / "apps_script" / "Security.js")
         proc = subprocess.run(
             ["node", "-e", node_script, security_js_path, secret],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
         )
         self.assertEqual(proc.returncode, 0, f"Node script thất bại: {proc.stderr}")
         envelope = json.loads(proc.stdout)
 
+        self.assertEqual(envelope["timestamp"], "1700000000")
+        self.assertEqual(envelope["requestId"], "fixed-request-id")
+        self.assertEqual(envelope["path"], TEST_PATH)
+        self.assertEqual(envelope["body"], '{"so_hieu":"288/2026/NĐ-CP","dry_run":true}')
         headers = make_headers(envelope["timestamp"], envelope["requestId"], envelope["signature"])
         raw_body = envelope["body"].encode("utf-8")
 
@@ -327,6 +342,7 @@ process.stdout.write(JSON.stringify(envelope));
         verify_request(
             headers=headers, path=envelope["path"], raw_body=raw_body, secret=secret,
             replay_cache=ReplayCache(300), max_body_bytes=1_000_000, ttl_seconds=300,
+            now=1_700_000_000,
         )
 
         # Đối chứng thêm: sign_request phía Python phải tính RA CÙNG signature với JS.
