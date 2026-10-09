@@ -8,11 +8,11 @@ Tài liệu này vừa là runbook tối thiểu, vừa là nơi ghi nhận tr�
 
 > Người quản trị phải cập nhật phần này sau mỗi lần deploy quan trọng.
 
-- Ngày xác nhận: `CHƯA XÁC NHẬN`
+- Ngày xác nhận: `09/10/2026`
 - Repository: `chatgptsdhas/luatvietnam_vbqppl_web`
 - Production branch: `main`
-- Commit đang chạy: `CHƯA XÁC NHẬN`
-- Apps Script deployment ID/version: `CHƯA XÁC NHẬN`
+- Commit đang chạy: `1554ff2abd375706ac9e5aa7a1eb028783f0961a`
+- Apps Script deployment ID/version: deployment đã được cập nhật sau `clasp push` ngày `09/10/2026`; số deployment version chưa được ghi nhận.
 - Dashboard production URL: `https://tracuuphaply.vercel.app`
 - Dashboard commit đang deploy: `CHƯA XÁC NHẬN`
 - Máy chạy Planner Sync Server: `KHÔNG GHI THÔNG TIN NHẠY CẢM TRONG GIT`
@@ -20,6 +20,16 @@ Tài liệu này vừa là runbook tối thiểu, vừa là nơi ghi nhận tr�
 - Health check gần nhất: `CHƯA XÁC NHẬN`
 - P0 Script Properties audit: `CHƯA XÁC NHẬN`
 - Microsoft Graph session: `CHỈ GHI TRẠNG THÁI, KHÔNG GHI TOKEN/SESSION`
+
+### Xác nhận hotfix Planner UTF-8 HMAC
+
+- PR: `#9` — `fix: support UTF-8 Planner envelope hashing`.
+- Hotfix commit: `44e6214c37dac7ce65b302a173036303ec8a7c1a`; merge commit trên `main`: `1554ff2abd375706ac9e5aa7a1eb028783f0961a`.
+- Smoke test ASCII: **PASS** — row `189`, `14/2026/TT-BNV`, `dry_run: true`, HTTP `200`, `Planner sync completed.`, `summary.ok: true`.
+- Smoke test Unicode HMAC: **PASS** — envelope `288/2026/NĐ-CP` trả HTTP `200`, không còn `SIGNATURE_INVALID`. `summary.ok: false` chỉ vì không có bản ghi tương ứng trong VBQPPL, không phải lỗi HMAC.
+- Smoke test Unicode body với bản ghi thật: **PASS** — source `dashboard-kiểm-thử-UTF8`, row `189`, `14/2026/TT-BNV`, `dry_run: true`, HTTP `200`, `summary.ok: true`.
+- Live candidate check: `PENDING_TOTAL: 199`, `MISSING_REQUIRED: 22`, `DUPLICATE_IN_VBQPPL: 178`, `READY_FOR_TRANSFER: 0`.
+- Live E2E chưa chạy vì không có record tự nhiên đủ điều kiện (`READY_FOR_TRANSFER = 0`). Đây không phải failure; kiểm thử được defer tới lần chuyển văn bản đủ điều kiện tiếp theo. Không tạo dữ liệu giả trên Production.
 
 ## 3. Cấu hình bắt buộc
 

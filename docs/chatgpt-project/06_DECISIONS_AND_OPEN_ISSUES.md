@@ -58,11 +58,18 @@ Tài liệu này lưu các quyết định kiến trúc/nghiệp vụ đã thố
 
 | ID | Vấn đề | Ảnh hưởng | Người quyết định | Hạn/Trạng thái |
 |---|---|---|---|---|
-| OPEN-001 | Commit/version production hiện tại chưa được ghi nhận trong repo | Khó xác định code đang chạy | Người quản trị hệ thống | Mở |
+| OPEN-001 | Production `main` commit đã được xác nhận là `1554ff2abd375706ac9e5aa7a1eb028783f0961a` (09/10/2026); số Apps Script deployment version chưa được lưu trong repo | Chưa truy vết được chính xác số version Apps Script đã deploy | Người quản trị hệ thống | Mở — chỉ còn deployment version |
 | OPEN-002 | Cần xác nhận chiến lược lưu và dọn `WEBAPP_DEBUG_LOG` | Hiệu năng và truy vết | Pháp chế/IT | Mở |
 | OPEN-003 | Cần rà soát các log lịch sử từng được Git track | Bảo mật và repository hygiene | Người quản trị repo | Mở |
 | OPEN-004 | Cần xác định source of truth cho từng trường khi Planner và Sheet mâu thuẫn | Sai lệch đồng bộ | Chủ hệ thống | Mở |
 | OPEN-005 | Cần xác định lộ trình tách nhỏ Dashboard/WebApp | Khả năng bảo trì | Chủ hệ thống/IT | Mở |
+
+### Ghi nhận release — Hotfix Planner UTF-8 HMAC (09/10/2026)
+
+- UTF-8 HMAC mismatch đã được resolve qua PR `#9` (`fix: support UTF-8 Planner envelope hashing`), merge commit `1554ff2`.
+- Apps Script chuyển body string thành explicit UTF-8 bytes trước khi SHA-256 để khớp exact UTF-8 raw HTTP bytes mà Python verifier kiểm tra.
+- Smoke test ASCII và Unicode HMAC đều PASS; không có thay đổi Python production verifier hoặc frontend, và không cần restart `planner_sync_server.py` cho hotfix này.
+- Live E2E còn pending vì hiện không có candidate đủ điều kiện (`READY_FOR_TRANSFER = 0`), không phải do lỗi kỹ thuật. Kiểm thử được defer tới record đủ điều kiện tiếp theo; không tạo dữ liệu giả trên Production.
 
 ## 5. Mẫu ghi quyết định mới
 
