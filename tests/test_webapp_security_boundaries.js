@@ -28,8 +28,13 @@ function computeHmacSha256Signature(messageBytesOrStr, keyBytesOrStr) {
   const digest = crypto.createHmac('sha256', keyBuf).update(msgBuf).digest();
   return Array.from(digest).map(b => (b > 127 ? b - 256 : b));
 }
-function computeDigest(_algorithm, messageStr) {
-  const digest = crypto.createHash('sha256').update(Buffer.from(String(messageStr), 'utf8')).digest();
+function bytesOrUtf8StringToBuffer(value) {
+  if (Buffer.isBuffer(value)) return value;
+  if (Array.isArray(value)) return Buffer.from(value.map(b => b < 0 ? b + 256 : b));
+  return Buffer.from(String(value), 'utf8');
+}
+function computeDigest(_algorithm, messageBytesOrStr) {
+  const digest = crypto.createHash('sha256').update(bytesOrUtf8StringToBuffer(messageBytesOrStr)).digest();
   return Array.from(digest).map(b => (b > 127 ? b - 256 : b));
 }
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -174,6 +179,21 @@ function setupScriptProperties() {
   scriptProps.ADMIN_PASSWORD_ITERATIONS = '1000';
   scriptProps.PLANNER_SYNC_SHARED_SECRET = 'planner-secret-test';
 }
+
+check('sha256Hex_ hashes exact UTF-8 bytes for ASCII and Vietnamese Unicode bodies', () => {
+  const bodyVectors = [
+    '{"so_hieu":"288/2026/NĐ-CP","dry_run":true}',
+    '{"title":"Nghị định sửa đổi, bổ sung"}',
+    '{"so_hieu":"14/2026/TT-BNV","dry_run":true}'
+  ];
+
+  bodyVectors.forEach((exactString) => {
+    const expected = crypto.createHash('sha256')
+      .update(Buffer.from(exactString, 'utf8'))
+      .digest('hex');
+    assert.strictEqual(ctx.sha256Hex_(exactString), expected, exactString);
+  });
+});
 
 // ============================================================
 // 0. Không còn fallback legacy trong validateServiceToken_ (Security.js trực tiếp)

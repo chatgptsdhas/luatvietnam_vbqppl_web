@@ -116,7 +116,8 @@ function hmacSha256Bytes_(keyBytes, messageBytes) {
 }
 
 function sha256Hex_(message) {
-  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(message));
+  const messageBytes = toUtf8Bytes_(String(message == null ? '' : message));
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, messageBytes);
   return bytesToHex_(digest);
 }
 
