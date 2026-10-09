@@ -11,6 +11,9 @@ from unittest.mock import patch
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
+API_DIR = PROJECT_DIR / "api"
+if str(API_DIR) not in sys.path:
+    sys.path.insert(0, str(API_DIR))
 
 
 def load_numbered_module(filename: str, module_name: str):
@@ -24,6 +27,7 @@ def load_numbered_module(filename: str, module_name: str):
 
 sync = load_numbered_module("11_sync_webapp_to_planner.py", "sync_webapp_to_planner_test")
 import ms_planner  # noqa: E402
+import _planner_backend as planner_backend  # noqa: E402
 
 
 ENV = {
@@ -153,6 +157,202 @@ class GraphRecoveryIdempotencyTests(unittest.TestCase):
         self.assertEqual("recovered-task-id", result["task_id"])
         self.assertEqual(1, create.call_count)
         self.assertEqual(2, find.call_count)
+
+
+class FakeResponse:
+    def __init__(self, status_code: int, payload=None, *, headers=None, json_error: Exception | None = None):
+        self.status_code = status_code
+        self._payload = payload
+        self.headers = headers or {}
+        self._json_error = json_error
+
+    @property
+    def ok(self) -> bool:
+        return 200 <= self.status_code < 400
+
+    def json(self):
+        if self._json_error:
+            raise self._json_error
+        return self._payload
+
+
+class SequencedHttp:
+    def __init__(self, *, post_items, get_items=()):
+        self.post_items = list(post_items)
+        self.get_items = list(get_items)
+        self.post_calls = []
+        self.get_calls = []
+
+    @staticmethod
+    def _next(items):
+        item = items.pop(0)
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+    def post(self, url, **kwargs):
+        self.post_calls.append((url, kwargs))
+        return self._next(self.post_items)
+
+    def get(self, url, **kwargs):
+        self.get_calls.append((url, kwargs))
+        return self._next(self.get_items)
+
+
+APPS_SCRIPT_ENV = {
+    "APPS_SCRIPT_WEBAPP_URL": "https://script.google.com/macros/s/unit-test/exec",
+    "APPS_SCRIPT_TOKEN": "unit-test-public-token",
+}
+CONTENT_SERVICE_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=unit-test"
+
+
+class AppsScriptClientRedirectTests(unittest.TestCase):
+    def _client(self, *, post_items, get_items=()):
+        http = SequencedHttp(post_items=post_items, get_items=get_items)
+        return planner_backend.AppsScriptClient(http=http), http
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_redirect_post_then_get_json_uses_one_post_and_one_get(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": CONTENT_SERVICE_URL})],
+            get_items=[FakeResponse(200, {"ok": True, "adminSession": "test-session"}, headers={"Content-Type": "application/json"})],
+        )
+
+        result = client.call("verify_admin", {"password": "test-password"})
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual(1, len(http.get_calls))
+        self.assertEqual(planner_backend.WEBAPP_ADMIN_TIMEOUT_SECONDS, http.post_calls[0][1]["timeout"])
+        self.assertFalse(http.post_calls[0][1]["allow_redirects"])
+        self.assertEqual(planner_backend.WEBAPP_CONTENTSERVICE_TIMEOUT_SECONDS, http.get_calls[0][1]["timeout"])
+        self.assertFalse(http.get_calls[0][1]["allow_redirects"])
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_retries_contentservice_get_without_reposting(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": CONTENT_SERVICE_URL})],
+            get_items=[
+                FakeResponse(502, {}),
+                FakeResponse(200, {"ok": True, "adminSession": "test-session"}, headers={"Content-Type": "application/json"}),
+            ],
+        )
+        with patch.object(planner_backend.time, "sleep") as sleep:
+            result = client.call("verify_admin", {"password": "test-password"})
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual(2, len(http.get_calls))
+        sleep.assert_called_once_with(0.5)
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_retries_non_json_contentservice_response_without_reposting(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": CONTENT_SERVICE_URL})],
+            get_items=[
+                FakeResponse(200, "<html>temporary response</html>", headers={"Content-Type": "text/html"}),
+                FakeResponse(200, {"ok": True}, headers={"Content-Type": "application/json"}),
+            ],
+        )
+        with patch.object(planner_backend.time, "sleep") as sleep:
+            result = client.call("verify_admin", {"password": "test-password"})
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual(2, len(http.get_calls))
+        sleep.assert_called_once_with(0.5)
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_retries_malformed_json_contentservice_response_without_reposting(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": CONTENT_SERVICE_URL})],
+            get_items=[
+                FakeResponse(
+                    200,
+                    headers={"Content-Type": "application/json"},
+                    json_error=ValueError("invalid JSON"),
+                ),
+                FakeResponse(200, {"ok": True}, headers={"Content-Type": "application/json"}),
+            ],
+        )
+        with patch.object(planner_backend.time, "sleep") as sleep:
+            result = client.call("verify_admin", {"password": "test-password"})
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual(2, len(http.get_calls))
+        sleep.assert_called_once_with(0.5)
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_retries_non_object_json_contentservice_response_without_reposting(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": CONTENT_SERVICE_URL})],
+            get_items=[
+                FakeResponse(200, ["not", "an", "object"], headers={"Content-Type": "application/json"}),
+                FakeResponse(200, {"ok": True}, headers={"Content-Type": "application/json"}),
+            ],
+        )
+        with patch.object(planner_backend.time, "sleep") as sleep:
+            result = client.call("verify_admin", {"password": "test-password"})
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual(2, len(http.get_calls))
+        sleep.assert_called_once_with(0.5)
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_contentservice_get_exhaustion_does_not_repost(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": CONTENT_SERVICE_URL})],
+            get_items=[FakeResponse(502, {}), FakeResponse(502, {}), FakeResponse(502, {})],
+        )
+        with patch.object(planner_backend.time, "sleep"):
+            with self.assertRaises(planner_backend.ApiProblem) as caught:
+                client.call("verify_admin", {"password": "test-password"})
+
+        self.assertEqual("APPS_SCRIPT_UNAVAILABLE", caught.exception.code)
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual(3, len(http.get_calls))
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_rejects_untrusted_redirect_without_following_it(self):
+        client, http = self._client(
+            post_items=[FakeResponse(302, headers={"Location": "https://attacker.example/redirect"})],
+        )
+
+        with self.assertRaises(planner_backend.ApiProblem) as caught:
+            client.call("verify_admin", {"password": "test-password"})
+
+        self.assertEqual("APPS_SCRIPT_UNAVAILABLE", caught.exception.code)
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual([], http.get_calls)
+        self.assertNotIn("attacker.example", caught.exception.message)
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_ordinary_action_keeps_post_retry_policy(self):
+        client, http = self._client(
+            post_items=[FakeResponse(502, {}), FakeResponse(200, {"ok": True, "data": []})],
+        )
+        with patch.object(planner_backend.time, "sleep") as sleep:
+            result = client.call("get_all_records")
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(2, len(http.post_calls))
+        self.assertEqual([], http.get_calls)
+        self.assertEqual(planner_backend.WEBAPP_TIMEOUT_SECONDS, http.post_calls[0][1]["timeout"])
+        self.assertNotIn("allow_redirects", http.post_calls[0][1])
+        sleep.assert_called_once_with(0.5)
+
+    @patch.dict(os.environ, APPS_SCRIPT_ENV, clear=False)
+    def test_verify_admin_post_timeout_is_not_retried(self):
+        client, http = self._client(post_items=[planner_backend.requests.Timeout("timed out")])
+
+        with self.assertRaises(planner_backend.ApiProblem) as caught:
+            client.call("verify_admin", {"password": "test-password"})
+
+        self.assertEqual("APPS_SCRIPT_UNAVAILABLE", caught.exception.code)
+        self.assertEqual(1, len(http.post_calls))
+        self.assertEqual([], http.get_calls)
 
 
 if __name__ == "__main__":

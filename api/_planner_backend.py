@@ -14,12 +14,18 @@ import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from typing import Any
+from urllib.parse import urlsplit
 
 import requests
 
 
 WEBAPP_TIMEOUT_SECONDS = 45
+WEBAPP_ADMIN_TIMEOUT_SECONDS = 240
 WEBAPP_MAX_ATTEMPTS = 3
+WEBAPP_CONTENTSERVICE_TIMEOUT_SECONDS = 60
+WEBAPP_CONTENTSERVICE_MAX_ATTEMPTS = 3
+GOOGLE_CONTENTSERVICE_HOST = "script.googleusercontent.com"
+APPS_SCRIPT_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 MAX_REQUEST_BYTES = 256 * 1024
 
 # Browser requests go through /api/webapp.  These machine-to-machine actions
@@ -66,6 +72,73 @@ class AppsScriptClient:
     def __init__(self, http: Any = requests):
         self.http = http
 
+    @staticmethod
+    def _is_allowed_contentservice_redirect(location: str) -> bool:
+        """Accept only the HTTPS ContentService host returned by Apps Script.
+
+        The redirect URL is short-lived and can contain opaque query parameters,
+        so it is deliberately never logged or included in a client error.
+        """
+        try:
+            parsed = urlsplit(location)
+            port = parsed.port
+        except (TypeError, ValueError):
+            return False
+        return (
+            parsed.scheme == "https"
+            and parsed.hostname == GOOGLE_CONTENTSERVICE_HOST
+            and port in (None, 443)
+        )
+
+    @staticmethod
+    def _unavailable_error() -> ApiProblem:
+        return ApiProblem(
+            HTTPStatus.BAD_GATEWAY,
+            "APPS_SCRIPT_UNAVAILABLE",
+            "Không thể kết nối Google Sheet. Vui lòng thử lại.",
+        )
+
+    def _get_contentservice_json(self, location: str) -> dict[str, Any]:
+        """Fetch a signed Apps Script ContentService response without rerunning POST."""
+        last_error: Exception | None = None
+        for attempt in range(1, WEBAPP_CONTENTSERVICE_MAX_ATTEMPTS + 1):
+            retryable = False
+            try:
+                # Do not follow a second redirect: only the first Location has
+                # been validated as the known Google ContentService host.
+                response = self.http.get(
+                    location,
+                    timeout=WEBAPP_CONTENTSERVICE_TIMEOUT_SECONDS,
+                    allow_redirects=False,
+                )
+                content_type = str(response.headers.get("Content-Type", "")).lower()
+                if response.ok and "application/json" in content_type:
+                    try:
+                        data = response.json()
+                    except ValueError as exc:
+                        last_error = exc
+                        retryable = True
+                    else:
+                        if isinstance(data, dict):
+                            return data
+                        last_error = RuntimeError("Apps Script trả response không hợp lệ.")
+                        retryable = True
+                elif response.ok:
+                    last_error = RuntimeError("Apps Script trả response không phải JSON.")
+                    retryable = True
+                else:
+                    last_error = RuntimeError(f"Apps Script HTTP {response.status_code}")
+                    retryable = response.status_code in (404, 408, 429) or response.status_code >= 500
+            except requests.RequestException as exc:
+                last_error = exc
+                retryable = True
+            if attempt < WEBAPP_CONTENTSERVICE_MAX_ATTEMPTS and retryable:
+                time.sleep(0.5 * attempt)
+                continue
+            break
+
+        raise self._unavailable_error() from last_error
+
     def call(
         self,
         action: str,
@@ -83,13 +156,32 @@ class AppsScriptClient:
 
         last_error: Exception | None = None
         response = None
-        for attempt in range(1, WEBAPP_MAX_ATTEMPTS + 1):
+        is_admin_login = action == "verify_admin"
+
+        request_timeout = (
+            WEBAPP_ADMIN_TIMEOUT_SECONDS
+            if is_admin_login
+            else WEBAPP_TIMEOUT_SECONDS
+        )
+
+        max_attempts = 1 if is_admin_login else WEBAPP_MAX_ATTEMPTS
+        for attempt in range(1, max_attempts + 1):
             try:
+                post_options: dict[str, Any] = {
+                    "json": body,
+                    "timeout": request_timeout,
+                }
+                if is_admin_login:
+                    post_options["allow_redirects"] = False
                 response = self.http.post(
                     env_value("APPS_SCRIPT_WEBAPP_URL"),
-                    json=body,
-                    timeout=WEBAPP_TIMEOUT_SECONDS,
+                    **post_options,
                 )
+                if is_admin_login and response.status_code in APPS_SCRIPT_REDIRECT_STATUSES:
+                    location = response.headers.get("Location", "")
+                    if not self._is_allowed_contentservice_redirect(location):
+                        raise self._unavailable_error()
+                    return self._get_contentservice_json(location)
                 if response.ok:
                     data = response.json()
                     if isinstance(data, dict):
@@ -101,16 +193,12 @@ class AppsScriptClient:
                 last_error = exc
 
             retryable = response is None or response.status_code in (404, 408, 429) or response.status_code >= 500
-            if attempt < WEBAPP_MAX_ATTEMPTS and retryable:
+            if attempt < max_attempts and retryable:
                 time.sleep(0.5 * attempt)
                 continue
             break
 
-        raise ApiProblem(
-            HTTPStatus.BAD_GATEWAY,
-            "APPS_SCRIPT_UNAVAILABLE",
-            "Không thể kết nối Google Sheet. Vui lòng thử lại.",
-        ) from last_error
+        raise self._unavailable_error() from last_error
 
 
 def allowed_origins() -> set[str]:

@@ -3,7 +3,7 @@
   "outputDirectory": "Dashboard",
   "functions": {
     "api/*.py": {
-      "maxDuration": 60,
+      "maxDuration": 300,
       "memory": 1024,
       "excludeFiles": "{tests/**,credentials/**,config/**,auth/**,logs/**,output/**,Dashboard/**,**/__pycache__/**}"
     }
