@@ -27,7 +27,7 @@
     "Y tế-Sức khỏe"
   ],
   "ajax_search_params": {
-    "_comment": "Nguồn: https://luatvietnam.vn/van-ban-moi.html, xác nhận qua API getfields/geteffectstatus ngày 31/07/2026. field_ids/doc_type_ids PHẢI encode dạng nối phẩy (vd FieldIds=1,24,5,...); effect_status_ids PHẢI encode dạng lặp tham số (vd EffectStatusIds=4&EffectStatusIds=3&...) — hai kiểu bind khác nhau ở phía server, đã kiểm chứng thực nghiệm.",
+    "_comment": "Nguồn: https://luatvietnam.vn/van-ban-moi.html, xác nhận qua API getfields/geteffectstatus ngày 31/07/2026 và kiểm chứng binding EffectStatusIds ngày 10/10/2026. field_ids, doc_type_ids và effect_status_ids PHẢI encode dạng một parameter nối phẩy (vd FieldIds=1,24,5,...; EffectStatusIds=4,3,...); lặp EffectStatusIds khiến server chỉ bind giá trị đầu tiên.",
     "field_ids": [1, 24, 5, 40, 7, 29, 4, 19, 12],
     "field_ids_comment": "1=Đầu tư, 24=Doanh nghiệp, 5=Giáo dục-Đào tạo-Dạy nghề, 40=Kế toán-Kiểm toán, 7=Lao động-Tiền lương, 29=Sở hữu trí tuệ, 4=Thuế-Phí-Lệ phí, 19=Xây dựng, 12=Y tế-Sức khỏe",
     "doc_type_ids": [58, 10, 11, 21],
