@@ -16,6 +16,7 @@ WEBAPP_TIMEOUT_SECONDS = 60
 DEFAULT_RECORD_ACTION = "get_all_records"
 VBQPPL_UPDATE_ACTION = "update_vbqppl_record"
 DELETED_SYNC_STATUS = "Đã xóa task Planner"
+DELETED_WORKFLOW_FIELDS = ("Current PIC", "Current Checkpoint", "Next Response Due")
 
 
 def setup_utf8_stdio() -> None:
@@ -97,6 +98,31 @@ def should_sync_from_planner(record: dict) -> tuple[bool, str]:
     return True, ""
 
 
+def is_deleted_planner_task(record: dict) -> bool:
+    return str(record.get("Planner Sync Status", "") or "").strip() == DELETED_SYNC_STATUS
+
+
+def needs_deleted_task_cleanup(record: dict) -> bool:
+    """Return True only when a previously deleted task still has current workflow data."""
+    return is_deleted_planner_task(record) and any(
+        str(record.get(field, "") or "").strip() for field in DELETED_WORKFLOW_FIELDS
+    )
+
+
+def deleted_task_workflow_updates() -> dict:
+    """Clear only current workflow fields; keep historical Planner identifiers untouched."""
+    return {field: "" for field in DELETED_WORKFLOW_FIELDS}
+
+
+def deleted_task_not_found_updates() -> dict:
+    """Mark a newly discovered Graph 404 and clear its current workflow state."""
+    return {
+        "Planner Sync Status": DELETED_SYNC_STATUS,
+        "Planner Last Sync": now_text(),
+        **deleted_task_workflow_updates(),
+    }
+
+
 def parse_checklist_item(title: str) -> dict | None:
     """Parse: 'department | email | Hạn hoàn thành: dd/MM/YYYY | checkpoint'"""
     parts = [p.strip() for p in title.split("|")]
@@ -174,8 +200,12 @@ def sync_planner_to_webapp(limit: int = 0, dry_run: bool = False) -> dict:
     records = get_records()
     records_to_process: list[dict] = []
     skipped: list[dict] = []
+    deleted_cleanup_candidates: list[dict] = []
 
     for record in records:
+        if needs_deleted_task_cleanup(record):
+            deleted_cleanup_candidates.append(record)
+            continue
         ok, reason = should_sync_from_planner(record)
         if ok:
             records_to_process.append(record)
@@ -184,6 +214,9 @@ def sync_planner_to_webapp(limit: int = 0, dry_run: bool = False) -> dict:
 
     if limit > 0:
         records_to_process = records_to_process[:limit]
+        deleted_cleanup_to_process = deleted_cleanup_candidates[:max(limit - len(records_to_process), 0)]
+    else:
+        deleted_cleanup_to_process = deleted_cleanup_candidates
 
     if dry_run:
         print("DRY RUN - records sẽ đồng bộ từ Planner:")
@@ -192,22 +225,53 @@ def sync_planner_to_webapp(limit: int = 0, dry_run: bool = False) -> dict:
              for r in records_to_process],
             ensure_ascii=False, indent=2,
         ))
+        print("DRY RUN - deleted task cleanup candidates:")
+        print(json.dumps(
+            [{"row_number": r.get("_rowNumber"), "so_hieu": str(r.get("Số hiệu", "") or "")}
+             for r in deleted_cleanup_candidates],
+            ensure_ascii=False, indent=2,
+        ))
+        print("DRY RUN - deleted task cleanup sẽ xử lý trong write budget:")
+        print(json.dumps(
+            [{"row_number": r.get("_rowNumber"), "so_hieu": str(r.get("Số hiệu", "") or "")}
+             for r in deleted_cleanup_to_process],
+            ensure_ascii=False, indent=2,
+        ))
         summary = {
             "ok": True,
             "dry_run": True,
             "total_records": len(records),
             "records_to_process": len(records_to_process),
             "skipped_records": len(skipped),
+            "deleted_cleanup_candidates": len(deleted_cleanup_candidates),
+            "deleted_cleanup_to_process": len(deleted_cleanup_to_process),
+            "deleted_cleanup_updated": 0,
+            "deleted_cleanup_failed": 0,
             "updated_records": 0,
             "failed_records": 0,
         }
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return summary
 
-    token = get_token()
     updated: list[dict] = []
     not_found: list[dict] = []
     failed: list[dict] = []
+    deleted_cleanup_updated: list[dict] = []
+    deleted_cleanup_failed: list[dict] = []
+
+    for record in deleted_cleanup_to_process:
+        row_number = record.get("_rowNumber")
+        so_hieu = str(record.get("Số hiệu", "") or "")
+        updates = deleted_task_workflow_updates()
+        try:
+            print(f"Dọn workflow stale của task Planner đã xóa row={row_number} | so_hieu={so_hieu}")
+            webapp_post(VBQPPL_UPDATE_ACTION, {"row_number": row_number, "updates": updates})
+            deleted_cleanup_updated.append({"row_number": row_number, "so_hieu": so_hieu, "updates": updates})
+        except Exception as exc:
+            print(f"  Không thể dọn workflow stale: {exc}")
+            deleted_cleanup_failed.append({"row_number": row_number, "so_hieu": so_hieu, "message": str(exc)})
+
+    token = get_token() if records_to_process else ""
 
     for record in records_to_process:
         task_id = str(record.get("Planner Task ID", "") or "").strip()
@@ -222,17 +286,16 @@ def sync_planner_to_webapp(limit: int = 0, dry_run: bool = False) -> dict:
         except HTTPError as exc:
             if exc.response is not None and exc.response.status_code == 404:
                 print(f"  Task không tìm thấy trên Planner (404), đánh dấu đã xóa.")
+                updates = deleted_task_not_found_updates()
                 try:
                     webapp_post(VBQPPL_UPDATE_ACTION, {
                         "row_number": row_number,
-                        "updates": {
-                            "Planner Sync Status": DELETED_SYNC_STATUS,
-                            "Planner Last Sync": now_text(),
-                        },
+                        "updates": updates,
                     })
+                    not_found.append({"row_number": row_number, "task_id": task_id, "updates": updates})
                 except Exception as update_exc:
                     print(f"  Không thể cập nhật trạng thái đã xóa: {update_exc}")
-                not_found.append({"row_number": row_number, "task_id": task_id})
+                    failed.append({"row_number": row_number, "task_id": task_id, "message": str(update_exc)})
             else:
                 print(f"  Lỗi HTTP {exc.response.status_code if exc.response else '?'}: {exc}")
                 failed.append({"row_number": row_number, "task_id": task_id, "message": str(exc)})
@@ -241,17 +304,23 @@ def sync_planner_to_webapp(limit: int = 0, dry_run: bool = False) -> dict:
             failed.append({"row_number": row_number, "task_id": task_id, "message": str(exc)})
 
     summary = {
-        "ok": len(failed) == 0,
+        "ok": len(failed) == 0 and len(deleted_cleanup_failed) == 0,
         "dry_run": False,
         "total_records": len(records),
         "records_to_process": len(records_to_process),
         "skipped_records": len(skipped),
         "updated_records": len(updated),
         "not_found_records": len(not_found),
-        "failed_records": len(failed),
+        "deleted_cleanup_candidates": len(deleted_cleanup_candidates),
+        "deleted_cleanup_to_process": len(deleted_cleanup_to_process),
+        "deleted_cleanup_updated": len(deleted_cleanup_updated),
+        "deleted_cleanup_failed": len(deleted_cleanup_failed),
+        "failed_records": len(failed) + len(deleted_cleanup_failed),
         "updated_items": updated,
         "not_found_items": not_found,
         "failed_items": failed,
+        "deleted_cleanup_updated_items": deleted_cleanup_updated,
+        "deleted_cleanup_failed_items": deleted_cleanup_failed,
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return summary
