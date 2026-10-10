@@ -138,11 +138,11 @@ def build_query_params(ajax_params: dict, page_index: int, page_size: int) -> li
     organ_ids = ajax_params.get("organ_ids", []) or []
     effect_status_ids = ajax_params.get("effect_status_ids", []) or []
 
-    # QUAN TRỌNG: FieldIds/DocTypeIds/OrganIds phải nối phẩy 1 tham số duy nhất
-    # (server chỉ bind giá trị ĐẦU TIÊN nếu lặp key=value nhiều lần — đã kiểm
-    # chứng thực nghiệm: lặp 9 FieldIds cho kết quả giống hệt chỉ truyền 1 ID).
-    # Ngược lại, EffectStatusIds PHẢI lặp tham số — nối phẩy bị server bỏ qua
-    # hoàn toàn (kết quả xấp xỉ không lọc gì).
+    # QUAN TRỌNG: FieldIds, DocTypeIds và EffectStatusIds đều phải encode thành
+    # một parameter comma-separated. Server chỉ bind giá trị ĐẦU TIÊN nếu lặp
+    # key=value nhiều lần. Đã kiểm chứng: EffectStatusIds=4&EffectStatusIds=6
+    # chỉ trả status 4, còn EffectStatusIds=4,6 trả cả TT85 (status 6) và TT86
+    # (status 4).
     params = [
         ("PageIndex", str(page_index)),
         ("PageSize", str(page_size)),
@@ -152,8 +152,8 @@ def build_query_params(ajax_params: dict, page_index: int, page_size: int) -> li
         ("FieldIds", ",".join(str(x) for x in field_ids)),
         ("DocTypeIds", ",".join(str(x) for x in doc_type_ids)),
     ]
-    for status_id in effect_status_ids:
-        params.append(("EffectStatusIds", str(status_id)))
+    if effect_status_ids:
+        params.append(("EffectStatusIds", ",".join(str(x) for x in effect_status_ids)))
     return params
 
 
