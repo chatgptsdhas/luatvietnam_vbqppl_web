@@ -70,6 +70,15 @@ Các giá trị hiện được code sử dụng gồm:
 
 Không tự thêm biến thể chữ hoa/thường, dấu cách hoặc từ đồng nghĩa. Nếu chuẩn hóa trạng thái, phải có mapping và migration dữ liệu lịch sử.
 
+### `Đã xóa task Planner`
+
+Khi `Planner Sync Status` chính xác là `Đã xóa task Planner`:
+
+- Giữ `Planner Task ID`, `Planner Plan ID`, `Planner Bucket ID`, `Planner Bucket Name` và `Planner Task URL` làm dữ liệu lịch sử phục vụ audit/truy vết.
+- `Current PIC`, `Current Checkpoint` và `Next Response Due` phải rỗng; đây là dữ liệu workflow hiện tại, không còn hợp lệ sau khi task bị xóa.
+- Khi Graph vừa trả `404`, cập nhật `Planner Last Sync` theo thời điểm phát hiện. Khi chỉ dọn các trường workflow stale của record đã có trạng thái này, không đổi `Planner Last Sync`.
+- Dashboard không được coi task là active: không tạo link task cũ, không hiển thị workflow hiện hành, không cho restore yêu cầu xóa task này và không đưa record vào workload/overdue active.
+
 ## 7. Quy tắc tạo Planner Task
 
 Một bản ghi chỉ đủ điều kiện tạo task khi tối thiểu:

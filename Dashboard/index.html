@@ -4656,9 +4656,13 @@
         return ['Đã hoàn thành checkpoint', 'Đã hoàn thành task'].includes(String(status || '').trim());
     }
 
+    function isDeletedPlannerTaskStatus(status) {
+        return String(status || '').trim() === 'Đã xóa task Planner';
+    }
+
     function shouldIncludePlannerReportRow(row) {
         if (!String(row?.['Planner Task ID'] || '').trim()) return false;
-        return String(row?.['Planner Sync Status'] || '').trim() !== 'Đã xóa task Planner';
+        return !isDeletedPlannerTaskStatus(row?.['Planner Sync Status']);
     }
 
     function enrichPlannerReportRow(row, today) {
@@ -7020,6 +7024,7 @@
         const idVanBan = String(rowData?.['ID VĂN BẢN'] || rowData?.['ID Văn bản'] || '').trim();
         const tenVanBan = String(rowData?.['Tên văn bản'] || '').trim();
         const plannerTaskId = String(rowData?.['Planner Task ID'] || '').trim();
+        const plannerTaskDeleted = isDeletedPlannerTaskStatus(rowData?.['Planner Sync Status']);
         const vbqpplRowNumber = rowData?._vbqpplRowNumber || '';
 
         if (!rowData || (!soHieu && !idVanBan)) {
@@ -7027,7 +7032,7 @@
             return;
         }
 
-        const plannerOptionHtml = plannerTaskId ? `
+        const plannerOptionHtml = plannerTaskId && !plannerTaskDeleted ? `
             <label style="display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid var(--border-color); border-radius:8px; background:#fff8e1; color:var(--text-main); font-size:13px; line-height:1.4;">
                 <input type="checkbox" id="restoreDeletePlannerTask" style="margin-top:2px;">
                 <span>
@@ -7043,7 +7048,11 @@
                 <strong style="color: var(--has-navy); font-size: 16px;">[${escapeHtml(soHieu || idVanBan)}]</strong><br><br>
                 <span>Thao tác này sẽ xóa dòng tương ứng khỏi sheet <b>VBQPPL</b>.</span><br>
                 <span>Sheet <b>VBQPPL_Nhap</b> không bị xóa hoặc cập nhật.</span><br>
-                <span>${plannerTaskId ? 'Nếu không chọn tùy chọn bên dưới, task Planner hiện có sẽ được giữ nguyên.' : 'Dòng này không có Planner Task ID nên không có tùy chọn xóa Planner.'}</span>
+                <span>${plannerTaskDeleted
+                    ? 'Task Planner đã được đánh dấu đã xóa; khôi phục sẽ không yêu cầu xóa task Planner.'
+                    : plannerTaskId
+                        ? 'Nếu không chọn tùy chọn bên dưới, task Planner hiện có sẽ được giữ nguyên.'
+                        : 'Dòng này không có Planner Task ID nên không có tùy chọn xóa Planner.'}</span>
             `,
             confirmText: 'Xác nhận khôi phục',
             extraHtml: plannerOptionHtml,
@@ -7056,7 +7065,8 @@
                     tenVanBan,
                     plannerTaskId,
                     vbqpplRowNumber,
-                    deletePlannerTask: shouldDeletePlannerTask
+                    deletePlannerTask: !plannerTaskDeleted && shouldDeletePlannerTask,
+                    plannerTaskDeleted
                 });
             }
         });
@@ -7099,13 +7109,13 @@
         }
     }
 
-    async function executeRestoreTransferredRow({ rowNumber, soHieu, idVanBan, tenVanBan, plannerTaskId, vbqpplRowNumber, deletePlannerTask }) {
+    async function executeRestoreTransferredRow({ rowNumber, soHieu, idVanBan, tenVanBan, plannerTaskId, vbqpplRowNumber, deletePlannerTask, plannerTaskDeleted = false }) {
         const btn = document.getElementById(`btn-restore-${rowNumber}`);
         if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`; }
  
         try {
             let plannerDeleteResult = null;
-            if (deletePlannerTask) {
+            if (deletePlannerTask && !plannerTaskDeleted) {
                 plannerDeleteResult = await deletePlannerTaskForRestore({ plannerTaskId, soHieu, tenVanBan });
                 await logPlannerTaskDeleteResult(plannerDeleteResult);
             }
@@ -7446,10 +7456,13 @@
 
         const plannerTaskId = rowData['Planner Task ID'] ? String(rowData['Planner Task ID']).trim() : '';
         const plannerPlanId = rowData['Planner Plan ID'] ? String(rowData['Planner Plan ID']).trim() : '';
+        const plannerTaskDeleted = isDeletedPlannerTaskStatus(rowData['Planner Sync Status']);
         const PLANNER_TENANT_ID = '010a6d4c-53ee-42a6-b68e-74c646a3297c';
-        const plannerTaskUrl = (plannerTaskId && plannerPlanId)
-            ? `https://planner.cloud.microsoft/webui/plan/${plannerPlanId}/view/board/task/${plannerTaskId}?tid=${PLANNER_TENANT_ID}`
-            : (rowData['Planner Task URL'] ? String(rowData['Planner Task URL']).trim() : '');
+        const plannerTaskUrl = plannerTaskDeleted
+            ? ''
+            : (plannerTaskId && plannerPlanId)
+                ? `https://planner.cloud.microsoft/webui/plan/${plannerPlanId}/view/board/task/${plannerTaskId}?tid=${PLANNER_TENANT_ID}`
+                : (rowData['Planner Task URL'] ? String(rowData['Planner Task URL']).trim() : '');
         const plannerLastSync = formatPlannerDate(rowData['Planner Last Sync'], true);
         const currentPic = rowData['Current PIC'] ? String(rowData['Current PIC']).trim() : '--';
         const currentCheckpoint = rowData['Current Checkpoint'] ? String(rowData['Current Checkpoint']).trim() : '--';
@@ -7466,11 +7479,19 @@
                         <i class="fa-solid fa-list-check"></i> Theo dõi Planner
                     </h4>
                     <div style="background: #eaf3ff; border: 1px solid #d6e8ff; padding: 12px 15px; border-radius: 6px; font-size: 13px;">
-                        ${plannerActionHtml}
-                        <p style="margin: 0 0 6px 0;"><strong>PIC hiện tại:</strong> ${escapeHtml(currentPic)}</p>
-                        <p style="margin: 0 0 6px 0;"><strong>Công việc hiện tại:</strong> ${escapeHtml(currentCheckpoint)}</p>
-                        <p style="margin: 0 0 6px 0;"><strong>Hạn hoàn thành:</strong> ${escapeHtml(nextResponseDue)}</p>
-                        <p style="margin: 0;"><strong>Cập nhật lần cuối:</strong> ${escapeHtml(plannerLastSync)}</p>
+                        ${plannerTaskDeleted
+                            ? `
+                                <p style="margin: 0 0 6px 0; color: #c62828; font-weight: 600;">Task Planner đã bị xóa</p>
+                                <p style="margin: 0 0 6px 0;"><strong>Task ID (lịch sử):</strong> ${escapeHtml(plannerTaskId)}</p>
+                                <p style="margin: 0;"><strong>Cập nhật lần cuối:</strong> ${escapeHtml(plannerLastSync)}</p>
+                            `
+                            : `
+                                ${plannerActionHtml}
+                                <p style="margin: 0 0 6px 0;"><strong>PIC hiện tại:</strong> ${escapeHtml(currentPic)}</p>
+                                <p style="margin: 0 0 6px 0;"><strong>Công việc hiện tại:</strong> ${escapeHtml(currentCheckpoint)}</p>
+                                <p style="margin: 0 0 6px 0;"><strong>Hạn hoàn thành:</strong> ${escapeHtml(nextResponseDue)}</p>
+                                <p style="margin: 0;"><strong>Cập nhật lần cuối:</strong> ${escapeHtml(plannerLastSync)}</p>
+                            `}
                     </div>
                 </div>
             `

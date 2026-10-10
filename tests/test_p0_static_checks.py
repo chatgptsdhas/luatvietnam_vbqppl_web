@@ -215,6 +215,15 @@ class TestDashboardFrontendStaticChecks(unittest.TestCase):
     def test_no_sensitive_console_log_of_session_or_password(self):
         self.assertNotIn("console.log(\"Kết quả xác thực:\", result)", self.src)
 
+    def test_deleted_planner_task_is_not_rendered_or_restored_as_active(self):
+        self.assertIn("function isDeletedPlannerTaskStatus(status)", self.src)
+        self.assertIn("return !isDeletedPlannerTaskStatus(row?.['Planner Sync Status']);", self.src)
+        self.assertIn("const plannerTaskUrl = plannerTaskDeleted\n            ? ''", self.src)
+        self.assertIn("Task Planner đã bị xóa", self.src)
+        self.assertIn("const plannerOptionHtml = plannerTaskId && !plannerTaskDeleted", self.src)
+        self.assertIn("deletePlannerTask: !plannerTaskDeleted && shouldDeletePlannerTask", self.src)
+        self.assertIn("if (deletePlannerTask && !plannerTaskDeleted)", self.src)
+
 
 class TestPlannerSyncServerStaticChecks(unittest.TestCase):
     def setUp(self):
