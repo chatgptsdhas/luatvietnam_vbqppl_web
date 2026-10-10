@@ -224,6 +224,33 @@ class TestDashboardFrontendStaticChecks(unittest.TestCase):
         self.assertIn("deletePlannerTask: !plannerTaskDeleted && shouldDeletePlannerTask", self.src)
         self.assertIn("if (deletePlannerTask && !plannerTaskDeleted)", self.src)
 
+    def test_transfer_modal_resets_save_button_and_department_state_from_record(self):
+        open_modal = self.src.split("function openModal(rowNum, isTransfer = false) {", 1)[1].split(
+            "async function saveEdit()", 1
+        )[0]
+        self.assertIn("const btnSave = document.getElementById('btnSaveEdit');", open_modal)
+        self.assertIn("btnSave.disabled = false;", open_modal)
+        self.assertLess(
+            open_modal.index("btnSave.disabled = false;"),
+            open_modal.index("if (isTransferMode) {"),
+        )
+        self.assertIn(
+            "danhSachBoPhanDaChon = parseBoPhanDaChon(rowData['Bộ phận chủ trì']);",
+            open_modal,
+        )
+        self.assertIn("capNhatGiaoDienBoPhan();", open_modal)
+        self.assertNotIn("document.getElementById('editBoPhan').value =", open_modal)
+        self.assertIn("function parseBoPhanDaChon(chuoiBoPhan)", self.src)
+        self.assertIn(".filter(Boolean)", self.src)
+        self.assertIn("new Set(", self.src)
+
+    def test_save_edit_reenables_button_after_admin_session_response(self):
+        save_edit = self.src.split("async function saveEdit() {", 1)[1].split(
+            "// =====================================================================\n    // HÀM transferRow", 1
+        )[0]
+        self.assertIn("if (handleAdminSessionResponse(result)) return;", save_edit)
+        self.assertRegex(save_edit, r"finally\s*\{\s*btnSave\.disabled = false;")
+
 
 class TestPlannerSyncServerStaticChecks(unittest.TestCase):
     def setUp(self):

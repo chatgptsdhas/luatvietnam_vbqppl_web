@@ -6626,10 +6626,12 @@
         document.getElementById('editChuDe').value = rowData['Chủ đề'] || '';
         document.getElementById('editMuc').value = rowData['Mục'] || '';
         document.getElementById('editMucDo').value = rowData['Mức độ tác động'] || '';
-        document.getElementById('editBoPhan').value = rowData['Bộ phận chủ trì'] || '';
+        danhSachBoPhanDaChon = parseBoPhanDaChon(rowData['Bộ phận chủ trì']);
+        capNhatGiaoDienBoPhan();
 
         // Đổi tên nút bấm trong Popup cho phù hợp
         const btnSave = document.getElementById('btnSaveEdit');
+        btnSave.disabled = false;
         if (isTransferMode) {
             btnSave.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển`;
         } else {
@@ -6641,7 +6643,7 @@
 
     async function saveEdit() {
         const btnSave = document.getElementById('btnSaveEdit');
-        const originalText = btnSave.innerHTML; 
+        const isTransfer = typeof isTransferMode !== 'undefined' ? isTransferMode : false;
 
         try {
             // Khóa nút ngay lập tức
@@ -6661,10 +6663,7 @@
                 "Bộ phận chủ trì": document.getElementById('editBoPhan') ? document.getElementById('editBoPhan').value : ''
             };
 
-            // 2. Bảo vệ biến cờ (tránh lỗi ReferenceError)
-            const isTransfer = typeof isTransferMode !== 'undefined' ? isTransferMode : false;
-
-            // 3. Gọi API lên Google
+            // 2. Gọi API lên Google
             const response = await fetchWebApp(WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -6674,14 +6673,11 @@
             const result = await response.json();
             if (handleAdminSessionResponse(result)) return;
 
-            // 4. Xử lý kết quả trả về
+            // 3. Xử lý kết quả trả về
             if (result.ok) {
                 const rId = parseInt(rowNum);
                 const rowIdx = currentRecords.findIndex(r => r._rowNumber == rId);
                 if (rowIdx > -1) Object.assign(currentRecords[rowIdx], updates);
-
-                btnSave.disabled = false;
-                btnSave.innerHTML = isTransfer ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển` : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
 
                 if (isTransfer) {
                     closeModal('editModal');
@@ -6692,17 +6688,17 @@
                     closeModal('editModal');
                 }
             } else {
-                btnSave.disabled = false;
-                btnSave.innerHTML = originalText;
                 showToast("Lỗi từ Máy chủ", result.message, "error");
             }
 
         } catch (error) {
-            // LƯỚI BẮT LỖI MẠNH NHẤT: Bắt buộc nhả nút và hiển thị thẳng lỗi lên màn hình
-            btnSave.disabled = false;
-            btnSave.innerHTML = originalText;
             console.error("LỖI GIAO DIỆN JS:", error);
             alert("Đã xảy ra lỗi trên trang web!\nChi tiết: " + error.message);
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerHTML = isTransfer
+                ? `<i class="fa-solid fa-paper-plane"></i> Cập nhật & Chuyển`
+                : `<i class="fa-solid fa-floppy-disk"></i> Cập nhật`;
         }
     }
 
@@ -9047,14 +9043,18 @@ async function saveIntroContent() {
         }
     });
 
+    function parseBoPhanDaChon(chuoiBoPhan) {
+        return [...new Set(
+            String(chuoiBoPhan || '')
+                .split(',')
+                .map(item => item.trim())
+                .filter(Boolean)
+        )];
+    }
+
     // 7. [QUAN TRỌNG] Hàm dùng để load dữ liệu cũ lên Modal khi bấm Cập nhật
     function loadDuLieuBoPhanCu(chuoiBoPhan) {
-        if (!chuoiBoPhan || chuoiBoPhan.trim() === "") {
-            danhSachBoPhanDaChon = [];
-        } else {
-            // Tách chuỗi "HO, EDU" thành mảng và xóa khoảng trắng thừa
-            danhSachBoPhanDaChon = chuoiBoPhan.split(',').map(item => item.trim());
-        }
+        danhSachBoPhanDaChon = parseBoPhanDaChon(chuoiBoPhan);
         capNhatGiaoDienBoPhan();
     }
     // Khôi phục trạng thái đăng nhập ngay khi script chạy xong
