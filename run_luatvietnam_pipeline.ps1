@@ -184,7 +184,7 @@ function Remove-Owned-Lock {
         $lock = Read-PipelineLock -Path $script:LockFile
 
         if ($lock.RunId -eq $script:RunId) {
-            Remove-Item -LiteralPath $script:LockFile -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $script:LockFile -Force -ErrorAction Stop
             $script:OwnsLock = $false
         }
         else {
