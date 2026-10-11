@@ -8,6 +8,7 @@ import socket
 import ssl
 import time
 from datetime import datetime
+from urllib.parse import quote, quote_plus
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -271,7 +272,7 @@ def safe_goto(page, url: str):
         except Exception:
             pass
     except PlaywrightTimeoutError:
-        print(f"Timeout khi mở URL: {url}")
+        print("Timeout khi mở URL (không ghi URL vào log)")
 
 
 
@@ -845,6 +846,65 @@ def sleep_before_apps_script_retry(attempt: int, base_delay_seconds: float, max_
         time.sleep(delay)
 
 
+def sanitize_diagnostic_data(value, credentials: tuple[str, ...] = ()):
+    """Copy output data, redacting sensitive fields and credential echoes."""
+    sensitive_key = re.compile(r"token|password|secret|session|cookie|authorization|signature|credential|api[_-]?key", re.IGNORECASE)
+    variants = set()
+    for credential in credentials:
+        if isinstance(credential, str) and credential:
+            variants.update((
+                credential,
+                json.dumps(credential, ensure_ascii=True)[1:-1],
+                json.dumps(credential, ensure_ascii=False)[1:-1],
+                quote(credential, safe=""),
+                quote_plus(credential),
+            ))
+    replacements = sorted(variants, key=len, reverse=True)
+
+    def clean_text(text: str) -> str:
+        for credential in replacements:
+            text = text.replace(credential, "[REDACTED]")
+        return text
+
+    def clean(item):
+        if isinstance(item, dict):
+            return {
+                clean_text(str(key)): "[REDACTED]" if sensitive_key.search(str(key)) else clean(child)
+                for key, child in item.items()
+            }
+        if isinstance(item, (list, tuple)):
+            return [clean(child) for child in item]
+        if isinstance(item, str):
+            return clean_text(item)
+        if item is None or isinstance(item, (bool, int, float)):
+            return item
+        return "[OMITTED]"
+
+    return clean(value)
+
+
+def build_apps_script_debug_row(sent: dict, document_index: int) -> dict:
+    """Allowlist transport metadata; never copy request/response business data."""
+    result = sent.get("result")
+    apps_script_ok = result.get("ok") if isinstance(result, dict) else None
+    metadata = sent.get("request_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    counts = {
+        key: metadata.get(key) if type(metadata.get(key)) is int else 0
+        for key in ("request_bytes", "payload_field_count", "relationship_section_count")
+    }
+    return {
+        "document_index": document_index,
+        "request_metadata": {"action": "import_vbqppl_nhap", **counts},
+        "attempt": sent.get("attempt") if type(sent.get("attempt")) is int else 1,
+        "response": {
+            "transport_ok": bool(sent.get("ok")),
+            "apps_script_ok": apps_script_ok if isinstance(apps_script_ok, bool) else None,
+        },
+        "retry_count": len(sent.get("retry_errors", [])),
+    }
+
+
 def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_save_request_body: bool = False) -> dict:
     url = normalize_text(config.get("APPS_SCRIPT_WEBAPP_URL", "") or os.getenv("APPS_SCRIPT_WEBAPP_URL", ""))
     token = resolve_apps_script_token(config)
@@ -891,6 +951,13 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
     }
 
     request_bytes = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    credentials = (token, service_token)
+    request_metadata = {
+        "action": "import_vbqppl_nhap",
+        "request_bytes": len(request_bytes),
+        "payload_field_count": len(payload) if isinstance(payload, dict) else 0,
+        "relationship_section_count": len(luoc_do_data) if isinstance(luoc_do_data, dict) else 0,
+    }
     failed_attempts = []
 
     for attempt in range(1, max_attempts + 1):
@@ -907,23 +974,26 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
             try:
                 parsed = json.loads(content)
             except Exception:
-                parsed = {"raw": content}
-            out = {"ok": True, "result": parsed, "attempt": attempt}
+                parsed = {"raw": "[NON_JSON_RESPONSE_OMITTED]"}
+            out = {"ok": True, "result": sanitize_diagnostic_data(parsed, credentials), "attempt": attempt}
             if failed_attempts:
                 out["retry_errors"] = failed_attempts
             if debug_save_request_body:
-                out["request_body"] = body
+                out["request_metadata"] = dict(request_metadata)
             return out
         except HTTPError as exc:
-            response_body = exc.read().decode("utf-8", errors="replace") if hasattr(exc, "read") else ""
-            detail = f"HTTPError {exc.code}: {exc.reason}. Body: {response_body[:500]}"
+            status = exc.code if isinstance(exc.code, int) else "unknown"
+            detail = f"HTTPError {status}: response details omitted"
             retryable = is_retryable_apps_script_error(exc)
+            try:
+                exc.close()
+            except Exception:
+                pass
         except URLError as exc:
-            detail = f"URLError: {exc.reason}"
+            detail = "URLError: request failed"
             retryable = is_retryable_apps_script_error(exc)
         except Exception as exc:
-            msg = str(exc) if str(exc) else repr(exc)
-            detail = f"{exc.__class__.__name__}: {msg}"
+            detail = f"{sanitize_diagnostic_data(type(exc).__name__, credentials)}: request failed"
             retryable = is_retryable_apps_script_error(exc)
 
         failed_attempts.append({"attempt": attempt, "error": detail, "retryable": retryable})
@@ -931,14 +1001,14 @@ def send_to_apps_script(payload: dict, luoc_do_data: dict, config: dict, debug_s
             prefix = f"Apps Script send failed after {attempt}/{max_attempts} attempt(s)"
             out = {"ok": False, "error": f"{prefix}: {detail}", "attempt": attempt, "retry_errors": failed_attempts}
             if debug_save_request_body:
-                out["request_body"] = body
+                out["request_metadata"] = dict(request_metadata)
             return out
 
         sleep_before_apps_script_retry(attempt, base_delay_seconds, max_delay_seconds)
 
     out = {"ok": False, "error": "Apps Script send failed without a captured exception", "retry_errors": failed_attempts}
     if debug_save_request_body:
-        out["request_body"] = body
+        out["request_metadata"] = dict(request_metadata)
     return out
 
 
@@ -1019,6 +1089,7 @@ def main():
     webapp_url = normalize_text(config.get("APPS_SCRIPT_WEBAPP_URL", "") or os.getenv("APPS_SCRIPT_WEBAPP_URL", ""))
     webapp_token = resolve_apps_script_token(config)
     webapp_service_token = resolve_apps_script_service_token(config)
+    diagnostic_credentials = (webapp_token, webapp_service_token)
     print(f"Apps Script enabled: {apps_script_enabled} | dry_run: {dry_run}")
     print(f"APPS_SCRIPT_WEBAPP_URL: {'OK' if webapp_url else 'MISSING'}")
     print(f"APPS_SCRIPT_TOKEN: {'OK' if webapp_token else 'MISSING'}")
@@ -1043,7 +1114,7 @@ def main():
             if not url:
                 continue
 
-            print(f"[{idx}/{len(docs)}] Xử lý: {url}")
+            print(f"[{idx}/{len(docs)}] Xử lý: {sanitize_diagnostic_data(url, diagnostic_credentials)}")
             processed = process_document(page, doc, config)
             payload = build_payload(
                 processed,
@@ -1072,15 +1143,7 @@ def main():
             luoc_do_payload = processed.get("luoc_do_payload", {"quan_he_phap_ly_theo_luoc_do": {}})
             sent = send_to_apps_script(payload, luoc_do_payload, config, debug_save_request_body=debug_save_request_body)
             if debug_save_request_body:
-                debug_row = {
-                    "url": url,
-                    "request_body": sent.get("request_body", {}),
-                    "attempt": sent.get("attempt", 1),
-                    "response": sent.get("result", {}) if sent.get("ok") else {"ok": False, "error": sent.get("error", "")},
-                }
-                if sent.get("retry_errors"):
-                    debug_row["retry_errors"] = sent.get("retry_errors")
-                request_debug_rows.append(debug_row)
+                request_debug_rows.append(build_apps_script_debug_row(sent, idx))
             if sent.get("ok"):
                 result_row = {"url": url, "status": "sent", "result": sent.get("result", {})}
                 if sent.get("attempt", 1) > 1:
@@ -1116,15 +1179,15 @@ def main():
         "results": results,
     }
 
-    save_json(OUTPUT_FILE, output)
+    save_json(OUTPUT_FILE, sanitize_diagnostic_data(output, diagnostic_credentials))
     if debug_save_request_body:
         save_json(
             OUTPUT_REQUEST_DEBUG_FILE,
-            {
+            sanitize_diagnostic_data({
                 "created_at": output["created_at"],
                 "run_mode": config.get("run_mode", ""),
                 "rows": request_debug_rows,
-            },
+            }, diagnostic_credentials),
         )
         print(f"Đã lưu request debug: {OUTPUT_REQUEST_DEBUG_FILE}")
     print(f"Đã lưu batch payload: {OUTPUT_FILE}")

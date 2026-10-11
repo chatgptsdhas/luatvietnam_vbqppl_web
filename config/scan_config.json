@@ -3,7 +3,7 @@
   "crawl_strategy": "ajax_docsnewest_pageindex",
   "dry_run": false,
   "enabled": true,
-  "debug_save_request_body": true,
+  "debug_save_request_body": false,
   "ma_linh_vuc": [
     "dau-tu",
     "doanh-nghiep",
