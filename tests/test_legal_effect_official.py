@@ -55,7 +55,7 @@ class OfficialSourceTest(unittest.TestCase):
 
     def test_exact_document_and_clause(self):
         result = official_html_check(EVT, URL, HTML)
-        self.assertEqual(result["status"], "OFFICIAL_ACTION_MATCHED_PENDING_LEGAL")
+        self.assertEqual(result["status"], "OFFICIAL_SCOPE_NEEDS_REVIEW")
         self.assertEqual(result["source_document_number"], NEW)
         self.assertIn(OLD, result["source_clause"])
         self.assertTrue(result["requires_legal_review"])
@@ -93,7 +93,7 @@ class OfficialSourceTest(unittest.TestCase):
                "Trạng thái xác minh": "CHO_XAC_MINH"}
         report = {"records_review": [row]}
         audit = check_official_sources(report, [EVT], {NEW: URL},
-                                       fetcher=lambda url: HTML)
+                                       fetcher=lambda url: HTML.replace("Thông tư này thay thế Thông tư", "Thông tư này thay thế toàn bộ Thông tư"))
         self.assertEqual(audit["status_counts"], {"OFFICIAL_ACTION_MATCHED_PENDING_LEGAL": 1})
         self.assertEqual(row["URL nguồn chính thức"], URL)
         self.assertEqual(row["Trạng thái xác minh"], "CHO_XAC_MINH")
