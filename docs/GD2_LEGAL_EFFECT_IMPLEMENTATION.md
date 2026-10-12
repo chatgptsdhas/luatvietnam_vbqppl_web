@@ -55,3 +55,14 @@ Dau ra: `legal_effect_review.csv`, `legal_effect_review.json` co cot theo dac ta
 - Test `tests/test_legal_effect_content.py` bao gom: navigation/tom tat/noi dung trang phai bi loai, chia dong ten dieu, phu luc, loai website khong co nguyen ban, ranh gioi fallback.
 - **Chua kiem thu tren website that**: selector va cau truc van ban co the thay doi; GD2.05 chay 30 van ban that truoc khi xem la hoan thanh van hanh.
 - Co the khong doc duoc noi dung khi trang dung anh/PDF hoac HTML khong co cau truc dieu; truong hop nay can manual review, khong suy dien hieu luc.
+
+## GD2.02 — Xu ly chieu quan he, pham vi, ngay ap dung (12/10/2026)
+
+- `legal_effect_analysis.py`: tach phan loai hanh vi (thay the/bai bo/sua doi/dinh chi), pham vi dieu/khoan/phu luc, va nguon chung cu. Mac dinh `CHUA_XAC_MINH` va `CHO_XAC_MINH`; khong suy ra hieu luc tu dong.
+- `effect_date_candidate` chi dien khi co ngay duoc gan truc tiep voi dieu khoan, hoac `hieu_luc_chung_cung_dieu` co chung cu ro rang khong co ngoai le; khong lay ngay van ban moi mac dinh neu khong co ngay dieu khoan lien quan.
+- Cung cap `effect_date_basis`, `affected_scope`, `scope_type`, `direction_confidence`, `evidence_location`, `evidence_section_heading` de phuc vu GD3/GD2.03.
+- Nhan dien cau chu dong/bi dong; khi van ban tac dong khong duoc noi ro, de `new_number` rong va `direction=unknown`. Loai bo cau phu dinh/van ban tiep tuc co hieu luc. Hanh vi phuc tap/tron nhieu quan he -> `KHAC` de kiem tra.
+- `08_process_field_documents_batch.py` nay truyen danh sach `legal_effect_evidence` co vi tri va dieu khoan thay vi chuoi phang de parser khong danh mat ngu canh.
+- Them 9 test trong `tests/test_legal_effect_analysis.py` ve thay the mot phan, phu luc, cau bi dong, danh sach gạch dau dong, ngay khong lien quan, ngay chung cung dieu, chung cu.
+- Sua nguong de nhan van ban ngan co quoc hieu va >=2 dieu trong `legal_effect_content.py` (loi test GD2.01).
+- Chua xu ly duoc moi mau dien dat thuc te; kiem thu 30 van ban web va doi chieu nguon chinh thuc trong GD2.03/GD2.05 van bat buoc. Khong write production, khong dong den Planner.
