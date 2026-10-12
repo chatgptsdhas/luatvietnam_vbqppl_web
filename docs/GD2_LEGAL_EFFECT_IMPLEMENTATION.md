@@ -66,3 +66,34 @@ Dau ra: `legal_effect_review.csv`, `legal_effect_review.json` co cot theo dac ta
 - Them 9 test trong `tests/test_legal_effect_analysis.py` ve thay the mot phan, phu luc, cau bi dong, danh sach gạch dau dong, ngay khong lien quan, ngay chung cung dieu, chung cu.
 - Sua nguong de nhan van ban ngan co quoc hieu va >=2 dieu trong `legal_effect_content.py` (loi test GD2.01).
 - Chua xu ly duoc moi mau dien dat thuc te; kiem thu 30 van ban web va doi chieu nguon chinh thuc trong GD2.03/GD2.05 van bat buoc. Khong write production, khong dong den Planner.
+
+## GD2.03 — Đối chiếu nguồn VBPL chính thức (12/10/2026)
+
+- Mã: `legal_effect_official.py`, chỉ đọc nguồn HTML chính thức được cấu hình tường minh, so số hiệu văn bản **mới** với số hiệu tại chính trang chính thức, sau đó đối chiếu **văn bản cũ**, loại quan hệ, phạm vi và ngày áp dụng từ điều khoản gốc.
+- Nguồn ưu tiên: Cơ sở dữ liệu quốc gia về văn bản pháp luật (VBPL). KHÔNG suy ra `ItemID` từ số hiệu, KHÔNG coi URL LuatVietnam là URL pháp luật chính thức, KHÔNG tự suy diễn trạng thái từ nhãn website.
+- Chống SSRF: chỉ HTTPS, danh sách host được cho phép, đúng đường dẫn fulltext `/TW/Pages/vbpq-toanvan.aspx?ItemID=N` và biến thể đơn vị ban hành, không redirect, giới hạn tải 5 MB và timeout. Không sử dụng token nào.
+- Nếu HTML không truy xuất được, trang chỉ có PDF, kết cấu DOM khác, số hiệu mâu thuẫn, không có điều khoản, phạm vi/chiều/ngày xung đột: giữ `CHUA_XAC_MINH`, đánh dấu `CAN_BO_SUNG_CHUNG_CU` và ghi mã lỗi kiểm soát.
+- Đầu ra `official_verification` trong `legal_effect_review.json`: mã phiếu, mã sự kiện, trạng thái đối chiếu, URL gốc, số hiệu tài liệu, chứng cứ có vị trí, phạm vi, ngày, SHA256 đoạn trích. CSV vẫn giữ đúng 28 cột GD1, thêm URL nguồn chính thức + trích dẫn khi đủ điều kiện.
+- Trạng thái `OFFICIAL_ACTION_MATCHED_PENDING_LEGAL` chỉ được ghi khi **đúng cặp số hiệu và hành vi, có phạm vi rõ**. Đây là chứng cứ tự động, KHÔNG phải quyết định xác nhận hết hiệu lực. Không nâng thành `DA_XAC_NHAN` hoặc đưa vào kho lưu trữ.
+- `OFFICIAL_SCOPE_NEEDS_REVIEW` cho trường hợp văn bản nguồn có câu thay thế/bãi bỏ nhưng chưa rõ phạm vi. Không coi toàn bộ một cách mặc định.
+- Tạo `official_sources.json` ở máy chạy, cấu trúc:
+
+```json
+{
+  "sources": {
+    "81/2026/TT-BGDĐT": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=12345"
+  }
+}
+```
+
+**Ví dụ URL nêu trên chỉ minh họa cấu trúc, tuyệt đối không dùng ItemID=12345 như nguồn đã xác thực.** Phải thay bằng URL toàn văn thực tế đã được kiểm tra bằng tay, đúng số hiệu tài liệu. Có thể lưu file index ở thư mục cục bộ (không commit thông tin cá nhân).
+
+Chạy:
+
+```powershell
+python 15_check_legal_effect.py --mode events --workbook "backup.xlsx" --step08-json "output/vbqppl_nhap_batch_payload.json" --official-index "official_sources.json" --output-dir "output/gd2-events"
+```
+
+Nếu không truyền `--official-index`, script vẫn chạy như trước và tất cả phiếu chỉ là gợi ý chưa xác minh. Không ghi Google Sheet production hoặc MS Planner.
+
+**Giới hạn hiện tại:** chưa xác minh kết nối HTTP/DOM trên cổng VBPL thật trong môi trường này (kết nối trực tiếp bị hạn chế); bộ test CI chỉ kiểm thử HTML giả lập và hành vi lỗi mạng/URL không tin cậy. Cần chạy E2E GD2.05 trên máy Windows được phép kết nối, bổ sung parser từ PDF chính thức khi cần, và kiểm tra 30 văn bản trước khi nghiệm thu GD2.
