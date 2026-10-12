@@ -59,7 +59,7 @@ def load_official_sources(path: Path) -> dict[str, str]:
     output = {}
     for number, url in data.items():
         key = normalize_number(number)
-        if not key or key != document_numbers(key)[0] if document_numbers(key) else True:
+        if not key or document_numbers(key) != [key]:
             raise ValueError("OFFICIAL_INDEX_INVALID_NUMBER")
         if key in output:
             raise ValueError("OFFICIAL_INDEX_DUPLICATED_NUMBER")
