@@ -187,78 +187,10 @@ function scanAndLogExpiredDocs(sourceSoHieu, sourceTen, sourceLink) {
  * Cần thiết lập Trigger Time-driven chạy hàm này hằng ngày lúc 06:00.
  */
 function processScheduledExpiredDocuments() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetExpired = initExpiredSheet_();
-  // Ở file này gọi WEBAPP_CONFIG sẽ lấy từ file webapp.gs chạy cùng
-  const sheetVbqppl = ss.getSheetByName(WEBAPP_CONFIG.SHEET_VBQPPL);
-  const sheetNhap = ss.getSheetByName(WEBAPP_CONFIG.SHEET_NHAP);
-
-  const expData = sheetExpired.getDataRange().getValues();
-  if (expData.length < 2) return;
-  const expHeaders = expData[0];
-  const idxSoHieuCu = expHeaders.indexOf('Số hiệu bị xử lý');
-  const idxNgayHet = expHeaders.indexOf('Ngày hết hiệu lực áp dụng');
-  const idxTrangThai = expHeaders.indexOf('Trạng thái xử lý');
-  const idxThoiGianXoa = expHeaders.indexOf('Thời gian xóa thật');
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  // Lấy toàn bộ Số hiệu cần xóa hôm nay
-  const toDeleteMap = {}; // Key: SoHieu, Value: Array of Row Index in Expired Sheet
-
-  for (let i = 1; i < expData.length; i++) {
-    const status = String(expData[i][idxTrangThai] || '').trim();
-    const dateStr = String(expData[i][idxNgayHet] || '').trim();
-    
-    if (status === 'Chờ xóa tự động' || status === 'Chưa xóa - chưa đến ngày hết hiệu lực') {
-      let isDue = false;
-      if (dateStr) {
-        const parts = dateStr.split(/[\/-]/);
-        if(parts.length === 3) {
-          const expDate = new Date(parts[2], parts[1] - 1, parts[0]);
-          if (expDate <= today) isDue = true;
-        }
-      } else {
-        // Nếu không có ngày nhưng đang chờ xóa, coi như đến hạn
-        isDue = true; 
-      }
-
-      if (isDue) {
-        const soHieu = String(expData[i][idxSoHieuCu]).trim();
-        if (soHieu) {
-          if (!toDeleteMap[soHieu]) toDeleteMap[soHieu] = [];
-          toDeleteMap[soHieu].push(i + 1); // Row index (1-based)
-        }
-      }
-    }
-  }
-
-  const soHieusToDelete = Object.keys(toDeleteMap);
-  if (soHieusToDelete.length === 0) return;
-
-  // Nếu là DRY RUN, chỉ đổi trạng thái thành "Đã mô phỏng xóa (DRY RUN)"
-  if (EXPIRED_CONFIG.DRY_RUN) {
-    soHieusToDelete.forEach(soHieu => {
-      toDeleteMap[soHieu].forEach(rowIdx => {
-        sheetExpired.getRange(rowIdx, idxTrangThai + 1).setValue('Đã mô phỏng xóa (DRY_RUN)');
-        sheetExpired.getRange(rowIdx, idxThoiGianXoa + 1).setValue(new Date());
-      });
-    });
-    return;
-  }
-
-  // NẾU DRY_RUN = FALSE -> BẮT ĐẦU XÓA THẬT
-  if (sheetVbqppl) deleteRowsAndReferences_(sheetVbqppl, soHieusToDelete);
-  if (sheetNhap) deleteRowsAndReferences_(sheetNhap, soHieusToDelete);
-
-  // Cập nhật lại sheet VBQPPL_HetHieuLuc
-  soHieusToDelete.forEach(soHieu => {
-    toDeleteMap[soHieu].forEach(rowIdx => {
-      sheetExpired.getRange(rowIdx, idxTrangThai + 1).setValue('Đã xóa theo lịch');
-      sheetExpired.getRange(rowIdx, idxThoiGianXoa + 1).setValue(new Date());
-    });
-  });
+  // GD0: Disable the legacy scheduled delete worker even if an old trigger exists.
+  // Do not read, update, delete, or auto-create sheets.
+  return { ok: true, disabled: true, changed_rows: 0,
+    message: 'Legacy document-deletion worker disabled by GD0 safety patch.' };
 }
 
 /**
@@ -287,58 +219,6 @@ function logExpiredResult_(sheet, soHieuCu, reason, sentence, soHieuMoi, tenMoi,
  * Hàm phụ trợ: Quét ngược từ dưới lên để XÓA DÒNG và XÓA THAM CHIẾU
  */
 function deleteRowsAndReferences_(sheet, soHieusToDelete) {
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-  if (lastRow < 2 || lastCol < 1) return;
-
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
-  const idxSoHieu = headers.indexOf('Số hiệu');
-  if (idxSoHieu === -1) return;
-
-  // Lấy chỉ số các cột quan hệ (nếu có tồn tại trong sheet)
-  const relColIndexes = [];
-  EXPIRED_CONFIG.RELATION_COLUMNS.forEach(colName => {
-    const idx = headers.indexOf(colName);
-    if (idx !== -1) relColIndexes.push(idx);
-  });
-
-  const data = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-  const lowerSoHieus = soHieusToDelete.map(s => s.toLowerCase());
-
-  // Quét từ dưới lên trên để xóa dòng không bị lệch index
-  for (let r = lastRow - 1; r >= 1; r--) {
-    const rowSoHieu = String(data[r][idxSoHieu]).trim().toLowerCase();
-    
-    // NẾU TÌM THẤY DÒNG CHỨA SỐ HIỆU HẾT HIỆU LỰC -> XÓA CẢ DÒNG
-    if (lowerSoHieus.includes(rowSoHieu)) {
-      sheet.deleteRow(r + 1);
-      continue; // Bỏ qua phần cập nhật tham chiếu bên dưới vì dòng đã bị xóa
-    }
-
-    // NẾU LÀ DÒNG BÌNH THƯỜNG -> QUÉT VÀ XÓA SỐ HIỆU Ở CÁC CỘT QUAN HỆ
-    let isRowModified = false;
-    relColIndexes.forEach(colIdx => {
-      const cellValue = String(data[r][colIdx] || '').trim();
-      if (cellValue) {
-        // Tách chuỗi theo dấu phẩy hoặc xuống dòng
-        let items = cellValue.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
-        let originalLength = items.length;
-        
-        // Lọc bỏ các phần tử bị trùng với số hiệu hết hiệu lực
-        items = items.filter(item => !lowerSoHieus.includes(item.toLowerCase()));
-        
-        // Nếu mảng bị rút ngắn, tức là có thay đổi
-        if (items.length < originalLength) {
-          data[r][colIdx] = items.join(', '); // Nối lại bằng dấu phẩy
-          isRowModified = true;
-        }
-      }
-    });
-
-    // Cập nhật lại dòng nếu có tham chiếu bị xóa
-    if (isRowModified) {
-      // Lấy data đã sửa của r, ghi đè lên sheet (r + 1 là số thứ tự dòng thực tế)
-      sheet.getRange(r + 1, 1, 1, lastCol).setValues([data[r]]);
-    }
-  }
+  // GD0: Defense in depth. Never delete legal documents from source sheets.
+  throw new Error('GD0_DELETE_DISABLED: archival requires verified workflow.');
 }
