@@ -45,3 +45,13 @@ Dau ra: `legal_effect_review.csv`, `legal_effect_review.json` co cot theo dac ta
 3. Unit tests va CI qua; thu nghem E2E tren 30 van ban da duoc nguoi duyet danh gia, xac dinh precision/recall va cot loi.
 4. Thong nhat nguon chinh thuc va phuong an quet dinh ky an toan.
 5. Chi sau khi GD2 duoc nghiem thu moi chuyen GD3 (Apps Script service API + Dashboard admin).
+
+## GD2.01 — Tach noi dung phap ly khoi thanh phan trang (12/10/2026)
+
+- Tao `legal_effect_content.py` doc DOM duoc Playwright render **truoc khi mo Luoc do**. Uu tien cac content container co dau hieu van ban; fallback co kiem soat khi co quoc hieu va >=2 dieu; khong fallback sang `body` hoac menu/tom tat.
+- Loc nav/footer/aside/share/menu; bat canh dieu hieu luc, chuyen tiep, bai bo, thay the, sua doi/bo sung va phu luc. Moi doan co `paragraph_index`, `location`, `section_heading`, `section_kind`, `root_selector` de doi chieu.
+- Step08 giu `get_body_lines()` **chi cho luong trich thong tin chung cu** va payload import hien tai; cac de xuat `legal_effect_candidates` **chi duoc nhan bang chung tu legal_effect_evidence**. Khong thay doi API import.
+- Neu khong tim thay can cu trong nguyen ban, `legal_content_extraction_meta.status` tra `document_root_not_found` / `source_unavailable` / `no_relevant_clauses` va **khong dung `body` doan thay**; quan he Luoc do van chi la goi y cho Phap che.
+- Test `tests/test_legal_effect_content.py` bao gom: navigation/tom tat/noi dung trang phai bi loai, chia dong ten dieu, phu luc, loai website khong co nguyen ban, ranh gioi fallback.
+- **Chua kiem thu tren website that**: selector va cau truc van ban co the thay doi; GD2.05 chay 30 van ban that truoc khi xem la hoan thanh van hanh.
+- Co the khong doc duoc noi dung khi trang dung anh/PDF hoac HTML khong co cau truc dieu; truong hop nay can manual review, khong suy dien hieu luc.
