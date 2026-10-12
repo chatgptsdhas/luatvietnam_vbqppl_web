@@ -14,6 +14,8 @@ from urllib.error import HTTPError, URLError
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
+from legal_effect_analysis import analyze_new_document
+
 
 def setup_utf8_stdio():
     try:
@@ -1073,6 +1075,12 @@ def process_document(page, doc: dict, config: dict) -> dict:
         "luoc_do_data": relationships,
         "luoc_do_payload": luoc_do_payload,
         "luoc_do_extraction_meta": extraction_meta,
+        "legal_effect_candidates": analyze_new_document({
+            "url": url,
+            "source_doc_number": doc.get("doc_number_from_list", "") or current_doc.get("so_hieu", ""),
+            "current_doc": current_doc,
+            "luoc_do_data": relationships,
+        }, lines=lines),
     }
 
 
@@ -1102,6 +1110,7 @@ def main():
 
     results = []
     payloads = []
+    legal_effect_candidates = []
     request_debug_rows = []
 
     with sync_playwright() as p:
@@ -1116,6 +1125,7 @@ def main():
 
             print(f"[{idx}/{len(docs)}] Xử lý: {sanitize_diagnostic_data(url, diagnostic_credentials)}")
             processed = process_document(page, doc, config)
+            legal_effect_candidates.extend(processed.get("legal_effect_candidates", []))
             payload = build_payload(
                 processed,
                 config=config,
@@ -1176,6 +1186,7 @@ def main():
         "total_input": len(docs),
         "total_payloads": len(payloads),
         "payloads": payloads,
+        "legal_effect_candidates": legal_effect_candidates,
         "results": results,
     }
 
