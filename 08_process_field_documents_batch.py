@@ -1093,7 +1093,7 @@ def process_document(page, doc: dict, config: dict) -> dict:
             "source_doc_number": doc.get("doc_number_from_list", "") or current_doc.get("so_hieu", ""),
             "current_doc": current_doc,
             "luoc_do_data": relationships,
-        }, lines=[block["text"] for block in legal_evidence]),
+        }, lines=legal_evidence),
     }
 
 
