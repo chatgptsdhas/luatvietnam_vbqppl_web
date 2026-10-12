@@ -81,6 +81,86 @@ class LegalEffectCandidatesTest(unittest.TestCase):
         self.assertEqual(c[0]["evidence_origin"], "clause")
 
 
+
+class LegalEffectDisambiguationTest(unittest.TestCase):
+    def test_partial_replacement_is_not_whole(self):
+        c = analyze_new_document(source(), ["Thay thế khoản 2 Điều 3 của Thông tư 55/2011/TT-BGDĐT."])
+        self.assertEqual(len(c), 1)
+        self.assertEqual(c[0]["relation_type"], "KHAC")
+        self.assertEqual(c[0]["scope_type"], "MOT_PHAN")
+
+    def test_general_effect_date_not_assigned_to_unrelated_clause(self):
+        doc = source()
+        items = [
+            {"text": "Bãi bỏ Nghị định 12/2015/NĐ-CP.", "section_heading": "Điều 5. Quy định chuyển tiếp",
+             "section_kind": "article", "location": "doc:p[25]"},
+            {"text": "Nghị định này có hiệu lực từ ngày 01/11/2026.", "section_heading": "Điều 6. Hiệu lực",
+             "section_kind": "article", "location": "doc:p[30]"},
+        ]
+        c = analyze_new_document(doc, items)
+        self.assertEqual(c[0]["effect_date_candidate"], "")
+        self.assertEqual(c[0]["evidence_location"], "doc:p[25]")
+
+    def test_same_article_general_date_marked_as_inferred(self):
+        doc = source()
+        items = [
+            {"text": "Bãi bỏ Nghị định 12/2015/NĐ-CP.", "section_heading": "Điều 6. Hiệu lực",
+             "section_kind": "article", "location": "doc:p[23]"},
+            {"text": "Nghị định này có hiệu lực từ ngày 01/11/2026.", "section_heading": "Điều 6. Hiệu lực",
+             "section_kind": "article", "location": "doc:p[24]"},
+        ]
+        c = analyze_new_document(doc, items)
+        self.assertEqual(c[0]["effect_date_candidate"], "2026-11-01")
+        self.assertEqual(c[0]["effect_date_basis"], "hieu_luc_chung_cung_dieu")
+
+    def test_passive_clause_actor_unknown(self):
+        c = analyze_new_document(source(), [
+            "Thông tư 55/2011/TT-BGDĐT bị thay thế theo quy định mới."
+        ])
+        self.assertEqual(len(c), 1)
+        self.assertEqual(c[0]["old_number"], "55/2011/TT-BGDĐT")
+        self.assertEqual(c[0]["new_number"], "")
+        self.assertEqual(c[0]["direction"], "unknown")
+
+    def test_list_after_repeal_clause_keeps_source_heading(self):
+        doc = source()
+        lines = [
+            {"text": "Bãi bỏ các văn bản sau đây:", "section_heading": "Điều 9. Bãi bỏ",
+             "section_kind": "article", "location": "doc:p[10]"},
+            {"text": "a) Thông tư 55/2011/TT-BGDĐT.", "section_heading": "Điều 9. Bãi bỏ",
+             "section_kind": "article", "location": "doc:p[11]"},
+        ]
+        c = analyze_new_document(doc, lines)
+        self.assertEqual(len(c), 1)
+        self.assertEqual(c[0]["old_number"], "55/2011/TT-BGDĐT")
+        self.assertEqual(c[0]["relation_type"], "BAI_BO_TOAN_BO")
+        self.assertEqual(c[0]["evidence_location"], "doc:p[11]")
+
+    def test_ambiguous_mixed_actions_unverified(self):
+        c = analyze_new_document(source(), ["Bãi bỏ và sửa đổi Thông tư 55/2011/TT-BGDĐT."])
+        self.assertEqual(c[0]["relation_type"], "KHAC")
+        self.assertEqual(c[0]["suggested_effect_status"], "CHUA_XAC_MINH")
+
+    def test_unrelated_date_never_assigned(self):
+        c = analyze_new_document(source(), [
+            "Bãi bỏ Thông tư 55/2011/TT-BGDĐT ban hành ngày 01/01/2011."
+        ])
+        self.assertEqual(c[0]["effect_date_candidate"], "")
+
+    def test_unrelated_references_do_not_imply_repeal(self):
+        self.assertEqual(analyze_new_document(source(), [
+            "Căn cứ Thông tư 55/2011/TT-BGDĐT ngày 01/01/2011."
+        ]), [])
+
+    def test_partial_annex_event_not_full(self):
+        c = analyze_new_document(source(), [
+            "Bãi bỏ Phụ lục I của Thông tư 55/2011/TT-BGDĐT."
+        ])
+        self.assertEqual(c[0]["scope_type"], "MOT_PHAN")
+        self.assertEqual(c[0]["relation_type"], "BAI_BO_MOT_PHAN")
+
+
+
 class BackfillTests(unittest.TestCase):
     @staticmethod
     def entry(sheet="VBQPPL", kind="Thông tư", url="https://luatvietnam.vn/sample.html"):
