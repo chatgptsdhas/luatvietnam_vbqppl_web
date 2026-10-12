@@ -12,6 +12,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from legal_effect_analysis import normalize_number
+from legal_effect_official import check_official_sources, load_official_sources
 
 HEADERS = [
     "Mã phiếu rà soát", "Khóa văn bản chuẩn", "Số hiệu", "Loại văn bản",
@@ -111,6 +112,7 @@ def main(argv=None):
     parser.add_argument("--mode", choices=("baseline", "events"), required=True)
     parser.add_argument("--workbook", type=Path, required=True)
     parser.add_argument("--step08-json", type=Path)
+    parser.add_argument("--official-index", type=Path, help="JSON mapping document number to verified official full-text URL")
     parser.add_argument("--output-dir", type=Path, default=Path("output"))
     args = parser.parse_args(argv)
     if args.mode == "events" and args.step08_json is None:
@@ -124,6 +126,11 @@ def main(argv=None):
         if not isinstance(events, list):
             parser.error("legal_effect_candidates must be a list")
     report = build_review(catalog_from_workbook(args.workbook), events, args.mode)
+    if args.official_index:
+        if args.mode != "events":
+            parser.error("--official-index requires --mode events")
+        index = load_official_sources(args.official_index)
+        report["official_verification"] = check_official_sources(report, events, index)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "legal_effect_review.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     with (args.output_dir / "legal_effect_review.csv").open("w", newline="", encoding="utf-8-sig") as f:
