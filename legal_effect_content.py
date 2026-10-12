@@ -123,7 +123,7 @@ def _choose_root(soup: BeautifulSoup) -> tuple[Tag | None, str]:
         if _is_chrome(node):
             continue
         text = clean_text(node.get_text(" ", strip=True))
-        if len(text) < 160 or len(text) > 1_700_000:
+        if len(text) < 80 or len(text) > 1_700_000:
             continue
         if not OFFICIAL_MASTHEAD.search(text):
             continue
