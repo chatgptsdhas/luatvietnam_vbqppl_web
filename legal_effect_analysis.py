@@ -339,11 +339,29 @@ def analyze_new_document(doc: dict[str, Any], lines: list[Any] | None = None) ->
                           direction_confidence="CAN_XAC_MINH"))
 
     blocks = _as_blocks(lines)
+    # GD2.03 acceptance: if evidence has locations/section metadata,
+    # the page title and preamble are NOT operative legal provisions.
+    # Retain legacy string input for existing offline tests and crawlers.
+    is_structured = any(
+        isinstance(raw, dict) and (
+            raw.get("section_kind") or raw.get("section_heading")
+        ) for raw in (lines or [])
+    )
     default_dates = _article_dates(blocks)
     active_context: tuple[str, str, int] | None = None
     for idx, block in enumerate(blocks):
         text = block["text"]
         section = block["section_heading"]
+        if is_structured:
+            in_article = (block["section_kind"] == "article"
+                          and bool(re.match(r"^\s*Điều\s+\d+", section, re.I)))
+            in_annex = (block["section_kind"] == "annex"
+                        and bool(re.match(r"^\s*PHỤ\s+LỤC\b", section, re.I)))
+            if not (in_article or in_annex):
+                # Prevent misleading 'clause' events from the document title
+                # (e.g. "Sửa đổi ... Thông tư 15/2020") or editorial prologue.
+                active_context = None
+                continue
         if NEGATED.search(text) or CONTINUED.search(text) or text.lower().startswith("căn cứ "):
             active_context = None
             continue
