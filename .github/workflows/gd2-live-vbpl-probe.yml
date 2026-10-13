@@ -1,0 +1,43 @@
+name: GD2 Live VBPL Read-Only Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/gd2-legal-effect-analysis-20261012]
+    paths:
+      - ".github/workflows/gd2-live-vbpl-probe.yml"
+      - "scripts/gd2_vbpl_live_probe.py"
+      - "legal_effect_analysis.py"
+      - "legal_effect_content.py"
+      - "legal_effect_official.py"
+
+permissions:
+  contents: read
+
+jobs:
+  vbpl-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install read-only parsing dependencies
+        run: python -m pip install beautifulsoup4 requests
+      - name: Probe official source without credentials or production writes
+        run: |
+          python scripts/gd2_vbpl_live_probe.py \
+            --url 'https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt-sua-doi-bo-sung-mot-so-dieu-cua-quy-che-thi-tot-nghiep-trung-hoc-pho-thong-ban-hanh-kem-theo-thong-tu-so-15-2020-tt-bgddt-ngay-26-thang-5-nam-2020-cua-bo-truong-bo-giao-duc-va-dao-tao--147477' \
+            --known-print-url 'https://vbpl.vn/botuphap/Pages/vbpq-print.aspx?ItemID=147477' \
+            --output output/gd2-server-probe.json
+      - name: Publish evidence status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gd2-vbpl-probe-report
+          path: output/gd2-server-probe.json
+          if-no-files-found: warn
+          retention-days: 7
