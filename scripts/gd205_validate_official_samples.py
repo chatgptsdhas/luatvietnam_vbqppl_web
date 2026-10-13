@@ -52,6 +52,8 @@ def load_manifest(path: Path) -> list[dict]:
         old = normalize_number(row.get("old_number"))
         relation = str(row.get("expected_relation") or "").strip()
         label = str(row.get("label_status") or "PENDING_HUMAN").strip()
+        truth = row.get("expected_present")
+        basis = str(row.get("label_basis") or "").strip()
         if not case_id or len(case_id) > 100 or case_id in seen:
             raise ValueError("DUPLICATE_OR_MISSING_CASE_ID")
         if not (NUMBER_SHAPE.fullmatch(new) and NUMBER_SHAPE.fullmatch(old)):
@@ -60,10 +62,17 @@ def load_manifest(path: Path) -> list[dict]:
             raise ValueError("INVALID_CASE_RELATION")
         if label not in ("PENDING_HUMAN", "HUMAN_VERIFIED"):
             raise ValueError("INVALID_CASE_LABEL_STATUS")
+        if label == "HUMAN_VERIFIED":
+            if not isinstance(truth, bool) or not basis or len(basis) > 300:
+                raise ValueError("HUMAN_LABEL_REQUIRES_BOOLEAN_TRUTH_AND_BASIS")
+        elif truth is not None or basis:
+            # Pending cases must not quietly carry an unreviewed truth value.
+            raise ValueError("PENDING_LABEL_MUST_NOT_HAVE_TRUTH")
         seen.add(case_id)
         result.append({
             "id": case_id, "url": url, "new_number": new, "old_number": old,
             "expected_relation": relation, "label_status": label,
+            "expected_present": truth, "label_basis": basis,
         })
     return result
 
@@ -93,7 +102,12 @@ def evaluate_case(case: dict, html: str, title: str,
     blocks = extracted.get("blocks") or []
     output["evidence_blocks"] = len(blocks)
     if not blocks:
-        output["result"] = "NO_LEGAL_TEXT"
+        # A legally validated full-text root with no matching action clauses
+        # is an admissible negative example, not a failure to read the page.
+        if extracted.get("status") == "no_relevant_clauses" and extracted.get("root_selector"):
+            output["result"] = "NO_MATCH"
+        else:
+            output["result"] = "NO_LEGAL_TEXT"
         return output
     events = analyze_new_document(
         {"source_doc_number": case["new_number"], "url": final_url, "luoc_do_data": []},
@@ -123,24 +137,65 @@ def evaluate_case(case: dict, html: str, title: str,
 
 
 def aggregate(cases: list[dict], results: list[dict]) -> dict:
+    """Distinguish retrieval failures, provisional matches and reviewed labels.
+
+    Precision/recall are intentionally hidden until ALL 30 cases have been
+    independently labelled, both classes occur and their text was retrieved.
+    An unreviewed association is never legal confirmation.
+    """
     counts = Counter(r["result"] for r in results)
-    labelled_ids = {c["id"] for c in cases if c["label_status"] == "HUMAN_VERIFIED"}
-    validated = [r for r in results if r["id"] in labelled_ids]
-    matching = sum(r["result"] == "MATCH_PENDING_HUMAN" for r in validated)
+    by_id = {r["id"]: r for r in results}
+    labelled = [c for c in cases if c["label_status"] == "HUMAN_VERIFIED"]
+    evaluable = []
+    missing = []
+    for case in labelled:
+        row = by_id.get(case["id"])
+        if row is None or row["result"] not in ("MATCH_PENDING_HUMAN", "NO_MATCH"):
+            missing.append(case["id"])
+        else:
+            evaluable.append((case, row))
+    tp = sum(c["expected_present"] is True and r["result"] == "MATCH_PENDING_HUMAN"
+             for c, r in evaluable)
+    tn = sum(c["expected_present"] is False and r["result"] == "NO_MATCH"
+             for c, r in evaluable)
+    fp = sum(c["expected_present"] is False and r["result"] == "MATCH_PENDING_HUMAN"
+             for c, r in evaluable)
+    fn = sum(c["expected_present"] is True and r["result"] == "NO_MATCH"
+             for c, r in evaluable)
+    positive_count = tp + fn
+    negative_count = tn + fp
+    full_validation = (len(cases) == MAX_CASES
+                       and len(labelled) == MAX_CASES
+                       and len(evaluable) == MAX_CASES
+                       and positive_count > 0 and negative_count > 0)
     return {
         "total_cases": len(cases),
         "cases_run": len(results),
-        "http_200": sum(r["http_status"] == 200 for r in results),
-        "legal_text_extracted": sum(r["extraction_status"] == "ok" for r in results),
+        "http_200": sum(r.get("http_status") == 200 for r in results),
+        "legal_text_extracted": sum(
+            r.get("extraction_status") in ("ok", "no_relevant_clauses")
+            for r in results
+        ),
         "provisional_matches": counts["MATCH_PENDING_HUMAN"],
-        "human_labelled_cases": len(labelled_ids),
-        "human_labelled_matches": matching,
-        # "accuracy" is not computed: false positives/negatives need a
-        # complete human-labelled document-by-document truth set.
-        "classification_precision": None,
-        "classification_recall": None,
-        "match_recall_on_preselected_positive_cases":
-            round(matching / len(validated), 4) if validated else None,
+        "human_labelled_cases": len(labelled),
+        "human_labelled_evaluable_cases": len(evaluable),
+        "human_labelled_not_evaluable_cases": len(missing),
+        "human_labelled_matches": tp,
+        "confusion_matrix": {
+            "true_positive": tp, "true_negative": tn,
+            "false_positive": fp, "false_negative": fn,
+        },
+        "classification_precision": (
+            round(tp / (tp + fp), 4) if full_validation and (tp + fp) else None
+        ),
+        "classification_recall": (
+            round(tp / positive_count, 4) if full_validation else None
+        ),
+        "match_recall_on_preselected_positive_cases": (
+            round(tp / positive_count, 4)
+            if positive_count and not missing else None
+        ),
+        "metrics_eligible": full_validation,
         "result_counts": dict(sorted(counts.items())),
         "legal_confirmation": False,
         "production_writes": False,
@@ -163,6 +218,7 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int) -> li
                     status = response.status if response else None
                     deadline = time.monotonic() + timeout_seconds
                     latest = None
+                    negative_stable = 0
                     while True:
                         latest = evaluate_case(case, page.content(), page.title(), page.url, status)
                         if latest["result"] in (
@@ -170,6 +226,15 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int) -> li
                             "HTTP_ERROR", "UNTRUSTED_REDIRECT",
                         ):
                             break
+                        # A legal text with no match can be a correct negative.
+                        # Confirm the rendered document remains stable for
+                        # three polls before concluding no candidate exists.
+                        if latest["result"] == "NO_MATCH":
+                            negative_stable += 1
+                            if negative_stable >= 3:
+                                break
+                        else:
+                            negative_stable = 0
                         if time.monotonic() >= deadline:
                             break
                         page.wait_for_timeout(2000)
@@ -215,7 +280,17 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report["summary"], ensure_ascii=True))
-    return 0 if all(r["result"] == "MATCH_PENDING_HUMAN" for r in results) else 2
+    by_id = {r["id"]: r for r in results}
+    success = True
+    for case in cases:
+        observed = by_id.get(case["id"])
+        if not observed or observed["result"] not in ("MATCH_PENDING_HUMAN", "NO_MATCH"):
+            success = False
+        elif case["label_status"] == "HUMAN_VERIFIED":
+            detected = observed["result"] == "MATCH_PENDING_HUMAN"
+            if detected != case["expected_present"]:
+                success = False
+    return 0 if success else 2
 
 
 if __name__ == "__main__":
