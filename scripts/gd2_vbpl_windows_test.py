@@ -109,6 +109,8 @@ def evaluate_rendered_document(html: str, page_title: str, page_url: str,
         and item["new_number"] == NEW_NUMBER
         and item["relation_type"] == EXPECTED_RELATION
         and item["evidence_origin"] == "clause"
+        and item.get("evidence_section_heading", "").strip()
+        and item.get("evidence_location", "")
     ]
     result["matched_events"] = [
         {
