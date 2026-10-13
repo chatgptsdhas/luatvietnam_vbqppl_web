@@ -144,3 +144,21 @@ Có thể truyền `--browser-path "C:\Program Files\CocCoc\Browser\Application\
 Điều kiện đạt: `outcome=PROVISIONAL_PASS_PENDING_LEGAL`, `extraction_status=ok`, đúng số hiệu 05/2021/TT-BGDĐT, relation `SUA_DOI_BO_SUNG` tác động tới 15/2020/TT-BGDĐT; kết luận cuối vẫn đợi Pháp chế. Nếu thất bại, lưu báo cáo và điều chỉnh selector theo dữ liệu nguồn được phép chia sẻ; không kết luận chưa có hiệu lực chỉ vì không tải được trang.
 
 Lưu ý: việc chuyển nhánh của máy vận hành cần do người vận hành thực hiện ở một bản checkout thử nghiệm tách biệt, tránh làm xáo trộn pipeline Windows hiện chạy production. Không bật scheduler cho script này.
+
+## GD2.03 — Nghiệm thu thực tế ca VBPL 05/2021 trên Windows (13/10/2026)
+
+**Nguồn báo cáo:** Người vận hành cung cấp trực tiếp JSON từ `output/gd2-windows-vbpl-test.json`, chạy bằng `scripts/gd2_vbpl_windows_test.py` trên bản checkout riêng; đây là bằng chứng do người vận hành cung cấp, **không phải phiên chạy Windows do GitHub Actions hoặc trợ lý trực tiếp quan sát**.
+
+- Giờ báo cáo: `2026-10-13T08:15:32+00:00` (15:15:32 giờ Việt Nam).
+- HTTP `200`, hostname `vbpl.vn`; `document_title_matches=true`.
+- `extraction_status=ok`; vùng nguồn `structural_vbpl_rendered_root`; `evidence_blocks=119`.
+- Văn bản tác động: `05/2021/TT-BGDĐT`; văn bản chịu tác động: `15/2020/TT-BGDĐT`.
+- Quan hệ phát hiện: `SUA_DOI_BO_SUNG`; `scope_type=MOT_PHAN`.
+- Chứng cứ: `structural_vbpl_rendered_root:paragraph[7]`, thuộc `Điều 1. Sửa đổi, bổ sung một số điều của Quy chế...`. Mã sự kiện `735c1058fb624b560fdf9d1b`.
+- `outcome=PROVISIONAL_PASS_PENDING_LEGAL`; `verification_status=CHO_XAC_MINH`; `requires_legal_review=true`; `production_writes=false`.
+
+**Phán định:** ĐẠT bài kiểm thử tích hợp kỹ thuật **một ca** cho phép truy cập và trích xuất trên môi trường Windows đã được người vận hành thử; khắc phục lỗi trước đây `source_section` rỗng. **Không** chứng minh độ chính xác trên mọi văn bản, không phải xác minh pháp lý hoàn tất, không có ghi/sync dữ liệu production.
+
+**Điểm cần rà soát:** `paragraph[7]` có thể chính là tiêu đề Điều 1; cần đối chiếu `evidence_text` của sự kiện với nội dung khoản sửa đổi dưới Điều 1 để xác nhận chính xác phần nội dung tác động và mức độ chi tiết. Trước khi triển khai tự động, nên kiểm thử thêm văn bản thay thế toàn bộ, bãi bỏ một phần, chuyển tiếp, hết hiệu lực trong tương lai và văn bản không có quan hệ.
+
+**Quyết định vận hành:** Giữ PR #16 Draft; chuyển sang GD2.04 đối soát định danh/khử trùng dữ liệu, sau đó GD2.05 kiểm thử E2E đủ nhiều trường hợp và Pháp chế xác minh.
