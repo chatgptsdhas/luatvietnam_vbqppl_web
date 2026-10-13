@@ -97,43 +97,65 @@ def load_official_sources(path: Path) -> dict[str, str]:
 
 
 def fetch_official_html(url: str, timeout_seconds: int = 15) -> str:
-    """Bounded HTTPS fetch; redirects and non-HTML responses are rejected."""
-    import requests
+    """Bounded GET; only validated HTTPS VBPL destinations, max two redirects.
 
-    url = canonical_official_url(url)
+    The URL is revalidated BEFORE every hop. No cookies, credentials, auth
+    headers, redirects to external services or HTML/HTTP dumps.
+    """
+    import requests
+    from urllib.parse import urljoin
+
+    current = canonical_official_url(url)
     try:
-        with requests.get(
-            url,
-            headers={"User-Agent": "HAS-VBQPPL-ReadOnly/1.0 (official-document-check)"},
-            timeout=(min(8, timeout_seconds), timeout_seconds),
-            stream=True,
-            allow_redirects=False,
-        ) as response:
-            if 300 <= response.status_code < 400:
-                raise ValueError("OFFICIAL_REDIRECT_BLOCKED")
-            if response.status_code != 200:
-                raise ValueError("OFFICIAL_HTTP_ERROR")
-            mime_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
-            if mime_type != "text/html":
-                raise ValueError("OFFICIAL_NOT_HTML")
-            try:
-                if int(response.headers.get("Content-Length", "0")) > MAX_HTML_BYTES:
-                    raise ValueError("OFFICIAL_DOCUMENT_TOO_LARGE")
-            except (TypeError, ValueError) as err:
-                if str(err) == "OFFICIAL_DOCUMENT_TOO_LARGE":
-                    raise
-            data = bytearray()
-            for chunk in response.iter_content(chunk_size=32768):
-                data.extend(chunk)
-                if len(data) > MAX_HTML_BYTES:
-                    raise ValueError("OFFICIAL_DOCUMENT_TOO_LARGE")
-            encoding = response.encoding or "utf-8"
-            return bytes(data).decode(encoding, errors="replace")
+        for redirect_count in range(3):
+            with requests.get(
+                current,
+                headers={"User-Agent": "HAS-VBQPPL-ReadOnly/1.0 (official-document-check)"},
+                timeout=(min(8, timeout_seconds), timeout_seconds),
+                stream=True,
+                allow_redirects=False,
+            ) as response:
+                if 300 <= response.status_code < 400:
+                    if redirect_count >= 2:
+                        raise ValueError("OFFICIAL_TOO_MANY_REDIRECTS")
+                    location = response.headers.get("Location")
+                    if not location:
+                        raise ValueError("OFFICIAL_REDIRECT_NO_LOCATION")
+                    try:
+                        next_url = canonical_official_url(urljoin(current, location))
+                    except (ValueError, TypeError):
+                        raise ValueError("OFFICIAL_REDIRECT_BLOCKED") from None
+                    # Canonical URL validation checks only allowlisted HTTPS
+                    # official detail/fulltext pages and safe query parameters.
+                    if next_url == current:
+                        raise ValueError("OFFICIAL_REDIRECT_LOOP")
+                    current = next_url
+                    continue
+                if response.status_code != 200:
+                    raise ValueError("OFFICIAL_HTTP_ERROR")
+                mime_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+                if mime_type != "text/html":
+                    raise ValueError("OFFICIAL_NOT_HTML")
+                length = response.headers.get("Content-Length", "")
+                if length:
+                    try:
+                        n = int(length)
+                    except ValueError:
+                        raise ValueError("OFFICIAL_INVALID_LENGTH") from None
+                    if n > MAX_HTML_BYTES:
+                        raise ValueError("OFFICIAL_DOCUMENT_TOO_LARGE")
+                data = bytearray()
+                for chunk in response.iter_content(chunk_size=32768):
+                    data.extend(chunk)
+                    if len(data) > MAX_HTML_BYTES:
+                        raise ValueError("OFFICIAL_DOCUMENT_TOO_LARGE")
+                encoding = response.encoding or "utf-8"
+                return bytes(data).decode(encoding, errors="replace")
     except ValueError:
         raise
-    except requests.RequestException as exc:
-        # Do not leak server headers, content, credentials or stack traces.
+    except requests.RequestException:
         raise ValueError("OFFICIAL_SOURCE_UNAVAILABLE") from None
+    raise ValueError("OFFICIAL_TOO_MANY_REDIRECTS")
 
 
 def _official_identity(soup: BeautifulSoup) -> str:
