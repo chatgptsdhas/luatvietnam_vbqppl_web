@@ -12,6 +12,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from legal_effect_analysis import normalize_number
+from legal_effect_identity import inspect_catalog
 from legal_effect_official import check_official_sources, load_official_sources
 
 HEADERS = [
@@ -37,13 +38,14 @@ def catalog_from_workbook(path: Path) -> dict[str, list[dict]]:
                 raise ValueError("Missing source sheet: " + sheet)
             cells = iter(wb[sheet].iter_rows(values_only=True))
             headers = [str(x or "").strip() for x in next(cells)]
-            for values in cells:
+            for physical_row, values in enumerate(cells, start=2):
                 row = dict(zip(headers, values))
                 code = normalize_number(row.get("Số hiệu"))
                 if not code:
                     continue
                 result[code].append({
                     "sheet": sheet,
+                    "row_number": physical_row,
                     "id": str(row.get("ID VĂN BẢN") or row.get("ID Văn bản") or ""),
                     "type": str(row.get("Loại văn bản") or ""),
                     "title": str(row.get("Tên văn bản") or ""),
@@ -57,6 +59,7 @@ def catalog_from_workbook(path: Path) -> dict[str, list[dict]]:
 
 def build_review(catalog: dict, events: list[dict], mode: str) -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    identity = inspect_catalog(catalog)
     candidates = [None] * len(catalog) if mode == "baseline" else events
     if mode == "baseline":
         pairs = [(code, None) for code in sorted(catalog)]
@@ -68,10 +71,11 @@ def build_review(catalog: dict, events: list[dict], mode: str) -> dict:
             unmatched.append({"old_number": code, "event_key": (event or {}).get("event_key", ""), "reason": "NOT_IN_CATALOG"})
             continue
         sources = catalog[code]
-        representative = sources[0]
-        kinds = {s["type"].strip().lower() for s in sources if s["type"]}
-        urls = {s["url"].split("?")[0].rstrip("/") for s in sources if s["url"]}
-        collision = len(kinds) > 1 or len(urls) > 1
+        identity_row = identity["by_number"][code]
+        representative = identity_row["representative"]
+        issues = identity_row["issues"]
+        collision = identity_row["requires_identity_review"]
+        source_url = identity_row["preferred_url"]
         event = event or {}
         event_key = event.get("event_key", "")
         seed = code + "|" + (event_key or "BASELINE")
@@ -81,15 +85,15 @@ def build_review(catalog: dict, events: list[dict], mode: str) -> dict:
             ", ".join(sorted({s["sheet"] for s in sources})),
             "; ".join(sorted({s["id"] for s in sources if s["sheet"] == "VBQPPL" and s["id"]})),
             "; ".join(sorted({s["id"] for s in sources if s["sheet"] == "VBQPPL_Nhap" and s["id"]})),
-            representative["url"], representative["effect_start"],
+            source_url, representative["effect_start"],
             "CHUA_XAC_MINH", event.get("relation_type", ""), event.get("new_number", ""),
-            event.get("effect_date_candidate", ""), event.get("direction", ""),
+            event.get("effect_date_candidate", ""), event.get("affected_scope", ""),
             event.get("evidence_text", ""), "", event.get("source_url", ""),
             event.get("confidence", "THAP"),
             "CAN_BO_SUNG_CHUNG_CU" if collision else "CHO_XAC_MINH",
             "", "", "", now, event_key,
-            hashlib.sha256((code + "|" + representative["url"]).encode()).hexdigest()[:24],
-            "POSSIBLE_IDENTITY_COLLISION" if collision else "",
+            identity_row["fingerprint"],
+            "; ".join(issues),
             event.get("note", "Rà soát ban đầu; chưa có kết luận pháp lý"),
         ]
         rows[review_id] = dict(zip(HEADERS, values))
@@ -104,6 +108,7 @@ def build_review(catalog: dict, events: list[dict], mode: str) -> dict:
         },
         "records_review": [rows[k] for k in sorted(rows)],
         "unmatched_events": unmatched,
+        "identity_audit": {"summary": identity["summary"], "issues": identity["issues"]},
     }
 
 
