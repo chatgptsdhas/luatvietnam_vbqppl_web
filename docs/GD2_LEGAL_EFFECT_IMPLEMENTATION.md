@@ -127,3 +127,20 @@ GitHub Actions live probe run 38336187228 (artifact `gd2-vbpl-probe-report`):
 - Có test đảm bảo khung HTML có tiêu đề đúng **không** tạo kết luận; test redirect cùng host cho phép và redirect ra ngoài chặn. Các báo cáo kiểm thử chỉ lưu metadata, không lưu HTML toàn trang hoặc token.
 - Giới hạn: Mặc dù đã kiểm thử máy chủ thực tế và sửa cơ chế, **chưa thể E2E xác nhận điều khoản 05/2021 sửa đổi 15/2020** khi VBPL không trả toàn văn cho HTTP client và chặn Playwright. Để nghiệm thu cần nguồn chính thức truy cập được (PDF/tải hợp lệ, endpoint công bố hoặc truy cập trình duyệt thủ công xuất file) hoặc môi trường được VBPL cho phép, sau đó kiểm thử lại. Tránh gán trạng thái hết hiệu lực chỉ từ tiêu đề.
 - PR #16 vẫn Draft, không ghi Apps Script, Google Sheets hay Planner.
+
+## GD2.03 — Kiểm thử trên máy Windows có trình duyệt hợp lệ
+
+GitHub-hosted runner không điều khiển trực tiếp được phiên Cốc Cốc của người dùng. Đã bổ sung `scripts/gd2_vbpl_windows_test.py`: chạy foreground, mở profile mới cô lập, sử dụng trình duyệt được cài trên chính Windows người vận hành; KHÔNG lấy cookie/session của profile thực, KHÔNG ghi Apps Script/Sheets/Planner. Đây là bài test chờ người vận hành chạy, KHÔNG phải kết quả E2E đã xác nhận.
+
+```powershell
+git fetch origin
+git switch feat/gd2-legal-effect-analysis-20261012
+python -m pip install beautifulsoup4 playwright
+python scripts/gd2_vbpl_windows_test.py
+```
+
+Có thể truyền `--browser-path "C:\Program Files\CocCoc\Browser\Application\browser.exe"` nếu không dò được Cốc Cốc, hoặc cài Chromium do Playwright phân phối. Bài test dùng `headless=False`, không gắn vào profile đang đăng nhập; website từ chối truy cập phải báo `SITE_ACCESS_DENIED`, không tìm cách vượt chặn. File báo cáo tại `output/gd2-windows-vbpl-test.json` chỉ ghi trạng thái, mã phiếu, vị trí chứng cứ, không ghi HTML/token.
+
+Điều kiện đạt: `outcome=PROVISIONAL_PASS_PENDING_LEGAL`, `extraction_status=ok`, đúng số hiệu 05/2021/TT-BGDĐT, relation `SUA_DOI_BO_SUNG` tác động tới 15/2020/TT-BGDĐT; kết luận cuối vẫn đợi Pháp chế. Nếu thất bại, lưu báo cáo và điều chỉnh selector theo dữ liệu nguồn được phép chia sẻ; không kết luận chưa có hiệu lực chỉ vì không tải được trang.
+
+Lưu ý: việc chuyển nhánh của máy vận hành cần do người vận hành thực hiện ở một bản checkout thử nghiệm tách biệt, tránh làm xáo trộn pipeline Windows hiện chạy production. Không bật scheduler cho script này.
