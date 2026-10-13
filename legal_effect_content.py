@@ -48,7 +48,7 @@ PARAGRAPH_TAGS = {"p", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6"}
 # VBPL modern "Nội dung" tab can show HTML without the national masthead.
 # A title plus the legal enacting preamble, not the surrounding UI, provides
 # the structural boundary; a page title or status badge alone is never proof.
-OFFICIAL_DOC_TITLE = re.compile(r"^(?:THÔNG\\s+TƯ|NGHỊ\\s+ĐỊNH|QUYẾT\\s+ĐỊNH|LUẬT|NGHỊ\\s+QUYẾT|BỘ\\s+LUẬT)$", re.I)
+OFFICIAL_DOC_TITLE = re.compile(r"^(?:THÔNG\s+TƯ|NGHỊ\s+ĐỊNH|QUYẾT\s+ĐỊNH|LUẬT|NGHỊ\s+QUYẾT|BỘ\s+LUẬT)$", re.I)
 MAX_HTML_BYTES = 8_000_000
 MAX_EVIDENCE_BLOCKS = 250
 MAX_PARAGRAPH_CHARS = 2400
@@ -156,8 +156,8 @@ def _choose_root(soup: BeautifulSoup) -> tuple[Tag | None, str]:
         # An editorial page may mention "Điều 1", but lacks the formal
         # enactment preamble and isolated legal document type heading.
         has_type_heading = any(OFFICIAL_DOC_TITLE.fullmatch(part) for part in prior)
-        if not (has_type_heading and re.search(r"\\bCăn\\s+cứ\\b", preamble, re.I)
-                and re.search(r"\\bban\\s+hành\\b", preamble, re.I)):
+        if not (has_type_heading and re.search(r"\bCăn\s+cứ\b", preamble, re.I)
+                and re.search(r"\bban\s+hành\b", preamble, re.I)):
             continue
         text_len = len(sanitized.get_text(" ", strip=True))
         if 250 <= text_len <= 1_700_000:
@@ -265,8 +265,8 @@ def extract_rendered_vbpl_evidence(page, timeout_ms: int = 15000) -> dict[str, A
         page.wait_for_function(
             r"""() => {
               const content = document.body?.innerText || '';
-              return /Điều\\s+\\d+\\s*[.:-]/i.test(content)
-                && /(?:Thông\\s+tư|Nghị\\s+định|Luật|Quyết\\s+định)/i.test(content);
+              return /Điều\s+\d+\s*[.:-]/i.test(content)
+                && /(?:Thông\s+tư|Nghị\s+định|Luật|Quyết\s+định)/i.test(content);
             }""",
             timeout=timeout_ms,
         )
