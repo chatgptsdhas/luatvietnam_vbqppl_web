@@ -162,3 +162,30 @@ Lưu ý: việc chuyển nhánh của máy vận hành cần do người vận h
 **Điểm cần rà soát:** `paragraph[7]` có thể chính là tiêu đề Điều 1; cần đối chiếu `evidence_text` của sự kiện với nội dung khoản sửa đổi dưới Điều 1 để xác nhận chính xác phần nội dung tác động và mức độ chi tiết. Trước khi triển khai tự động, nên kiểm thử thêm văn bản thay thế toàn bộ, bãi bỏ một phần, chuyển tiếp, hết hiệu lực trong tương lai và văn bản không có quan hệ.
 
 **Quyết định vận hành:** Giữ PR #16 Draft; chuyển sang GD2.04 đối soát định danh/khử trùng dữ liệu, sau đó GD2.05 kiểm thử E2E đủ nhiều trường hợp và Pháp chế xác minh.
+
+## GD2.04 — Đối chiếu định danh nguồn và chống trùng (13/10/2026)
+
+Tình trạng: **mã nguồn và kiểm thử tự động đã bổ sung, chưa chạy migration hoặc ghi production**.
+
+- `legal_effect_identity.py`: đối chiếu hai sheet theo số hiệu chuẩn hóa, **không** coi số hiệu tự nó là bằng chứng duy nhất. Bảo toàn ID của hai nguồn, flag `MULTIPLE_DOCUMENT_IDS`, `DOCUMENT_TYPE_CONFLICT`, `ISSUING_AUTHORITY_CONFLICT`, `MULTIPLE_VALID_SOURCE_URLS`, `NON_URL_DOCUMENT_LINK`, `TITLE_VARIANTS`, `NONSTANDARD_DOCUMENT_NUMBER`. Trường URL chỉ chấp nhận URL HTTP(S) công khai hợp lệ, không biến nhãn văn bản thành URL.
+- `15_check_legal_effect.py`: gắn `identity_audit` trong báo cáo JSON; giữ **28 cột GD1** trong CSV; `ID nguồn VBQPPL` / `ID nguồn VBQPPL_Nhap` vẫn lưu đủ; `Dấu vân tay nguồn` ổn định khi thay thứ tự dòng; `Phạm vi tác động` lấy đúng `affected_scope`, không lấy `direction` như trước. Các khóa có xung đột định danh nghiêm trọng chuyển sang `CAN_BO_SUNG_CHUNG_CU`.
+- **Đối chiếu bản sao offline** `BACKUP_FULL_Data_TraCuuVanBan_PRE_PHASE0_2026-10-12.xlsx` do người vận hành cung cấp: 190 VBQPPL + 341 VBQPPL_Nhap = 531 bản ghi có số hiệu, 339 số hiệu chuẩn hóa; 188 số hiệu ở cả hai nguồn; 54 link tại `VBQPPL` thực chất là nhãn/văn bản, không phải URL; có 2 số hiệu với nhiều mã ID là `32/2025/TT-BTC` và `46/2014/QH13`. Riêng trường hợp `46/2014/QH13` có tiêu đề Luật Sở hữu trí tuệ ở một ID nhưng URL gắn Luật Bảo hiểm y tế: **cảnh báo mâu thuẫn nguồn, cần Pháp chế xác nhận**; không tự sửa.
+- `339` là số khóa số hiệu, KHÔNG được mặc nhiên kết luận có đúng 339 thực thể pháp lý độc lập. Không thay đổi ID gốc, bảo vệ các trường thủ công và không tạo/xóa Planner.
+- Chưa thể xác nhận cơ quan ban hành cho toàn bộ nguồn vì nguồn snapshot không có cột `Cơ quan ban hành`; đánh dấu chưa biết, không tự suy ra từ số hiệu hoặc tên đơn vị.
+
+## GD2.05 — Bộ kiểm thử đa văn bản trên Windows (13/10/2026)
+
+Tình trạng: **đã triển khai runner và test offline, chưa có dữ liệu đối chứng pháp chế đủ 30 ca thực tế**.
+
+- `scripts/gd205_validate_official_samples.py`: đọc tối đa 30 ca từ `docs/gd205_case_manifest.json`, mỗi ca gồm `id`, URL nguồn VBPL chính thức, số hiệu văn bản mới, số hiệu văn bản cũ, quan hệ dự kiến và `label_status`. Chỉ mở trình duyệt Windows với profile mới, *headless=False*, không tái sử dụng cookie phiên cá nhân và không bypass HTTP 403. Chỉ ghi mã trạng thái, vị trí điều khoản, phạm vi, kết quả và metadata vào `output/gd205-validation.json`.
+- Manifest hiện có **1 ca đã kiểm thử kỹ thuật trên Windows**: TT 05/2021/TT-BGDĐT sửa đổi TT 15/2020/TT-BGDĐT. Để `PENDING_HUMAN` vì **được xác nhận kỹ thuật không đồng nghĩa được Pháp chế dán nhãn chuẩn**.
+- Đánh giá tách biệt 3 lớp: tỷ lệ tải thành công, tỷ lệ lấy toàn văn, tỷ lệ phát hiện khớp quan hệ dự kiến. Không báo precision/recall pháp lý khi chưa có đầy đủ ground-truth gồm cả ví dụ âm tính; cột chỉ tiêu này trả `null`. Với các ca dán nhãn `HUMAN_VERIFIED`, chỉ thống kê **khả năng tìm lại trên tập ca dương tính đã lựa chọn**, không gọi đó là precision tổng thể.
+- Không tự bịa 29 link hoặc gắn nhãn căn cứ pháp luật chưa kiểm tra. Ở giai đoạn thí điểm có thể bổ sung dần các ca thay thế toàn bộ, bãi bỏ một phần, sửa đổi, ngày tương lai, ngoại lệ chuyển tiếp, và ca không có quan hệ; muốn đánh giá false positive cần mở rộng manifest riêng với nhãn âm tính.
+- Lệnh trên **checkout thử nghiệm riêng** của máy Windows đã xác nhận truy cập được vbpl.vn:
+
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py
+```
+
+- Nếu báo `MATCH_PENDING_HUMAN` đây là phát hiện kỹ thuật **cần xác minh**, không phải `DA_XAC_NHAN` hay `HET_HIEU_LUC_TOAN_BO`. Không triển khai lịch chạy tự động vào production và không merge PR #16 khi chưa nghiệm thu đủ bộ mẫu.
