@@ -189,3 +189,16 @@ python scripts/gd205_validate_official_samples.py
 ```
 
 - Nếu báo `MATCH_PENDING_HUMAN` đây là phát hiện kỹ thuật **cần xác minh**, không phải `DA_XAC_NHAN` hay `HET_HIEU_LUC_TOAN_BO`. Không triển khai lịch chạy tự động vào production và không merge PR #16 khi chưa nghiệm thu đủ bộ mẫu.
+
+## GD2.05 — Kết quả Windows một ca và mở rộng đối chứng (13/10/2026)
+
+Người vận hành gửi kết quả `output/gd205-validation.json` (chỉ báo cáo tóm tắt): `total_cases=1`, `cases_run=1`, `http_200=1`, `legal_text_extracted=1`, `provisional_matches=1`, `MATCH_PENDING_HUMAN=1`, `human_labelled_cases=0`, `legal_confirmation=false`, `production_writes=false`. **Kết luận: PASS kỹ thuật một ca, chưa đạt nghiệm thu 30 ca và chưa có kết luận pháp chế.**
+
+Đã mở rộng `scripts/gd205_validate_official_samples.py` cho nhãn đối chứng:
+- `label_status=PENDING_HUMAN`: chưa có nhãn sự thật, không kèm `expected_present`/`label_basis`.
+- `label_status=HUMAN_VERIFIED`: phải có `expected_present=true|false` (tác động đúng loại quan hệ có/không) và `label_basis` là căn cứ kiểm tra độc lập. Không đưa URL/trích dẫn chưa rà soát thành ground truth.
+- `NO_MATCH` được xử lý như dự đoán âm tính hợp lệ khi toàn văn nguồn được nhận diện đầy đủ; riêng lỗi mạng/không có DOM không bị gán âm tính và không được che khỏi báo cáo.
+- Báo cáo lưu TP/TN/FP/FN và số ca chưa đủ điều kiện đánh giá. **Precision/recall chỉ hiện số** khi đã đủ 30 trường hợp có nhãn, cả hai lớp dương và âm và đều kiểm tra được. Nếu chưa đủ thì `null`.
+- Bộ thử offline bổ sung trường hợp âm tính thật, dương tính giả, lỗi nguồn và tập đã gắn nhãn đủ 30. Các phép thử này mô phỏng, không chứng minh độ chính xác pháp lý.
+
+**Mức độ sẵn sàng:** PR #16 Draft; thí điểm 1 trường hợp Windows thành công; chờ bổ sung 29 URL hợp lệ và nhãn được rà soát. Không ghi Google Sheets/Planner, không deploy production.
