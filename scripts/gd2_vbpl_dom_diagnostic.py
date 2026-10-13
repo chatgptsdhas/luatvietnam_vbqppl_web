@@ -15,7 +15,7 @@ from urllib.parse import urljoin, urlsplit
 from pathlib import Path
 from sys import path as syspath
 syspath.insert(0, str(Path(__file__).resolve().parents[1]))
-from legal_effect_official import canonical_official_url
+from legal_effect_official import canonical_official_url, fetch_official_html
 
 
 def tag_selector(node: Tag) -> str:
@@ -106,19 +106,12 @@ def main() -> int:
     url = canonical_official_url(args.url)
     result = {"requested_host": urlsplit(url).hostname}
     try:
-        resp = requests.get(url, timeout=(8, 20), allow_redirects=False)
-        result["http_status"] = resp.status_code
-        result["redirect_target"] = ""
-        if 300 <= resp.status_code < 400:
-            target = urljoin(url, resp.headers.get("Location", ""))
-            try:
-                result["redirect_target"] = canonical_official_url(target)
-            except ValueError:
-                result["redirect_target"] = "NOT_ALLOWLISTED"
-        elif resp.status_code == 200:
-            result.update(inspect_html(resp.text[:6_000_000]))
-    except requests.RequestException:
-        result["http_status"] = "OFFICIAL_SOURCE_UNAVAILABLE"
+        html = fetch_official_html(url)
+        result["http_status"] = 200
+        result.update(inspect_html(html))
+    except ValueError as exc:
+        code = str(exc)
+        result["http_status"] = code if code.startswith("OFFICIAL_") else "OFFICIAL_SOURCE_UNAVAILABLE"
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
