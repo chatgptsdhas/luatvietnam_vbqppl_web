@@ -97,3 +97,12 @@ python 15_check_legal_effect.py --mode events --workbook "backup.xlsx" --step08-
 Nếu không truyền `--official-index`, script vẫn chạy như trước và tất cả phiếu chỉ là gợi ý chưa xác minh. Không ghi Google Sheet production hoặc MS Planner.
 
 **Giới hạn hiện tại:** chưa xác minh kết nối HTTP/DOM trên cổng VBPL thật trong môi trường này (kết nối trực tiếp bị hạn chế); bộ test CI chỉ kiểm thử HTML giả lập và hành vi lỗi mạng/URL không tin cậy. Cần chạy E2E GD2.05 trên máy Windows được phép kết nối, bổ sung parser từ PDF chính thức khi cần, và kiểm tra 30 văn bản trước khi nghiệm thu GD2.
+
+## GD2.03 — Test case thực tế: 05/2021/TT-BGDĐT (13/10/2026)
+
+- URL người dùng cung cấp: `https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt-sua-doi-bo-sung-mot-so-dieu-cua-quy-che-thi-tot-nghiep-trung-hoc-pho-thong-ban-hanh-kem-theo-thong-tu-so-15-2020-tt-bgddt-ngay-26-thang-5-nam-2020-cua-bo-truong-bo-giao-duc-va-dao-tao--147477`.
+- Khóa tra cứu dự kiến: `05/2021/TT-BGDĐT`. Văn bản này sửa đổi, bổ sung Quy chế ban hành kèm `15/2020/TT-BGDĐT`. Chỉ quan hệ sửa đổi, không được coi là thay thế toàn bộ văn bản gốc.
+- Đã mở rộng URL allowlist cho `/van-ban/chi-tiet/<slug>--<id>` của `vbpl.vn`. Có thể thử URL toàn văn/print cũ dựa trên **ID thực sự nằm trong URL đã được cung cấp**; không suy ra ID từ số hiệu.
+- Phải kiểm tra số hiệu tại đầu văn bản sau khi tải, điều khoản nguyên văn, chiều quan hệ và điều khoản chuyển tiếp. Trường hợp không chắc chắn → `CAN_BO_SUNG_CHUNG_CU`, không tự xác nhận.
+- GitHub CI kiểm thử URL của chính case này dưới dạng offline; **máy container hiện không phân giải được DNS vbpl.vn**, nên chưa có kết quả Python E2E trực tiếp trên VBPL. Không được gọi đây là test truy cập thực tế đã thành công.
+- Bộ kiểm chứng `official_html_check` hiện phục vụ mô hình *văn bản mới tác động đến văn bản cũ*; không sử dụng trang thông tư 05 để thay thế việc kiểm tra văn bản bãi bỏ nó sau này. Các điều khoản chuyển tiếp phải được kiểm tra thủ công trước khi xác nhận hết hiệu lực.
