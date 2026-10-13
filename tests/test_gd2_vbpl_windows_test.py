@@ -39,6 +39,25 @@ class VBPLWindowsOracleTest(unittest.TestCase):
         self.assertEqual(result["matched_events"][0]["relation_type"], "SUA_DOI_BO_SUNG")
         self.assertTrue(result["requires_legal_review"])
 
+    def test_amendment_in_title_only_not_acceptance(self):
+        html = page(
+            "<section class='document-reader'>"
+            "<p>THÔNG TƯ</p>"
+            "<p>Sửa đổi, bổ sung Quy chế ban hành kèm Thông tư 15/2020/TT-BGDĐT</p>"
+            "<p>Căn cứ Luật Giáo dục năm 2019;</p>"
+            "<p>Bộ trưởng ban hành Thông tư quy định đầy đủ trình tự, phương thức "
+            "tổ chức kỳ thi tốt nghiệp trung học phổ thông tại các trường.</p>"
+            "<p>Điều 1. Phạm vi điều chỉnh</p>"
+            "<p>Nội dung tổ chức thi.</p>"
+            "<p>Điều 2. Hiệu lực thi hành</p>"
+            "<p>Thông tư này có hiệu lực từ ngày 27/04/2021.</p>"
+            "</section>"
+        )
+        result = evaluate_rendered_document(
+            html, "Thông tư 05/2021/TT-BGDĐT của Bộ Giáo dục", TEST_URL, 200)
+        self.assertNotEqual(result["outcome"], "PROVISIONAL_PASS_PENDING_LEGAL")
+        self.assertEqual(result["matched_events"], [])
+
     def test_editorial_summary_only_is_insufficient(self):
         html = page("<section><p>Thông tư 05/2021/TT-BGDĐT "
                     "sửa đổi bổ sung Thông tư 15/2020/TT-BGDĐT</p></section>")
