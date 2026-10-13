@@ -8,6 +8,7 @@ on:
       - ".github/workflows/gd2-live-vbpl-probe.yml"
       - "scripts/gd2_vbpl_live_probe.py"
       - "scripts/gd2_vbpl_dom_diagnostic.py"
+      - "scripts/gd2_vbpl_browser_diagnostic.py"
       - "legal_effect_analysis.py"
       - "legal_effect_content.py"
       - "legal_effect_official.py"
@@ -28,6 +29,16 @@ jobs:
           python-version: "3.11"
       - name: Install read-only parsing dependencies
         run: python -m pip install beautifulsoup4 requests
+      - name: Setup isolated Playwright Chromium
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Inspect browser-rendered VBPL DOM
+        continue-on-error: true
+        run: |
+          python scripts/gd2_vbpl_browser_diagnostic.py \
+            --url 'https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt-sua-doi-bo-sung-mot-so-dieu-cua-quy-che-thi-tot-nghiep-trung-hoc-pho-thong-ban-hanh-kem-theo-thong-tu-so-15-2020-tt-bgddt-ngay-26-thang-5-nam-2020-cua-bo-truong-bo-giao-duc-va-dao-tao--147477' \
+            --out output/gd2-playwright-diagnostic.json
       - name: Inspect DOM structure without storing full HTML
         run: |
           python scripts/gd2_vbpl_dom_diagnostic.py \
@@ -47,5 +58,6 @@ jobs:
           path: |
             output/gd2-server-probe.json
             output/gd2-vbpl-dom-diagnostic.json
+            output/gd2-playwright-diagnostic.json
           if-no-files-found: warn
           retention-days: 7
