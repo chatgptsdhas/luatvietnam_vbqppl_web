@@ -1,0 +1,14 @@
+{
+  "status": "PILOT_ONE_CASE_ONLY_NOT_30_CASE_ACCEPTANCE",
+  "notes": "Case 05/2021 verified for extraction on Windows operator browser; legal outcome remains pending. Add independently reviewed and labelled cases for GD2.05.",
+  "cases": [
+    {
+      "id": "GD205-001-05-2021",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt-sua-doi-bo-sung-mot-so-dieu-cua-quy-che-thi-tot-nghiep-trung-hoc-pho-thong-ban-hanh-kem-theo-thong-tu-so-15-2020-tt-bgddt-ngay-26-thang-5-nam-2020-cua-bo-truong-bo-giao-duc-va-dao-tao--147477",
+      "new_number": "05/2021/TT-BGDĐT",
+      "old_number": "15/2020/TT-BGDĐT",
+      "expected_relation": "SUA_DOI_BO_SUNG",
+      "label_status": "PENDING_HUMAN"
+    }
+  ]
+}
