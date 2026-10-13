@@ -44,6 +44,29 @@ class OfficialSourceTest(unittest.TestCase):
             with self.subTest(url=bad), self.assertRaises(ValueError):
                 canonical_official_url(bad)
 
+    def test_modern_vbpl_user_link(self):
+        modern = ("https://vbpl.vn/van-ban/chi-tiet/"
+                  "thong-tu-so-05-2021-tt-bgddt-sua-doi-bo-sung-mot-so-dieu-cua-"
+                  "quy-che-thi-tot-nghiep-trung-hoc-pho-thong-ban-hanh-kem-theo-"
+                  "thong-tu-so-15-2020-tt-bgddt-ngay-26-thang-5-nam-2020-cua-"
+                  "bo-truong-bo-giao-duc-va-dao-tao--147477")
+        from legal_effect_official import official_fetch_targets
+        self.assertEqual(canonical_official_url(modern), modern)
+        targets = official_fetch_targets(modern)
+        self.assertEqual(targets[0], modern)
+        self.assertEqual(targets[1],
+                         "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=147477")
+        self.assertTrue(all(x.startswith("https://vbpl.vn/") for x in targets))
+
+    def test_modern_link_rejects_malicious_suffix(self):
+        modern = "https://vbpl.vn/van-ban/chi-tiet/van-ban--147477"
+        for bad in (modern + "?redirect=https://evil.test",
+                    modern + "#bad", modern + "/etc",
+                    modern.replace("vbpl.vn", "vbpl.vn.evil.test"),
+                    modern.replace("147477", "not-a-number")):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                canonical_official_url(bad)
+
     def test_explicit_index_only(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "index.json"
