@@ -255,15 +255,28 @@ def check_official_sources(report: dict, events: list[dict], sources: dict[str, 
         else:
             try:
                 safe_url = canonical_official_url(official_url)
-                if safe_url not in cache:
-                    try:
-                        cache[safe_url] = ("ok", fetcher(safe_url))
-                    except (ValueError, OSError):
-                        cache[safe_url] = ("error", "")
-                fetch_status, html = cache[safe_url]
-                result = (official_html_check(event, safe_url, html) if fetch_status == "ok"
-                          else {"status": "OFFICIAL_SOURCE_UNAVAILABLE",
-                                "official_url": safe_url, "requires_legal_review": True})
+                targets = official_fetch_targets(safe_url)
+                result = {"status": "OFFICIAL_SOURCE_UNAVAILABLE",
+                          "official_url": safe_url, "requires_legal_review": True}
+                for target in targets:
+                    if target not in cache:
+                        try:
+                            cache[target] = ("ok", fetcher(target))
+                        except (ValueError, OSError):
+                            cache[target] = ("error", "")
+                    fetch_status, html = cache[target]
+                    if fetch_status != "ok":
+                        continue
+                    trial = official_html_check(event, target, html)
+                    result = trial
+                    # Only fallback when the page cannot be read or is not
+                    # identified as the requested document. A valid but
+                    # conflicting source is evidence requiring legal review.
+                    if trial["status"] not in (
+                        "OFFICIAL_TEXT_UNAVAILABLE", "OFFICIAL_EMPTY_DOCUMENT",
+                        "IDENTITY_MISMATCH"
+                    ):
+                        break
             except (ValueError, TypeError):
                 result = {"status": "OFFICIAL_URL_REJECTED", "official_url": "",
                           "requires_legal_review": True}
