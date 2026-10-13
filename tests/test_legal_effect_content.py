@@ -60,5 +60,49 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(extract('')['status'],'source_unavailable')
         self.assertEqual(extract('<div></div>')['status'],'document_root_not_found')
 
+
+    def test_rendered_vbpl_content_without_masthead(self):
+        html = ('<nav><p>Thông tư đã hết hiệu lực toàn bộ</p></nav>'
+                '<div class="app-page"><p>Tóm tắt: Bãi bỏ Thông tư 01/2020/TT-BGDĐT</p>'
+                '<section class="document-reader"><p>THÔNG TƯ</p>'
+                '<p>Sửa đổi, bổ sung một số điều của Quy chế thi tốt nghiệp THPT</p>'
+                '<p>Căn cứ Luật Giáo dục năm 2019;</p>'
+                '<p>Bộ trưởng Bộ Giáo dục và Đào tạo ban hành Thông tư:</p>'
+                '<p>Điều 1. Sửa đổi, bổ sung quy chế ban hành kèm Thông tư 15/2020/TT-BGDĐT</p>'
+                '<p>1. Sửa đổi khoản 2 của quy chế.</p>'
+                '<p>Điều 2. Hiệu lực thi hành</p>'
+                '<p>Thông tư này có hiệu lực từ ngày 27/04/2021.</p>'
+                '</section></div>')
+        result = extract(html)
+        self.assertEqual(result['status'], 'ok')
+        self.assertEqual(result['root_selector'], 'structural_vbpl_rendered_root')
+        evidence = ' '.join(x['text'] for x in result['blocks'])
+        self.assertIn('15/2020/TT-BGDĐT', evidence)
+        self.assertNotIn('01/2020/TT-BGDĐT', evidence)
+
+    def test_rendered_vbpl_summary_alone_not_source(self):
+        html = ('<nav>Thông tư 05/2021/TT-BGDĐT</nav><div><p>THÔNG TƯ</p>'
+                '<p>Thông tư sửa đổi quy chế</p><p>Điều 1. Nội dung</p>'
+                '<p>Điều 2. Hiệu lực</p></div>')
+        result = extract(html)
+        self.assertEqual(result['status'], 'document_root_not_found')
+
+    def test_rendered_reader_waits_then_extracts(self):
+        from legal_effect_content import extract_rendered_vbpl_evidence
+        class FakePage:
+            waited = False
+            def content(self):
+                if not self.waited:
+                    return '<div id="app">Loading...</div>'
+                return ('<div><p>THÔNG TƯ</p><p>Căn cứ Luật Giáo dục;</p>'
+                        '<p>Bộ trưởng ban hành Thông tư.</p>'
+                        '<p>Điều 1. Sửa đổi Thông tư 15/2020/TT-BGDĐT.</p>'
+                        '<p>Điều 2. Hiệu lực thi hành</p>'
+                        '<p>Có hiệu lực từ ngày 27/04/2021.</p></div>')
+            def wait_for_function(self, expression, timeout):
+                self.waited = True
+        result = extract_rendered_vbpl_evidence(FakePage())
+        self.assertEqual(result['status'], 'ok')
+
 if __name__ == '__main__':
     unittest.main()
