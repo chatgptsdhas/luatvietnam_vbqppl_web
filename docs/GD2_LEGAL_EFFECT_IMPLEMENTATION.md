@@ -106,3 +106,14 @@ Nếu không truyền `--official-index`, script vẫn chạy như trước và 
 - Phải kiểm tra số hiệu tại đầu văn bản sau khi tải, điều khoản nguyên văn, chiều quan hệ và điều khoản chuyển tiếp. Trường hợp không chắc chắn → `CAN_BO_SUNG_CHUNG_CU`, không tự xác nhận.
 - GitHub CI kiểm thử URL của chính case này dưới dạng offline; **máy container hiện không phân giải được DNS vbpl.vn**, nên chưa có kết quả Python E2E trực tiếp trên VBPL. Không được gọi đây là test truy cập thực tế đã thành công.
 - Bộ kiểm chứng `official_html_check` hiện phục vụ mô hình *văn bản mới tác động đến văn bản cũ*; không sử dụng trang thông tư 05 để thay thế việc kiểm tra văn bản bãi bỏ nó sau này. Các điều khoản chuyển tiếp phải được kiểm tra thủ công trước khi xác nhận hết hiệu lực.
+
+## GD2.03 — Kết quả kiểm thử máy chủ thực tế (13/10/2026)
+
+GitHub Actions live probe run 38336187228 (artifact `gd2-vbpl-probe-report`):
+
+- Link `/van-ban/chi-tiet/...--147477`: HTTP 200; 83,287 byte HTML.
+- `official_check=IDENTITY_MISMATCH` (parser không tìm thấy số hiệu), `extraction_status=document_root_not_found`, `evidence_blocks=0`.
+- Các endpoint VBPL legacy `/TW/Pages/vbpq-toanvan.aspx?ItemID=147477`, `/TW/Pages/vbpq-print.aspx?ItemID=147477` và `/botuphap/Pages/vbpq-print.aspx?ItemID=147477` trả redirect; crawler hiện chặn redirect để bảo vệ SSRF.
+- `OVERALL LIVE_HTML_RETRIEVED_PARSER_UNCONFIRMED`; job fail exit 2 theo thiết kế, **chưa nghiệm thu E2E**.
+- Việc tiếp theo: phân tích DOM HTML thực (chỉ lưu trích mẫu cấu trúc/selector an toàn); cập nhật parser cho trang hiện hành; kiểm soát redirect cùng host bằng re-validation từng URL; chạy lại và phải nhận đúng 05/2021/TT-BGDĐT, quan hệ sửa đổi 15/2020/TT-BGDĐT. Không bỏ qua xác minh danh tính nguồn để pass test.
+- Không ghi dữ liệu production, không sync Planner, PR #16 vẫn Draft.
