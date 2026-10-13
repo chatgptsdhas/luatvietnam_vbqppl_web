@@ -143,5 +143,38 @@ class OfficialSourceTest(unittest.TestCase):
             self.assertFalse(req.call_args.kwargs["allow_redirects"])
 
 
+    def test_allowlisted_redirect_with_revalidation(self):
+        class Resp:
+            def __init__(self, status, headers, data=b""):
+                self.status_code = status
+                self.headers = headers
+                self.encoding = "utf-8"
+                self.data = data
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def iter_content(self, chunk_size=32768):
+                yield self.data
+        end = "https://vbpl.vn/TW/Pages/vbpq-print.aspx?ItemID=12345"
+        with patch("requests.get", side_effect=[
+            Resp(302, {"Location": end}),
+            Resp(200, {"Content-Type": "text/html"}, b"<html>valid</html>"),
+        ]) as req:
+            self.assertEqual(fetch_official_html(URL), "<html>valid</html>")
+            self.assertEqual(req.call_count, 2)
+            self.assertEqual(req.call_args.args[0], end)
+            self.assertFalse(req.call_args.kwargs["allow_redirects"])
+
+    def test_redirect_disallows_external_destination(self):
+        class Resp:
+            status_code = 302
+            headers = {"Location": "https://vbpl.vn.evil.example/steal"}
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+        with patch("requests.get", return_value=Resp()) as req:
+            with self.assertRaisesRegex(ValueError, "OFFICIAL_REDIRECT_BLOCKED"):
+                fetch_official_html(URL)
+            self.assertEqual(req.call_count, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
