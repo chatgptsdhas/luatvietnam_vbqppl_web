@@ -89,6 +89,17 @@ class OfficialSourceTest(unittest.TestCase):
         result = official_html_check(EVT, URL, html)
         self.assertEqual(result["status"], "IDENTITY_MISMATCH")
 
+    def test_vbpl_app_shell_is_not_verified_evidence(self):
+        html = (
+            "<html><head><title>Thông tư 81/2026/TT-BGDĐT | CSDL quốc gia</title></head>"
+            "<body><div id='root'>Đang tải văn bản</div><script src='/js/app.js'></script></body></html>"
+        )
+        result = official_html_check(EVT, URL, html)
+        self.assertEqual(result["status"], "CLIENT_RENDER_REQUIRED")
+        self.assertTrue(result["requires_legal_review"])
+        self.assertEqual(result["source_document_number"], "")
+        self.assertEqual(result["source_clause"], "")
+
     def test_conflicting_relation_blocks(self):
         event = dict(EVT, relation_type="SUA_DOI_BO_SUNG")
         result = official_html_check(event, URL, HTML)
