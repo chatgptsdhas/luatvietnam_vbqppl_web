@@ -95,7 +95,7 @@ class ExtractionTests(unittest.TestCase):
                 if not self.waited:
                     return '<div id="app">Loading...</div>'
                 return ('<div><p>THÔNG TƯ</p><p>Căn cứ Luật Giáo dục;</p>'
-                        '<p>Bộ trưởng ban hành Thông tư.</p>'
+                        '<p>Bộ trưởng ban hành Thông tư quy định cụ thể về nội dung thi tốt nghiệp trung học phổ thông, trách nhiệm tổ chức thi, công tác chấm thi và quản lý kết quả thi.</p>'
                         '<p>Điều 1. Sửa đổi Thông tư 15/2020/TT-BGDĐT.</p>'
                         '<p>Điều 2. Hiệu lực thi hành</p>'
                         '<p>Có hiệu lực từ ngày 27/04/2021.</p></div>')
