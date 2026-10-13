@@ -45,6 +45,10 @@ RELEVANT = re.compile(
 )
 DOC_NUMBER = re.compile(r"\b\d{1,4}/(?:19|20)\d{2}/[A-ZÀ-ỸĐ][A-ZÀ-ỸĐ0-9-]+", re.I)
 PARAGRAPH_TAGS = {"p", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6"}
+# VBPL modern "Nội dung" tab can show HTML without the national masthead.
+# A title plus the legal enacting preamble, not the surrounding UI, provides
+# the structural boundary; a page title or status badge alone is never proof.
+OFFICIAL_DOC_TITLE = re.compile(r"^(?:THÔNG\\s+TƯ|NGHỊ\\s+ĐỊNH|QUYẾT\\s+ĐỊNH|LUẬT|NGHỊ\\s+QUYẾT|BỘ\\s+LUẬT)$", re.I)
 MAX_HTML_BYTES = 8_000_000
 MAX_EVIDENCE_BLOCKS = 250
 MAX_PARAGRAPH_CHARS = 2400
@@ -133,6 +137,33 @@ def _choose_root(soup: BeautifulSoup) -> tuple[Tag | None, str]:
             structural.append((len(text), node))
     if structural:
         return min(structural, key=lambda x: x[0])[1], "structural_document_root"
+
+    # VBPL renders the full text directly under its "Nội dung" tab. Some
+    # current HTML versions omit the national masthead. Require a genuine
+    # legal-document prologue *before* multiple article headings to avoid
+    # treating the page menu, summaries and relationship tabs as full text.
+    vbpl_roots: list[tuple[int, Tag]] = []
+    for node in soup.select("div, section, article, [role='tabpanel']"):
+        if _is_chrome(node):
+            continue
+        sanitized = _sanitized_clone(soup, node)
+        paragraphs = _paragraphs(sanitized)
+        article_indexes = [i for i, part in enumerate(paragraphs) if ARTICLE.match(part)]
+        if len(article_indexes) < 2:
+            continue
+        prior = paragraphs[:article_indexes[0]]
+        preamble = " ".join(prior)
+        # An editorial page may mention "Điều 1", but lacks the formal
+        # enactment preamble and isolated legal document type heading.
+        has_type_heading = any(OFFICIAL_DOC_TITLE.fullmatch(part) for part in prior)
+        if not (has_type_heading and re.search(r"\\bCăn\\s+cứ\\b", preamble, re.I)
+                and re.search(r"\\bban\\s+hành\\b", preamble, re.I)):
+            continue
+        text_len = len(sanitized.get_text(" ", strip=True))
+        if 250 <= text_len <= 1_700_000:
+            vbpl_roots.append((text_len, node))
+    if vbpl_roots:
+        return min(vbpl_roots, key=lambda x: x[0])[1], "structural_vbpl_rendered_root"
     return None, ""
 
 
@@ -149,7 +180,14 @@ def extract_legal_effect_evidence_from_html(html: str) -> dict[str, Any]:
     # the official text. Do not let that synopsis generate clause evidence.
     masthead_index = next((i for i, part in enumerate(paragraphs)
                            if OFFICIAL_MASTHEAD.search(part)), None)
-    start_index = masthead_index if masthead_index is not None else 0
+    title_index = next((i for i, part in enumerate(paragraphs)
+                        if OFFICIAL_DOC_TITLE.fullmatch(part)), None)
+    # For the modern VBPL text panel, omit the page synopsis preceding
+    # the actual official "THÔNG TƯ" (or equivalent) document heading.
+    if root_selector == "structural_vbpl_rendered_root":
+        start_index = title_index if title_index is not None else 0
+    else:
+        start_index = masthead_index if masthead_index is not None else 0
     evidence: list[dict[str, Any]] = []
     section = ""
     section_kind = ""
@@ -212,3 +250,29 @@ def extract_legal_effect_evidence(page) -> dict[str, Any]:
     except Exception:
         # Deliberately do not leak page HTML, cookies or stack trace to logs.
         return {"status": "source_unavailable", "root_selector": "", "blocks": [], "truncated": False}
+
+
+def extract_rendered_vbpl_evidence(page, timeout_ms: int = 15000) -> dict[str, Any]:
+    """Read VBPL DOM after JavaScript hydration. No bypass for HTTP 403.
+
+    Browser readiness uses body text only as a signal; legal evidence is
+    extracted exclusively from a validated *document root* in page.content().
+    """
+    try:
+        result = extract_legal_effect_evidence_from_html(page.content())
+        if result.get("status") == "ok":
+            return result
+        page.wait_for_function(
+            r"""() => {
+              const content = document.body?.innerText || '';
+              return /Điều\\s+\\d+\\s*[.:-]/i.test(content)
+                && /(?:Thông\\s+tư|Nghị\\s+định|Luật|Quyết\\s+định)/i.test(content);
+            }""",
+            timeout=timeout_ms,
+        )
+        return extract_legal_effect_evidence_from_html(page.content())
+    except Exception:
+        # The caller decides whether a website refused browser automation.
+        # No fallback to headings, metadata or body text as legal evidence.
+        return {"status": "rendered_document_unavailable", "root_selector": "",
+                "blocks": [], "truncated": False}
