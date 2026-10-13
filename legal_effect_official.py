@@ -194,7 +194,16 @@ def official_html_check(event: dict[str, Any], url: str, html: str) -> dict[str,
     found = _official_identity(soup)
     base["source_document_number"] = found
     if found != new:
-        base["status"] = "IDENTITY_MISMATCH"
+        # Modern VBPL serves an HTML shell with the document number in
+        # <title>/<meta> but no official text. A matching title is not
+        # sufficient to establish document identity or legal-effect clauses.
+        body = soup.body.get_text(" ", strip=True) if soup.body else ""
+        title = clean(soup.title.get_text(" ", strip=True)) if soup.title else ""
+        title_numbers = document_numbers(title)
+        if not found and new in title_numbers and len(body) < 1000:
+            base["status"] = "CLIENT_RENDER_REQUIRED"
+        else:
+            base["status"] = "IDENTITY_MISMATCH"
         return base
 
     raw = RAW_STATUS.search(clean(soup.get_text(" ", strip=True)))
@@ -296,7 +305,7 @@ def check_official_sources(report: dict, events: list[dict], sources: dict[str, 
                     # conflicting source is evidence requiring legal review.
                     if trial["status"] not in (
                         "OFFICIAL_TEXT_UNAVAILABLE", "OFFICIAL_EMPTY_DOCUMENT",
-                        "IDENTITY_MISMATCH"
+                        "IDENTITY_MISMATCH", "CLIENT_RENDER_REQUIRED"
                     ):
                         break
             except (ValueError, TypeError):
