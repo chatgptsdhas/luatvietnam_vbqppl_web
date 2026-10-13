@@ -117,3 +117,13 @@ GitHub Actions live probe run 38336187228 (artifact `gd2-vbpl-probe-report`):
 - `OVERALL LIVE_HTML_RETRIEVED_PARSER_UNCONFIRMED`; job fail exit 2 theo thiết kế, **chưa nghiệm thu E2E**.
 - Việc tiếp theo: phân tích DOM HTML thực (chỉ lưu trích mẫu cấu trúc/selector an toàn); cập nhật parser cho trang hiện hành; kiểm soát redirect cùng host bằng re-validation từng URL; chạy lại và phải nhận đúng 05/2021/TT-BGDĐT, quan hệ sửa đổi 15/2020/TT-BGDĐT. Không bỏ qua xác minh danh tính nguồn để pass test.
 - Không ghi dữ liệu production, không sync Planner, PR #16 vẫn Draft.
+
+## GD2.03 FIX — Kết quả điều tra trên server 13/10/2026
+
+- Đã chạy Live Probe ở GitHub Actions: URL VBPL mới có thể trả HTML 200 nhưng BODY chỉ 334 ký tự, không có quốc hiệu/Điều 1, dù tiêu đề và script chứa tham chiếu số hiệu. Đây là trang khung SPA, **không phải toàn văn**.
+- Đã chạy Playwright Chromium độc lập: trang VBPL trả HTTP 403 với trình duyệt tự động từ GitHub-hosted runner. **Không tìm cách vượt cơ chế bảo vệ website**.
+- Đã cập nhật `fetch_official_html()` theo tối đa 2 lần redirect, từng đích yêu cầu HTTPS + đúng whitelist/đường dẫn cấu trúc VBPL; không redirect tự động tới host khác.
+- Parser phân biệt `CLIENT_RENDER_REQUIRED` (khung JavaScript có số hiệu trong title nhưng không có toàn văn) với `IDENTITY_MISMATCH` (sai số hiệu); cả hai đều **không phải** chứng cứ xác minh.
+- Có test đảm bảo khung HTML có tiêu đề đúng **không** tạo kết luận; test redirect cùng host cho phép và redirect ra ngoài chặn. Các báo cáo kiểm thử chỉ lưu metadata, không lưu HTML toàn trang hoặc token.
+- Giới hạn: Mặc dù đã kiểm thử máy chủ thực tế và sửa cơ chế, **chưa thể E2E xác nhận điều khoản 05/2021 sửa đổi 15/2020** khi VBPL không trả toàn văn cho HTTP client và chặn Playwright. Để nghiệm thu cần nguồn chính thức truy cập được (PDF/tải hợp lệ, endpoint công bố hoặc truy cập trình duyệt thủ công xuất file) hoặc môi trường được VBPL cho phép, sau đó kiểm thử lại. Tránh gán trạng thái hết hiệu lực chỉ từ tiêu đề.
+- PR #16 vẫn Draft, không ghi Apps Script, Google Sheets hay Planner.
