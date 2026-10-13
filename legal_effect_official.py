@@ -21,14 +21,20 @@ from legal_effect_analysis import analyze_new_document, clean, document_numbers,
 from legal_effect_content import extract_legal_effect_evidence_from_html
 
 ALLOWED_HOSTS = frozenset(("vbpl.vn", "vbpl.moj.gov.vn"))
-FULLTEXT_PATH = re.compile(r"^/[a-zA-Z0-9_-]{2,40}/pages/vbpq-toanvan\.aspx$", re.I)
+FULLTEXT_PATH = re.compile(r"^/[a-zA-Z0-9_-]{2,40}/pages/vbpq-(?:toanvan|print)\.aspx$", re.I)
+# VBPL modern details: the trailing numeric ID is an official record ID,
+# NOT a legal-document number; do not derive it from an unverified title.
+FRIENDLY_DETAIL_PATH = re.compile(
+    r"^/van-ban/chi-tiet/[a-z0-9][a-z0-9-]{1,300}--(?P<item_id>[1-9]\d{0,8})/?$", re.I
+)
 MAX_HTML_BYTES = 5_000_000
 SOURCE_NUMBER = re.compile(
     r"(?:^|[\s;])Số\s*[:：]\s*(\d{1,4}\s*/\s*(?:19|20)\d{2}\s*/\s*[A-ZÀ-ỸĐ0-9-]+)",
     re.I,
 )
 RAW_STATUS = re.compile(r"Hiệu\s+lực\s*[:：]\s*(Còn\s+hiệu\s+lực|"
-                        r"Hết\s+hiệu\s+lực(?:\s+một\s+phần)?|Chưa\s+có\s+hiệu\s+lực)", re.I)
+                        r"Hết\s+hiệu\s+lực(?:\s+(?:toàn\s+bộ|một\s+phần))?|"
+                        r"Chưa\s+có\s+hiệu\s+lực)", re.I)
 
 
 def canonical_official_url(value: Any) -> str:
@@ -40,12 +46,35 @@ def canonical_official_url(value: Any) -> str:
         raise ValueError("INVALID_OFFICIAL_URL")
     if parsed.hostname not in ALLOWED_HOSTS or parsed.port is not None:
         raise ValueError("INVALID_OFFICIAL_HOST")
+    friendly_match = FRIENDLY_DETAIL_PATH.fullmatch(parsed.path)
+    if friendly_match:
+        # VBPL modern URLs must not carry arbitrary parameters or fragments.
+        if parsed.hostname != "vbpl.vn" or parsed.query:
+            raise ValueError("INVALID_OFFICIAL_QUERY")
+        return f"https://vbpl.vn{parsed.path.rstrip('/')}"
     if not FULLTEXT_PATH.fullmatch(parsed.path):
         raise ValueError("INVALID_OFFICIAL_PATH")
     query = parse_qsl(parsed.query, keep_blank_values=True)
     if len(query) != 1 or query[0][0] != "ItemID" or not re.fullmatch(r"[1-9]\d{0,8}", query[0][1]):
         raise ValueError("INVALID_OFFICIAL_QUERY")
     return f"https://{parsed.hostname}{parsed.path}?ItemID={query[0][1]}"
+
+
+def official_fetch_targets(value: str) -> list[str]:
+    """Allowed alternatives derived only from an explicit VBPL record ID.
+
+    The alternate endpoint is *not* trusted until its document identity and
+    actual operative clauses match. We never follow redirects to untrusted URLs.
+    """
+    url = canonical_official_url(value)
+    parsed = urlsplit(url)
+    match = FRIENDLY_DETAIL_PATH.fullmatch(parsed.path)
+    if not match:
+        return [url]
+    item_id = match.group("item_id")
+    return [url,
+            f"https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID={item_id}",
+            f"https://vbpl.vn/TW/Pages/vbpq-print.aspx?ItemID={item_id}"]
 
 
 def load_official_sources(path: Path) -> dict[str, str]:
