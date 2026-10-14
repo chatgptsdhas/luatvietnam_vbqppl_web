@@ -123,7 +123,9 @@ class GD205Tests(unittest.TestCase):
     def test_actual_manifest_exists_and_is_explicitly_unverified(self):
         path=Path(__file__).resolve().parents[1]/"docs/gd205_case_manifest.json"
         items=load_manifest(path)
-        self.assertEqual(len(items),1)
+        self.assertEqual(len(items),30)
+        self.assertEqual(len({x["url"] for x in items}),30)
+        self.assertEqual(sum(x["probe_kind"] == "NEGATIVE_CONTROL_CANDIDATE" for x in items),19)
         self.assertEqual(items[0]["label_status"],"PENDING_HUMAN")
 
 if __name__=="__main__":
