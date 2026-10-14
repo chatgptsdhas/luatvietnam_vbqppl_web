@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from gd205_validate_official_samples import load_manifest, evaluate_case, aggregate, describe_navigation, MAX_CASES
+from gd205_validate_official_samples import load_manifest, evaluate_case, aggregate, describe_navigation, modern_candidate_from_known_legacy_id, MAX_CASES
 
 URL = "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=147477"
 GOOD_HTML = """
@@ -118,6 +118,13 @@ class GD205Tests(unittest.TestCase):
         row = dict(case(), url=old)
         result = evaluate_case(row, GOOD_HTML, "Thông tư 05/2021/TT-BGDĐT", final, 200)
         self.assertEqual(result["result"], "SOURCE_ID_CHANGED")
+
+    def test_candidate_reuses_only_known_item_id(self):
+        row = dict(case(), url="https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167014")
+        candidate = modern_candidate_from_known_legacy_id(row)
+        self.assertEqual(candidate,
+            "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt--167014")
+        self.assertIsNone(modern_candidate_from_known_legacy_id(case()))
 
     def test_403_no_bypass(self):
         r=evaluate_case(case(),"","Forbidden",URL,403)
