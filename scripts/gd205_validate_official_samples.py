@@ -236,8 +236,8 @@ def evaluate_case(case: dict, html: str, title: str,
                                      "160-999" if len(source_text) < 1000 else
                                      "1000-9999" if len(source_text) < 10000 else
                                      "10000+"),
-                "has_article_marker": bool(re.search(r"Điều\\s+\\d+", source_text, re.I)),
-                "has_official_masthead": bool(re.search(r"CỘNG\\s+HÒA\\s+XÃ\\s+HỘI\\s+CHỦ\\s+NGHĨA", source_text, re.I)),
+                "has_article_marker": bool(re.search(r"Điều\s+\d+", source_text, re.I)),
+                "has_official_masthead": bool(re.search(r"CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA", source_text, re.I)),
             }
         return output
     events = analyze_new_document(
