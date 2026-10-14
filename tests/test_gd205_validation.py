@@ -124,7 +124,7 @@ class GD205Tests(unittest.TestCase):
         candidate = modern_candidate_from_known_legacy_id(row)
         self.assertEqual(candidate,
             "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt--167014")
-        self.assertIsNone(modern_candidate_from_known_legacy_id(case()))
+        self.assertIsNone(modern_candidate_from_known_legacy_id(dict(case(), url="https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-test--147477")))
 
     def test_403_no_bypass(self):
         r=evaluate_case(case(),"","Forbidden",URL,403)
