@@ -56,6 +56,17 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(extract('<article>'+A1+A2+'</article>')['status'],
                          'document_root_not_found')
 
+    def test_long_source_does_not_cut_evidence_at_250(self):
+        html = ('<div class="doc-content"><p>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>'
+                '<p>Điều 1. Sửa đổi, bổ sung quy định</p>'
+                + ''.join('<p>Sửa đổi khoản 2 Thông tư 55/2011/TT-BGDĐT.</p>'
+                          for _ in range(310))
+                + '<p>Điều 2. Hiệu lực thi hành</p>'
+                + '<p>Thông tư có hiệu lực từ ngày 01/01/2027.</p></div>')
+        r = extract(html)
+        self.assertGreater(r["evidence_count"], 250)
+        self.assertFalse(r["truncated"])
+
     def test_missing_or_empty(self):
         self.assertEqual(extract('')['status'],'source_unavailable')
         self.assertEqual(extract('<div></div>')['status'],'document_root_not_found')
