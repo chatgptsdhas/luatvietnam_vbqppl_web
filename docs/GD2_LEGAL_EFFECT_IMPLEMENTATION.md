@@ -235,3 +235,16 @@ git pull origin feat/gd2-legal-effect-analysis-20261012
 python scripts/gd205_validate_official_samples.py --case-indexes 2,3,12 --probe-same-id-modern --output output/gd205-modern-probe.json
 ```
 Chỉ sau khi người vận hành cung cấp kết quả mới được đánh giá xem có thể cập nhật URL nguồn không. Các ca còn lại chưa có URL hiện đại đã được kiểm chứng.
+
+## GD2.05 — Kết quả thử đường dẫn hiện đại trên Windows, 3 ca (14/10/2026)
+
+**Nguồn bằng chứng:** JSON summary do người vận hành cung cấp sau lệnh `python scripts/gd205_validate_official_samples.py --case-indexes 2,3,12 --probe-same-id-modern --output output/gd205-modern-probe.json`. Đây là kết quả người vận hành báo lại; **chưa có JSON chi tiết `results[]` để xác định từng ca thành công hay không và URL nào có thể được xác nhận**.
+
+- `total_cases=3`, `cases_run=3`, `http_200=3`, `legal_text_extracted=3`.
+- `provisional_matches=1`, `result_counts={MATCH_PENDING_HUMAN:1, NO_MATCH:2}`.
+- Bộ thử gồm `positive_candidate_cases=2`, `negative_control_candidate_cases=1`. **Không thể từ summary xác định `MATCH_PENDING_HUMAN` thuộc ca nào**; phải xem `results[].id` trước khi kết luận ca dương/âm được nhận diện đúng.
+- `negative_controls_without_match=1` theo bộ đếm, nhưng **chưa có nhãn Pháp chế**, nên không được tính là true negative đã nghiệm thu.
+- `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+- Kết quả khẳng định cơ chế probe có thể lấy được nội dung 3/3 ca vừa thử, cải thiện so với `LEGACY_REDIRECT_TO_HOME` cho cả 3 ca ở lượt trước. **Không** khẳng định cả 29 URL legacy còn lại sẽ được xử lý thành công; không tự động thay thế các URL trong manifest dựa trên summary.
+
+**Bước tiếp:** chạy 30 ca với `--probe-same-id-modern`, lưu JSON đầy đủ ở `output/gd205-modern-30.json`; đối chiếu `results[].id/result/navigation/proposed_source_url/matches` trước khi cập nhật manifest. Mọi ca `NO_MATCH` trên nhóm dương tính dự kiến phải rà soát chứng cứ Điều/Khoản, không tự đổi nhãn âm tính. PR #16 giữ Draft; không ghi production.
