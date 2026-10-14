@@ -126,6 +126,18 @@ class GD205Tests(unittest.TestCase):
             "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt--167014")
         self.assertIsNone(modern_candidate_from_known_legacy_id(dict(case(), url="https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-test--147477")))
 
+    def test_truncated_no_match_is_not_valid_negative(self):
+        from unittest.mock import patch
+        partial = {"status": "ok", "root_selector": ".doc-content",
+                   "truncated": True, "paragraph_count": 1600, "blocks": [
+                       {"text": "Sửa đổi Thông tư 99/2020/TT-BGDĐT.",
+                        "section_heading": "Điều 1. Sửa đổi", "section_kind": "article",
+                        "location": "official:p[5]"}]}
+        with patch("gd205_validate_official_samples.extract_legal_effect_evidence_from_html",
+                   return_value=partial):
+            r = evaluate_case(case(), GOOD_HTML, "Thông tư 05/2021/TT-BGDĐT", URL, 200)
+        self.assertEqual(r["result"], "INCOMPLETE_EVIDENCE")
+
     def test_403_no_bypass(self):
         r=evaluate_case(case(),"","Forbidden",URL,403)
         self.assertEqual(r["result"],"ACCESS_DENIED")
