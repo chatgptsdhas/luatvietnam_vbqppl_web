@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from gd205_validate_official_samples import load_manifest, evaluate_case, aggregate, MAX_CASES
+from gd205_validate_official_samples import load_manifest, evaluate_case, aggregate, describe_navigation, MAX_CASES
 
 URL = "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=147477"
 GOOD_HTML = """
@@ -96,6 +96,28 @@ class GD205Tests(unittest.TestCase):
     def test_wrong_title_does_not_count(self):
         r=evaluate_case(case(),GOOD_HTML,"Thông tư 07/2021/TT-BGDĐT",URL,200)
         self.assertEqual(r["result"],"IDENTITY_UNCONFIRMED")
+
+    def test_legacy_redirect_home_is_not_document(self):
+        old = "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167014"
+        final = "https://vbpl.vn/"
+        row = dict(case(), url=old)
+        result = evaluate_case(row, GOOD_HTML, "Thông tư 05/2021/TT-BGDĐT", final, 200)
+        self.assertEqual(result["result"], "LEGACY_REDIRECT_TO_HOME")
+        self.assertEqual(result["navigation"]["final_path_kind"], "PORTAL_HOME")
+
+    def test_legacy_redirect_to_same_id_modern_may_be_accepted(self):
+        old = "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167014"
+        final = "https://vbpl.vn/van-ban/chi-tiet/thong-tu-test--167014"
+        info = describe_navigation(old, final)
+        self.assertTrue(info["record_id_matches"])
+        self.assertEqual(info["final_path_kind"], "MODERN_DETAIL")
+
+    def test_legacy_redirect_to_different_record_is_blocked(self):
+        old = "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167014"
+        final = "https://vbpl.vn/van-ban/chi-tiet/thong-tu-test--167015"
+        row = dict(case(), url=old)
+        result = evaluate_case(row, GOOD_HTML, "Thông tư 05/2021/TT-BGDĐT", final, 200)
+        self.assertEqual(result["result"], "SOURCE_ID_CHANGED")
 
     def test_403_no_bypass(self):
         r=evaluate_case(case(),"","Forbidden",URL,403)
