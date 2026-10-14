@@ -248,3 +248,18 @@ Chỉ sau khi người vận hành cung cấp kết quả mới được đánh 
 - Kết quả khẳng định cơ chế probe có thể lấy được nội dung 3/3 ca vừa thử, cải thiện so với `LEGACY_REDIRECT_TO_HOME` cho cả 3 ca ở lượt trước. **Không** khẳng định cả 29 URL legacy còn lại sẽ được xử lý thành công; không tự động thay thế các URL trong manifest dựa trên summary.
 
 **Bước tiếp:** chạy 30 ca với `--probe-same-id-modern`, lưu JSON đầy đủ ở `output/gd205-modern-30.json`; đối chiếu `results[].id/result/navigation/proposed_source_url/matches` trước khi cập nhật manifest. Mọi ca `NO_MATCH` trên nhóm dương tính dự kiến phải rà soát chứng cứ Điều/Khoản, không tự đổi nhãn âm tính. PR #16 giữ Draft; không ghi production.
+
+## GD2.05 — Windows kiểm thử đủ 30 ca với modern URL probe (14/10/2026)
+
+**Nguồn dữ liệu:** Summary JSON do người vận hành gửi sau khi chạy `python scripts/gd205_validate_official_samples.py --probe-same-id-modern --output output/gd205-modern-30.json` trên bản checkout Windows, nhánh `feat/gd2-legal-effect-analysis-20261012`. **Chưa nhận được file JSON chi tiết `results[]`**; chưa thể xác định ID/URL từng ca.
+
+- `total_cases=30`; `cases_run=30`; `http_200=30`; `legal_text_extracted=27` (**27/30 = 90%**).
+- `provisional_matches=9`; `result_counts={MATCH_PENDING_HUMAN:9, NO_MATCH:18, NO_LEGAL_TEXT:3}`.
+- Tập nghiên cứu gồm `positive_candidate_cases=11`, `negative_control_candidate_cases=19`, và `negative_controls_without_match=16`.
+- Theo phép đối chiếu đếm: 18 ca `NO_MATCH` trừ 16 ca thuộc nhóm kiểm soát âm tính = **2 ca `NO_MATCH` thuộc nhóm dương tính dự kiến**. Cần xem `results[].id`, điều khoản, scope và link để phân biệt lỗi parser với sai nhãn nghiên cứu.
+- Không được suy ra rằng cả 9 ca `MATCH_PENDING_HUMAN` đều thuộc nhóm dương tính dự kiến: số liệu tổng hợp không chỉ rõ phân bổ; cần JSON từng ca.
+- `human_labelled_cases=0`; `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`. **Không có xác nhận pháp lý hay chỉ số độ chính xác**.
+- Khả năng trích xuất cải thiện so với lượt 30 ca dùng URL legacy (`legal_text_extracted=1`), nhưng 3 ca `NO_LEGAL_TEXT` vẫn chưa chứng minh thất bại thực sự của trang nguồn; cần kiểm tra `navigation`, `modern_candidate_probe` và tình trạng DOM.
+- Mọi URL `proposed_source_url` phải được đối chiếu với **đúng ID/số hiệu và toàn văn nguồn**, không tự sửa manifest từ con số summary. Không ghi Apps Script/Sheets/Planner; PR #16 tiếp tục Draft.
+
+**Việc cần tiếp:** nhận trực tiếp `output/gd205-modern-30.json` để lập bảng từng ca (30 hàng), xác định 3 ca `NO_LEGAL_TEXT`, 2 ca dương tính `NO_MATCH` và xác định có ca âm tính dự kiến bị phát hiện nhầm hay không; sau đó sửa dữ liệu nguồn/parser theo từng bằng chứng và chạy lại các ca có thay đổi.
