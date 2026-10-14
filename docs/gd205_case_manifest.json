@@ -1,5 +1,5 @@
 {
-  "status": "WINDOWS_CHECKED_27_URLS_3_CONTENT_ROOT_MISSING_PENDING_LEGAL",
+  "status": "WINDOWS_CHECKED_30_URLS_PENDING_HUMAN_LEGAL_LABELS",
   "description": "30 DISTINCT VBPL source documents; 11 positive-intent and 19 negative-intent candidate pairs. Intent is not verified ground truth.",
   "cases": [
     {
@@ -55,14 +55,16 @@
     },
     {
       "id": "GD205-005-04-2024-TT-BQP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=164941",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-04-2024-tt-bqp--164941",
       "new_number": "04/2024/TT-BQP",
       "old_number": "155/2019/TT-BQP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended circular",
       "label_status": "PENDING_HUMAN",
-      "source_url_status": "CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED"
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=164941",
+      "source_url_checked_at": "2026-10-14T04:30:03+00:00"
     },
     {
       "id": "GD205-006-06-2024-TT-BKHCN",
@@ -144,14 +146,16 @@
     },
     {
       "id": "GD205-012-08-2024-TT-BYT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=169585",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-08-2024-tt-byt--169585",
       "new_number": "08/2024/TT-BYT",
       "old_number": "34/2016/NĐ-CP",
       "expected_relation": "BAI_BO_TOAN_BO",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Legal basis is not the repealed instrument",
       "label_status": "PENDING_HUMAN",
-      "source_url_status": "CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED"
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=169585",
+      "source_url_checked_at": "2026-10-14T04:30:03+00:00"
     },
     {
       "id": "GD205-013-15-2024-TT-BLĐTBXH",
@@ -168,14 +172,16 @@
     },
     {
       "id": "GD205-014-23-2024-TT-BTTTT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=174567",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-23-2024-tt-btttt--174567",
       "new_number": "23/2024/TT-BTTTT",
       "old_number": "154/2020/NĐ-CP",
       "expected_relation": "BAI_BO_TOAN_BO",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Cited decree not necessarily repealed",
       "label_status": "PENDING_HUMAN",
-      "source_url_status": "CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED"
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=174567",
+      "source_url_checked_at": "2026-10-14T04:30:03+00:00"
     },
     {
       "id": "GD205-015-104-2024-TT-BQP",
@@ -386,5 +392,5 @@
       "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     }
   ],
-  "notes": "27/30 read-only Windows checks loaded a legal document root with matching source ID and title. Three roots are unavailable and original legacy URLs remain until checked. All relation labels are pending human legal verification."
+  "notes": "All 30 candidate URLs had matching VBPL source ID, legal-number title and extracted legal-document root on read-only Windows browser checks (26 original October 14 03:50 UTC, 3 remaining 04:30 UTC plus 1 preexisting). Legal relation labels all remain PENDING_HUMAN. Source verification is not legal confirmation or production approval."
 }
