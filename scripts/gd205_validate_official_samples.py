@@ -430,11 +430,12 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int,
                             and latest.get("navigation", {}).get("final_path_kind") == "MODERN_DETAIL"):
                         latest["source_retry"] = {"attempted": True, "same_official_url": True}
                         try:
-                            page.reload(wait_until="domcontentloaded", timeout=45000)
-                            retry_response = page.evaluate("document.readyState")
-                            _ = retry_response  # Readiness only; no interaction.
+                            retry_response = page.reload(
+                                wait_until="domcontentloaded", timeout=45000
+                            )
+                            retry_status = retry_response.status if retry_response else None
                             retried = evaluate_open_page(
-                                case, page, status, timeout_seconds
+                                case, page, retry_status, timeout_seconds
                             )
                             retried["source_retry"] = {
                                 "attempted": True, "same_official_url": True,
