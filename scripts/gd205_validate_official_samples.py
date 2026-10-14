@@ -15,7 +15,7 @@ import time
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -24,7 +24,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from gd2_vbpl_windows_test import find_installed_browser
 from legal_effect_analysis import analyze_new_document, document_numbers, normalize_number
 from legal_effect_content import extract_legal_effect_evidence_from_html
-from legal_effect_official import canonical_official_url
+from legal_effect_official import (canonical_official_url, FRIENDLY_DETAIL_PATH,
+                                   FULLTEXT_PATH, ALLOWED_HOSTS)
 
 KNOWN_RELATIONS = frozenset((
     "SUA_DOI_BO_SUNG", "BAI_BO_MOT_PHAN", "BAI_BO_TOAN_BO",
@@ -84,6 +85,54 @@ def load_manifest(path: Path) -> list[dict]:
     return result
 
 
+
+
+def describe_navigation(original_url: str, final_url: str) -> dict:
+    """Metadata-only description of a redirect: no URL, HTML, query, or cookies.
+
+    On today's VBPL, some legacy /TW/Pages/vbpq-toanvan.aspx
+    addresses lead to the portal home instead of the law document.
+    Returning HTTP 200 from the portal home is NOT a successful fetch.
+    """
+    expected = urlsplit(original_url)
+    final = urlsplit(final_url)
+    host = (final.hostname or "").lower()
+    path = final.path.lower()
+    origin_id = ""
+    if FULLTEXT_PATH.fullmatch(expected.path):
+        qs = parse_qs(expected.query)
+        ids = qs.get("ItemID") or []
+        origin_id = ids[0] if len(ids) == 1 else ""
+    else:
+        match = FRIENDLY_DETAIL_PATH.fullmatch(expected.path)
+        if match:
+            origin_id = match.group("item_id")
+    modern = FRIENDLY_DETAIL_PATH.fullmatch(final.path)
+    old = FULLTEXT_PATH.fullmatch(final.path)
+    final_id = modern.group("item_id") if modern else ""
+    if old:
+        ids = parse_qs(final.query).get("ItemID") or []
+        final_id = ids[0] if len(ids) == 1 else ""
+    if final.scheme != "https" or host not in ALLOWED_HOSTS or final.port is not None:
+        kind = "EXTERNAL_OR_INSECURE"
+    elif path in ("/", "/tw/pages/home.aspx", "/tw/pages/ihome.aspx",
+                  "/pages/portal.aspx"):
+        kind = "PORTAL_HOME"
+    elif modern:
+        kind = "MODERN_DETAIL"
+    elif old:
+        kind = "LEGACY_DOCUMENT"
+    else:
+        kind = "UNRECOGNIZED_OFFICIAL_PATH"
+    return {
+        "redirected": original_url.rstrip("/") != final_url.rstrip("/"),
+        "final_host": host if host in ALLOWED_HOSTS else "OTHER_HOST",
+        "final_path_kind": kind,
+        "record_id_matches": (origin_id == final_id)
+                             if origin_id and final_id else None,
+    }
+
+
 def evaluate_case(case: dict, html: str, title: str,
                   final_url: str, http_status: int | None) -> dict:
     output = {
@@ -92,10 +141,18 @@ def evaluate_case(case: dict, html: str, title: str,
         "evidence_blocks": 0, "matches": [], "result": "UNCONFIRMED",
         "label_status": case["label_status"],
         "probe_kind": case.get("probe_kind", "POSITIVE_CANDIDATE"),
+        "navigation": describe_navigation(case["url"], final_url),
         "requires_legal_review": True,
     }
     if http_status != 200:
         output["result"] = "ACCESS_DENIED" if http_status in (401, 403, 429) else "HTTP_ERROR"
+        return output
+    navigation = output["navigation"]
+    if navigation["final_path_kind"] == "PORTAL_HOME":
+        output["result"] = "LEGACY_REDIRECT_TO_HOME"
+        return output
+    if navigation["record_id_matches"] is False:
+        output["result"] = "SOURCE_ID_CHANGED"
         return output
     try:
         canonical_official_url(final_url)
@@ -245,6 +302,7 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int) -> li
                         if latest["result"] in (
                             "MATCH_PENDING_HUMAN", "ACCESS_DENIED",
                             "HTTP_ERROR", "UNTRUSTED_REDIRECT",
+                            "LEGACY_REDIRECT_TO_HOME", "SOURCE_ID_CHANGED",
                         ):
                             break
                         # A legal text with no match can be a correct negative.
@@ -283,12 +341,26 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path,
                         default=Path("docs/gd205_case_manifest.json"))
     parser.add_argument("--browser-path", type=Path)
+    parser.add_argument(
+        "--case-indexes", default="",
+        help="Optional 1-based case numbers, e.g. 2,3,12, to diagnose only selected cases",
+    )
     parser.add_argument("--timeout-seconds", type=int, default=40)
     parser.add_argument("--output", type=Path, default=Path("output/gd205-validation.json"))
     args = parser.parse_args()
     if not 10 <= args.timeout_seconds <= 180:
         parser.error("Invalid timeout")
-    cases = load_manifest(args.manifest)
+    all_cases = load_manifest(args.manifest)
+    cases = all_cases
+    if args.case_indexes:
+        try:
+            numbers = [int(x.strip()) for x in args.case_indexes.split(",")]
+        except ValueError:
+            parser.error("--case-indexes must be comma-separated integers")
+        if not numbers or len(set(numbers)) != len(numbers) or any(
+                x < 1 or x > len(all_cases) for x in numbers):
+            parser.error("--case-indexes must name distinct existing cases")
+        cases = [all_cases[i - 1] for i in numbers]
     executable = args.browser_path or find_installed_browser()
     if executable is None or not executable.is_file():
         parser.error("Browser not found; pass --browser-path")
@@ -296,6 +368,7 @@ def main() -> int:
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "mode": "GD2_05_WINDOWS_BROWSER_READONLY",
+        "partial_selection": bool(args.case_indexes),
         "summary": aggregate(cases, results), "results": results,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
