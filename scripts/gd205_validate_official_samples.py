@@ -8,8 +8,10 @@ Never use existing browser profiles, saved sessions, cookies, or secrets.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import subprocess
 import sys
 import time
 import unicodedata
@@ -436,6 +438,23 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int,
     return results
 
 
+def get_checkout_revision() -> str | None:
+    """Identify exactly which local code produced a Windows report.
+
+    This is an offline, read-only Git invocation. A failed Git lookup must
+    not prevent an otherwise useful browser test from running.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD"],
+            cwd=ROOT, capture_output=True, text=True, check=False, timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    sha = result.stdout.strip()
+    return sha if result.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", sha) else None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path,
@@ -473,6 +492,8 @@ def main() -> int:
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "mode": "GD2_05_WINDOWS_BROWSER_READONLY",
+        "git_revision": get_checkout_revision(),
+        "manifest_sha256": hashlib.sha256(args.manifest.read_bytes()).hexdigest(),
         "partial_selection": bool(args.case_indexes),
         "modern_candidate_probe_enabled": args.probe_same_id_modern,
         "summary": aggregate(cases, results), "results": results,
