@@ -52,6 +52,8 @@ def load_manifest(path: Path) -> list[dict]:
         old = normalize_number(row.get("old_number"))
         relation = str(row.get("expected_relation") or "").strip()
         label = str(row.get("label_status") or "PENDING_HUMAN").strip()
+        probe_kind = str(row.get("probe_kind") or "POSITIVE_CANDIDATE")
+        review_hint = str(row.get("review_hint") or "").strip()
         truth = row.get("expected_present")
         basis = str(row.get("label_basis") or "").strip()
         if not case_id or len(case_id) > 100 or case_id in seen:
@@ -60,6 +62,10 @@ def load_manifest(path: Path) -> list[dict]:
             raise ValueError("INVALID_CASE_NUMBER")
         if old == new or relation not in KNOWN_RELATIONS:
             raise ValueError("INVALID_CASE_RELATION")
+        if probe_kind not in ("POSITIVE_CANDIDATE", "NEGATIVE_CONTROL_CANDIDATE"):
+            raise ValueError("INVALID_PROBE_KIND")
+        if len(review_hint) > 300:
+            raise ValueError("REVIEW_HINT_TOO_LONG")
         if label not in ("PENDING_HUMAN", "HUMAN_VERIFIED"):
             raise ValueError("INVALID_CASE_LABEL_STATUS")
         if label == "HUMAN_VERIFIED":
@@ -73,6 +79,7 @@ def load_manifest(path: Path) -> list[dict]:
             "id": case_id, "url": url, "new_number": new, "old_number": old,
             "expected_relation": relation, "label_status": label,
             "expected_present": truth, "label_basis": basis,
+            "probe_kind": probe_kind, "review_hint": review_hint,
         })
     return result
 
@@ -83,7 +90,9 @@ def evaluate_case(case: dict, html: str, title: str,
         "id": case["id"], "site": urlsplit(final_url).hostname,
         "http_status": http_status, "extraction_status": "not_evaluated",
         "evidence_blocks": 0, "matches": [], "result": "UNCONFIRMED",
-        "label_status": case["label_status"], "requires_legal_review": True,
+        "label_status": case["label_status"],
+        "probe_kind": case.get("probe_kind", "POSITIVE_CANDIDATE"),
+        "requires_legal_review": True,
     }
     if http_status != 200:
         output["result"] = "ACCESS_DENIED" if http_status in (401, 403, 429) else "HTTP_ERROR"
@@ -177,6 +186,18 @@ def aggregate(cases: list[dict], results: list[dict]) -> dict:
             for r in results
         ),
         "provisional_matches": counts["MATCH_PENDING_HUMAN"],
+        "positive_candidate_cases": sum(
+            c.get("probe_kind", "POSITIVE_CANDIDATE") == "POSITIVE_CANDIDATE"
+            for c in cases
+        ),
+        "negative_control_candidate_cases": sum(
+            c.get("probe_kind") == "NEGATIVE_CONTROL_CANDIDATE" for c in cases
+        ),
+        "negative_controls_without_match": sum(
+            c.get("probe_kind") == "NEGATIVE_CONTROL_CANDIDATE"
+            and by_id.get(c["id"], {}).get("result") == "NO_MATCH"
+            for c in cases
+        ),
         "human_labelled_cases": len(labelled),
         "human_labelled_evaluable_cases": len(evaluable),
         "human_labelled_not_evaluable_cases": len(missing),
