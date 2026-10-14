@@ -222,3 +222,16 @@ Nguyên nhân kỹ thuật xác định từ logic runner: 29 ca sử dụng đ�
 Đã bổ sung diagnostic `navigation` chỉ gồm loại đường dẫn đích (`PORTAL_HOME`, `MODERN_DETAIL`, `LEGACY_DOCUMENT`, `UNRECOGNIZED_OFFICIAL_PATH`, `EXTERNAL_OR_INSECURE`), host đã giới hạn, khớp ID hoặc không. Không lưu URL cuối, cookie, HTML. Mã trạng thái mới `LEGACY_REDIRECT_TO_HOME` và `SOURCE_ID_CHANGED` là lỗi nguồn, không phải `NO_MATCH`. Có thể chạy chọn ca `--case-indexes 2,3,12` để chẩn đoán mà không quét lại 30 trang.
 
 Bước tiếp theo: người vận hành chạy 3 ca, gửi `results[].navigation`; sửa các URL legacy chỉ khi có URL hiện đại, ID và **số hiệu nội dung** khớp, xác minh từng nguồn. Nếu chuyển về trang chủ, phải thay URL nguồn, không coi đường chuyển hướng là toàn văn. PR #16 tiếp tục Draft; không ghi production.
+
+## GD2.05 — Chẩn đoán URL chuyển về trang chủ và phép thử URL mới (14/10/2026)
+
+Người vận hành đã chạy 3 ca đại diện: **GD205-002, GD205-003 và GD205-012 đều có HTTP 200 nhưng `LEGACY_REDIRECT_TO_HOME`**, đường dẫn cuối `PORTAL_HOME`, số đoạn chứng cứ bằng 0. Điều này xác nhận **trang chủ không phải toàn văn**, và phương pháp dùng URL VBPL legacy `/TW/Pages/vbpq-toanvan.aspx?ItemID=...` không phù hợp với các ca được thử. Không được coi các trường hợp này là kết quả âm tính pháp lý.
+
+Đã bổ sung phương án thăm dò `--probe-same-id-modern` trong `scripts/gd205_validate_official_samples.py`: chỉ khi URL legacy chuyển về trang chủ, dựng **URL ứng viên chưa xác minh** thuộc `/van-ban/chi-tiet/` bằng ID hồ sơ `ItemID` đã có và slug tên số hiệu, sau đó mở trang trên Windows. Ứng viên này **không tự động được coi là URL chính thức**. Chỉ đề xuất `proposed_source_url` nếu đường dẫn cuối nằm trong allowlist HTTPS, có **cùng ID**, tiêu đề **khớp số hiệu mới**, bộ tách nội dung xác định được toàn văn và trả `MATCH_PENDING_HUMAN` hoặc `NO_MATCH`. Nếu trang chủ hoặc sai ID, dừng ở lỗi. Không tự ghi lại manifest, không nới whitelist, không thao tác Sheet/Planner.
+
+Lệnh chạy thử **3 ca trước** trên clone Windows riêng:
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 2,3,12 --probe-same-id-modern --output output/gd205-modern-probe.json
+```
+Chỉ sau khi người vận hành cung cấp kết quả mới được đánh giá xem có thể cập nhật URL nguồn không. Các ca còn lại chưa có URL hiện đại đã được kiểm chứng.
