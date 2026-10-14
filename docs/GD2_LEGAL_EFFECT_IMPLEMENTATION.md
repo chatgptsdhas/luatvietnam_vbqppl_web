@@ -296,3 +296,24 @@ git pull origin feat/gd2-legal-effect-analysis-20261012
 python scripts/gd205_validate_official_samples.py --case-indexes 2,4,5,9,12,14,16,18 --probe-same-id-modern --output output/gd205-targeted-recheck.json
 ```
 Cần nhận file `output/gd205-targeted-recheck.json` để xác nhận cải thiện E2E. Không tự coi test offline hoặc các phát hiện là xác minh pháp lý; PR #16 Draft, không ghi production.
+
+## GD2.05 — Kết quả E2E xác định theo commit và lần xử lý tiếp (14/10/2026)
+
+Người vận hành nộp `gd205-targeted-recheck-v2.json`, commit `48b83aceff7866bdddc5fd7754df5771be7f980c`, manifest SHA256 `43339c3b097b635a005364b73eca5cdd5a714430ad9f2dde784b8b7ddc130e84`. Tám ca `2,4,5,9,12,14,16,18`: HTTP 200 và trích xuất 8/8; `MATCH_PENDING_HUMAN=6`, `NO_MATCH=2`; không có nhãn xác minh Pháp chế.
+
+- `002`: sửa đổi một phần, 27 chứng cứ, khớp Điều 1.
+- `004`: 7 event cùng quan hệ và văn bản cũ, xảy ra ở Điều 1 và Điều 2; **không tự hợp nhất vì có thể là nhiều phạm vi sửa đổi riêng**; cần kiểm tra trùng phạm vi thực sự.
+- `005`: 53 chứng cứ, tìm thấy sửa đổi Điều 1, URL cùng ItemID.
+- `009`: `scope_type=MOT_PHAN` sau sửa.
+- `012` và `014`: đã nhận diện vùng văn bản nguồn, dự đoán `NO_MATCH` trên cặp âm tính dự kiến; không xác nhận âm tính pháp lý.
+- `016`: phát hiện `HET_THOI_HAN` từ Điều 7 và ngày dự kiến 2024-05-15 nhưng **evidence_truncated=true** (giới hạn 250/666 đoạn), phải khắc phục trước khi nghiệm thu bao phủ.
+- `018`: vẫn dự đoán có sửa đổi `204/2004/NĐ-CP` ở đoạn 42 Điều 3 dù Điều 3 trực tiếp sửa `34/2016/TT-BLĐTBXH`. Cần đối chiếu câu dẫn chiếu và chặn nguồn gán sai quan hệ.
+
+Đã thêm test tái hiện câu trích dẫn/diễn giải sửa đổi, giới hạn dữ liệu; sửa bộ phân tích để không kéo ngữ cảnh `sửa đổi ... như sau:` sang số hiệu trong nội dung trích dẫn, tăng `MAX_EVIDENCE_BLOCKS` từ 250 lên 1000 để thử trên VBPL dài và không coi kết quả `NO_MATCH` là đầy đủ nếu chứng cứ bị cắt. Các giả thuyết đã sửa cần **kiểm chứng lại bằng E2E**. Kiểm thử CI trên commit `50fd034cfadd4350933253f9d1bfadab16c5ee1e` đã thành công.
+
+Bước thử Windows chỉ 3 ca để giảm công chạy:
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 4,16,18 --probe-same-id-modern --output output/gd205-targeted-recheck-v3.json
+```
+Gửi file JSON gốc cho người rà soát. Giữ `PENDING_HUMAN`, PR #16 Draft; không có hoạt động ghi production.
