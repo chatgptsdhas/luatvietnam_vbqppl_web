@@ -341,3 +341,15 @@ Người vận hành xác nhận `git pull` fast-forward từ `48b83ac` lên com
 Bên cạnh đó, đã đối chiếu JSON kiểm thử v2 (commit `48b83ac`) cho **005, 012, 014**: `proposed_source_url` HTTPS VBPL đúng ID, title, extraction_status=ok, không truncated; cập nhật URL hiện đại cho 3 ca cuối cùng trong `docs/gd205_case_manifest.json` và giữ `legacy_url`. Bộ manifest hiện có **30/30 URL đã qua kiểm tra định danh nguồn ở máy Windows trên các lượt kiểm thử**, nhưng vẫn **30/30 `label_status=PENDING_HUMAN`**; đây là trạng thái nguồn, không phải chứng nhận tính đúng đắn quan hệ hiệu lực.
 
 **Tiếp theo:** chạy lại đủ 30 ca trên manifest đã chuẩn hóa để xác nhận khả năng trích xuất và hồi quy; sau đó xây dựng bộ nhãn đối chứng pháp lý, có bằng chứng và người xác minh. Không tự tạo trạng thái `HUMAN_VERIFIED` hay đồng bộ production. PR #16 tiếp tục Draft.
+
+## GD2.05 — Kết quả hồi quy 30 ca với manifest URL hiện đại (14/10/2026)
+
+Người vận hành xác nhận `git pull` từ `a48d229` lên `06ceb83` bằng fast-forward, sau đó chạy `scripts/gd205_validate_official_samples.py --output output/gd205-final-30.json` (không bật modern URL probe). Bằng chứng hiện tại **mới gồm JSON summary hiển thị trên PowerShell**; chưa có file `results[]` để định danh ca ngoại lệ hoặc xác minh `git_revision` trong báo cáo.
+
+- `total_cases=30`, `cases_run=30`, `http_200=30`, `legal_text_extracted=29` (**96,7%**).
+- `result_counts={MATCH_PENDING_HUMAN:11, NO_MATCH:17, INCOMPLETE_EVIDENCE:1, NO_LEGAL_TEXT:1}`. Có **28 ca với kết quả ứng viên có thể đối chiếu**, **2 ca chưa đầy đủ để đánh giá**, chưa đủ điều kiện nghiệm thu toàn bộ.
+- `positive_candidate_cases=11`, `negative_control_candidate_cases=19`, `negative_controls_without_match=17`. Từ summary, chỉ kết luận **17 ca thuộc nhóm âm tính dự kiến trả về NO_MATCH**; chưa thể biết 11 MATCH và 2 ngoại lệ nằm ở những ca nào khi chưa nhận `results[]`. Không coi nhãn ứng viên là ground truth.
+- `INCOMPLETE_EVIDENCE` là kết quả fail-closed khi chứng cứ bị cắt và không tìm được quan hệ dự kiến, không đồng nghĩa `NO_MATCH`. `NO_LEGAL_TEXT` là tình trạng chưa xác thực được vùng toàn văn dù HTTP 200, không được coi âm tính pháp lý.
+- `human_labelled_cases=0`, `metrics_eligible=false`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+
+**Bước tiếp:** nhận tệp `output/gd205-final-30.json`; trước tiên xác định ID, `source_diagnostic`, `navigation`, `evidence_truncated` của 2 ngoại lệ, đối chiếu kết quả 11 dương tính và 17 âm tính, rồi chỉ chạy lại các ca cần xử lý. Không quy lỗi cho hộp thoại cookie nếu chưa có bằng chứng. PR #16 giữ Draft, mọi trạng thái quan hệ `PENDING_HUMAN`, không ghi production.
