@@ -186,6 +186,17 @@ class LegalEffectDisambiguationTest(unittest.TestCase):
         self.assertTrue(any(e["old_number"] == "34/2016/TT-BLĐTBXH" for e in events))
         self.assertFalse(any(e["old_number"] == "204/2004/NĐ-CP" for e in events))
 
+    def test_gd205_018_multiblock_quote_does_not_amend_cited_decree(self):
+        heading = "Điều 3. Sửa đổi, bổ sung một số điều của Thông tư 34/2016/TT-BLĐTBXH"
+        rows = [
+            {"text": heading, "section_heading": heading, "section_kind": "article", "location": "p1"},
+            {"text": "2. Sửa đổi, bổ sung điểm c khoản 3 Điều 5 như sau:", "section_heading": heading, "section_kind": "article", "location": "p2"},
+            {"text": "“c) Tiền lương được tính theo quy định dưới đây:", "section_heading": heading, "section_kind": "article", "location": "p3"},
+            {"text": "- Theo hệ số lương quy định tại Nghị định số 204/2004/NĐ-CP.", "section_heading": heading, "section_kind": "article", "location": "p4"},
+        ]
+        events = analyze_new_document(source(number="12/2024/TT-BLĐTBXH"), rows)
+        self.assertFalse(any(e["old_number"] == "204/2004/NĐ-CP" for e in events))
+
     def test_gd205_009_some_program_content_is_partial_scope(self):
         doc = source(number="17/2025/TT-BGDĐT")
         heading = ("Điều 1. Sửa đổi, bổ sung một số nội dung trong Chương trình "
