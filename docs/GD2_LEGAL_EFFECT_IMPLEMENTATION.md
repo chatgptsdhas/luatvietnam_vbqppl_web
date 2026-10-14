@@ -353,3 +353,18 @@ Người vận hành xác nhận `git pull` từ `a48d229` lên `06ceb83` bằng
 - `human_labelled_cases=0`, `metrics_eligible=false`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
 
 **Bước tiếp:** nhận tệp `output/gd205-final-30.json`; trước tiên xác định ID, `source_diagnostic`, `navigation`, `evidence_truncated` của 2 ngoại lệ, đối chiếu kết quả 11 dương tính và 17 âm tính, rồi chỉ chạy lại các ca cần xử lý. Không quy lỗi cho hộp thoại cookie nếu chưa có bằng chứng. PR #16 giữ Draft, mọi trạng thái quan hệ `PENDING_HUMAN`, không ghi production.
+
+## GD2.05 — Phân tích JSON 30 ca và khắc phục ngoại lệ 015/025 (14/10/2026)
+
+Đã đọc trực tiếp `gd205-final-30.json`, commit Windows `06ceb83b6d34436fd5f8a699220bf64ac884b1a4`, manifest SHA256 `82a8b6c904495f13eb9ee0a7d6160156316ca46c44c6048ec4dec3207c147e1e`. Kết quả chính xác theo `results[]`: toàn bộ **11 dương tính ứng viên** trả `MATCH_PENDING_HUMAN`; **17/19 âm tính ứng viên** trả `NO_MATCH`; hai ngoại lệ đều thuộc nhóm âm tính ứng viên:
+- `GD205-015-104-2024-TT-BQP`: `INCOMPLETE_EVIDENCE`, `evidence_blocks=1000`, `source_paragraph_count=2291`, `evidence_truncated=true`, HTTP 200, VBPL detail URL đúng record ID. Giới hạn kỹ thuật cũ dừng việc phân tích giữa chừng; **không phải bằng chứng có quan hệ pháp lý**.
+- `GD205-025-04-2024-TT-BXD`: `NO_LEGAL_TEXT`, `document_root_not_found`, HTML nhiều hơn 10.000 ký tự, URL/ID/title đúng. Đã từng trích xuất được 20 khối ở lần kiểm thử trước, nên có khả năng trang tải không ổn định. Không đủ chứng cứ quy lỗi cho popup cookie. Hai cờ `source_diagnostic` trước đó sử dụng regex bị escape thừa; được sửa để cung cấp tín hiệu cấu trúc đúng.
+
+Đã tăng `MAX_EVIDENCE_BLOCKS` từ 1.000 lên **3.000** (còn giới hạn để bảo vệ tài nguyên, các ca tràn tiếp tục `INCOMPLETE_EVIDENCE`), thêm một lần `page.reload` có giới hạn chỉ khi nhận `NO_LEGAL_TEXT` trên trang chi tiết HTTPS hợp lệ, không tương tác cookie, không thay đổi vùng trích xuất fail-closed; bổ sung hồi quy với nguồn hơn 2.000 đoạn. `NO_MATCH` chỉ là kết quả của cặp quan hệ được kiểm tra, không phải xác nhận tình trạng hiệu lực.
+
+Chạy lại **2 ca** trên Windows sau khi pull branch:
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 15,25 --output output/gd205-15-25-recheck.json
+```
+Gửi file JSON chi tiết để phân tích `source_retry`, `evidence_truncated`, `matches`. Không thay đổi `PENDING_HUMAN`, không ghi production; PR #16 vẫn Draft.
