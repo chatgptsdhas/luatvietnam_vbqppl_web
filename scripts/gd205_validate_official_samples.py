@@ -12,6 +12,7 @@ import json
 import re
 import sys
 import time
+import unicodedata
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -131,6 +132,54 @@ def describe_navigation(original_url: str, final_url: str) -> dict:
         "record_id_matches": (origin_id == final_id)
                              if origin_id and final_id else None,
     }
+
+
+
+def modern_candidate_from_known_legacy_id(case: dict) -> str | None:
+    """Make a diagnostic URL, NOT an authenticated/verified official source.
+
+    Only reuse a literal ItemID that is already present in a strictly
+    validated VBPL URL; never compute a document ID from a legal number.
+    A generated slug can be wrong. Validation of both source document number
+    and record ID remains mandatory after a live browser response.
+    """
+    original = canonical_official_url(case["url"])
+    url = urlsplit(original)
+    if not FULLTEXT_PATH.fullmatch(url.path):
+        return None
+    item_ids = parse_qs(url.query).get("ItemID", [])
+    if len(item_ids) != 1:
+        return None
+    item_id = item_ids[0]
+    number = case["new_number"]
+    # Presentation-only slug. It is NOT treated as the official canonical URL.
+    latin = unicodedata.normalize("NFKD", number).replace("Đ", "D").replace("đ", "d")
+    slug = re.sub(r"[^a-z0-9]+", "-", latin.lower()).strip("-")
+    if not slug:
+        return None
+    candidate = f"https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-{slug}--{item_id}"
+    return canonical_official_url(candidate)
+
+
+def evaluate_open_page(case: dict, page, status: int | None, timeout_seconds: int) -> dict:
+    deadline = time.monotonic() + timeout_seconds
+    negative_stable = 0
+    while True:
+        latest = evaluate_case(case, page.content(), page.title(), page.url, status)
+        if latest["result"] in (
+            "MATCH_PENDING_HUMAN", "ACCESS_DENIED", "HTTP_ERROR",
+            "UNTRUSTED_REDIRECT", "LEGACY_REDIRECT_TO_HOME", "SOURCE_ID_CHANGED",
+        ):
+            return latest
+        if latest["result"] == "NO_MATCH":
+            negative_stable += 1
+            if negative_stable >= 3:
+                return latest
+        else:
+            negative_stable = 0
+        if time.monotonic() >= deadline:
+            return latest
+        page.wait_for_timeout(2000)
 
 
 def evaluate_case(case: dict, html: str, title: str,
@@ -280,8 +329,10 @@ def aggregate(cases: list[dict], results: list[dict]) -> dict:
     }
 
 
-def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int) -> list[dict]:
+def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int,
+              probe_same_id_modern: bool = False) -> list[dict]:
     from playwright.sync_api import sync_playwright
+
     results = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
@@ -291,32 +342,68 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int) -> li
             for case in cases:
                 context = browser.new_context(accept_downloads=False)
                 try:
-                    page = context.new_page()
-                    response = page.goto(case["url"], wait_until="domcontentloaded", timeout=45000)
-                    status = response.status if response else None
-                    deadline = time.monotonic() + timeout_seconds
-                    latest = None
-                    negative_stable = 0
-                    while True:
-                        latest = evaluate_case(case, page.content(), page.title(), page.url, status)
-                        if latest["result"] in (
-                            "MATCH_PENDING_HUMAN", "ACCESS_DENIED",
-                            "HTTP_ERROR", "UNTRUSTED_REDIRECT",
-                            "LEGACY_REDIRECT_TO_HOME", "SOURCE_ID_CHANGED",
-                        ):
-                            break
-                        # A legal text with no match can be a correct negative.
-                        # Confirm the rendered document remains stable for
-                        # three polls before concluding no candidate exists.
-                        if latest["result"] == "NO_MATCH":
-                            negative_stable += 1
-                            if negative_stable >= 3:
-                                break
+                    # Block unintended cross-domain navigations. Assets are not
+                    # forcibly changed; this only checks document navigations.
+                    def guard_navigation(route):
+                        request = route.request
+                        url = urlsplit(request.url)
+                        if request.is_navigation_request() and (
+                                url.scheme != "https"
+                                or (url.hostname or "").lower() not in ALLOWED_HOSTS
+                                or url.port is not None):
+                            route.abort()
                         else:
-                            negative_stable = 0
-                        if time.monotonic() >= deadline:
-                            break
-                        page.wait_for_timeout(2000)
+                            route.continue_()
+                    context.route("**/*", guard_navigation)
+                    page = context.new_page()
+                    response = page.goto(
+                        case["url"], wait_until="domcontentloaded", timeout=45000
+                    )
+                    status = response.status if response else None
+                    latest = evaluate_open_page(case, page, status, timeout_seconds)
+                    if (probe_same_id_modern
+                            and latest["result"] == "LEGACY_REDIRECT_TO_HOME"):
+                        original_result = latest["result"]
+                        candidate = modern_candidate_from_known_legacy_id(case)
+                        if candidate:
+                            try:
+                                retry_response = page.goto(
+                                    candidate, wait_until="domcontentloaded",
+                                    timeout=45000,
+                                )
+                                retry_status = (
+                                    retry_response.status if retry_response else None
+                                )
+                                probe = evaluate_open_page(
+                                    case, page, retry_status, timeout_seconds
+                                )
+                                probe["modern_candidate_probe"] = {
+                                    "attempted": True,
+                                    "method": "SAME_KNOWN_ITEMID_UNVERIFIED_SLUG",
+                                    "legacy_result": original_result,
+                                }
+                                # Only an identified, actually rendered legal
+                                # document allows a URL to be proposed for
+                                # potential updating into the manifest.
+                                if (probe["result"] in (
+                                        "MATCH_PENDING_HUMAN", "NO_MATCH")
+                                        and probe["navigation"]["record_id_matches"] is True
+                                        and probe["extraction_status"] in (
+                                            "ok", "no_relevant_clauses")):
+                                    probe["modern_candidate_probe"]["document_loaded"] = True
+                                    probe["proposed_source_url"] = (
+                                        canonical_official_url(page.url)
+                                    )
+                                else:
+                                    probe["modern_candidate_probe"]["document_loaded"] = False
+                                latest = probe
+                            except Exception as exc:
+                                latest["modern_candidate_probe"] = {
+                                    "attempted": True,
+                                    "method": "SAME_KNOWN_ITEMID_UNVERIFIED_SLUG",
+                                    "document_loaded": False,
+                                    "error_type": type(exc).__name__,
+                                }
                     results.append(latest)
                 except Exception as exc:
                     results.append({
@@ -329,7 +416,6 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int) -> li
                     })
                 finally:
                     context.close()
-                # Modest read-only request cadence; no automatic retries for blocks.
                 time.sleep(2)
         finally:
             browser.close()
@@ -341,6 +427,10 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path,
                         default=Path("docs/gd205_case_manifest.json"))
     parser.add_argument("--browser-path", type=Path)
+    parser.add_argument(
+        "--probe-same-id-modern", action="store_true",
+        help="Test an UNVERIFIED modern candidate only when the legacy URL redirects home",
+    )
     parser.add_argument(
         "--case-indexes", default="",
         help="Optional 1-based case numbers, e.g. 2,3,12, to diagnose only selected cases",
@@ -364,11 +454,13 @@ def main() -> int:
     executable = args.browser_path or find_installed_browser()
     if executable is None or not executable.is_file():
         parser.error("Browser not found; pass --browser-path")
-    results = run_batch(cases, executable, args.timeout_seconds)
+    results = run_batch(cases, executable, args.timeout_seconds,
+                        probe_same_id_modern=args.probe_same_id_modern)
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "mode": "GD2_05_WINDOWS_BROWSER_READONLY",
         "partial_selection": bool(args.case_indexes),
+        "modern_candidate_probe_enabled": args.probe_same_id_modern,
         "summary": aggregate(cases, results), "results": results,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
