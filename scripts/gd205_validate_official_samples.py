@@ -422,6 +422,27 @@ def run_batch(cases: list[dict], browser_path: Path, timeout_seconds: int,
                                     "document_loaded": False,
                                     "error_type": type(exc).__name__,
                                 }
+                    # A document root may not have hydrated in the first pass.
+                    # Retry once in the SAME isolated browser context. Do not
+                    # click cookie consent or treat page chrome as legal text.
+                    if (latest["result"] == "NO_LEGAL_TEXT"
+                            and status == 200
+                            and latest.get("navigation", {}).get("final_path_kind") == "MODERN_DETAIL"):
+                        latest["source_retry"] = {"attempted": True, "same_official_url": True}
+                        try:
+                            page.reload(wait_until="domcontentloaded", timeout=45000)
+                            retry_response = page.evaluate("document.readyState")
+                            _ = retry_response  # Readiness only; no interaction.
+                            retried = evaluate_open_page(
+                                case, page, status, timeout_seconds
+                            )
+                            retried["source_retry"] = {
+                                "attempted": True, "same_official_url": True,
+                                "initial_result": "NO_LEGAL_TEXT",
+                            }
+                            latest = retried
+                        except Exception as exc:
+                            latest["source_retry"]["error_type"] = type(exc).__name__
                     results.append(latest)
                 except Exception as exc:
                     results.append({
