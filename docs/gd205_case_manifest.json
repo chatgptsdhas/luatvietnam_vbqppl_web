@@ -1,5 +1,5 @@
 {
-  "status": "RESEARCHED_30_OFFICIAL_URLS_PENDING_WINDOWS_AND_HUMAN_VALIDATION",
+  "status": "WINDOWS_CHECKED_27_URLS_3_CONTENT_ROOT_MISSING_PENDING_LEGAL",
   "description": "30 DISTINCT VBPL source documents; 11 positive-intent and 19 negative-intent candidate pairs. Intent is not verified ground truth.",
   "cases": [
     {
@@ -10,37 +10,48 @@
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Pilot Windows passed; source Điều 1",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-002-07-2024-TT-BGDĐT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167014",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-07-2024-tt-bgddt--167014",
       "new_number": "07/2024/TT-BGDĐT",
       "old_number": "13/2021/TT-BGDĐT",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title explicit partial amendment and appendix replacement",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167014",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-003-04-2024-TT-BNNPTNT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166956",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-04-2024-tt-bnnptnt--166956",
       "new_number": "04/2024/TT-BNNPTNT",
       "old_number": "25/2016/TT-BNNPTNT",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Article 1 names old circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166956",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-004-04-2024-TT-BVHTTDL",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=168511",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-04-2024-tt-bvhttdl--168511",
       "new_number": "04/2024/TT-BVHTTDL",
       "old_number": "06/2017/TT-BVHTTDL",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=168511",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-005-04-2024-TT-BQP",
@@ -50,67 +61,86 @@
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "source_url_status": "CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED"
     },
     {
       "id": "GD205-006-06-2024-TT-BKHCN",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170641",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-06-2024-tt-bkhcn--170641",
       "new_number": "06/2024/TT-BKHCN",
       "old_number": "11/2015/TT-BKHCN",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170641",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-007-02-2024-TT-BCT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=164927",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-02-2024-tt-bct--164927",
       "new_number": "02/2024/TT-BCT",
       "old_number": "31/2015/TT-BCT",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=164927",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-008-10-2024-TT-BLĐTBXH",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=173108",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-10-2024-tt-bldtbxh--173108",
       "new_number": "10/2024/TT-BLĐTBXH",
       "old_number": "07/2023/TT-BLĐTBXH",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=173108",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-009-17-2025-TT-BGDĐT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=183284",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-17-2025-tt-bgddt--183284",
       "new_number": "17/2025/TT-BGDĐT",
       "old_number": "32/2018/TT-BGDĐT",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Title names amended curriculum",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=183284",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-010-26-2025-TT-BGDĐT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=185886",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-26-2025-tt-bgddt--185886",
       "new_number": "26/2025/TT-BGDĐT",
       "old_number": "11/2025/TT-BGDĐT",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Chapter II explicitly refers to amended circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=185886",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-011-03-2024-TT-BTP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167186",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-03-2024-tt-btp--167186",
       "new_number": "03/2024/TT-BTP",
       "old_number": "104/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Preamble cites decree; do not infer direct amendment to decree",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167186",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-012-08-2024-TT-BYT",
@@ -120,17 +150,21 @@
       "expected_relation": "BAI_BO_TOAN_BO",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Legal basis is not the repealed instrument",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "source_url_status": "CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED"
     },
     {
       "id": "GD205-013-15-2024-TT-BLĐTBXH",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175025",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-15-2024-tt-bldtbxh--175025",
       "new_number": "15/2024/TT-BLĐTBXH",
       "old_number": "34/2016/NĐ-CP",
       "expected_relation": "BAI_BO_TOAN_BO",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Repeal-themed title but decree is only cited in preamble",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175025",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-014-23-2024-TT-BTTTT",
@@ -140,167 +174,217 @@
       "expected_relation": "BAI_BO_TOAN_BO",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Cited decree not necessarily repealed",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "source_url_status": "CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED"
     },
     {
       "id": "GD205-015-104-2024-TT-BQP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175483",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-104-2024-tt-bqp--175483",
       "new_number": "104/2024/TT-BQP",
       "old_number": "34/2016/NĐ-CP",
       "expected_relation": "THAY_THE_TOAN_BO",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Replacing templates does not replace decree in preamble",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175483",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-016-02-2024-TT-BTTTT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166291",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-02-2024-tt-btttt--166291",
       "new_number": "02/2024/TT-BTTTT",
       "old_number": "04/2023/TT-BTTTT",
       "expected_relation": "HET_THOI_HAN",
       "probe_kind": "POSITIVE_CANDIDATE",
       "review_hint": "Article 7 explicitly terminates effect of old circular; classify carefully",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166291",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-017-12-2024-TT-BTP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=171890",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-12-2024-tt-btp--171890",
       "new_number": "12/2024/TT-BTP",
       "old_number": "104/2022/NĐ-CP",
       "expected_relation": "BAI_BO_MOT_PHAN",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Partial-repeal title but cited decree is only background",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=171890",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-018-12-2024-TT-BLĐTBXH",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=173110",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-12-2024-tt-bldtbxh--173110",
       "new_number": "12/2024/TT-BLĐTBXH",
       "old_number": "204/2004/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Decree is cited as legal basis, not directly amended",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=173110",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-019-01-2024-TT-VPCP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170854",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-01-2024-tt-vpcp--170854",
       "new_number": "01/2024/TT-VPCP",
       "old_number": "79/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Legal basis cited in introduction",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170854",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-020-04-2024-TT-BKHCN",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170401",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-04-2024-tt-bkhcn--170401",
       "new_number": "04/2024/TT-BKHCN",
       "old_number": "08/2014/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Research case: referenced decree vs actual modification",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170401",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-021-03-2024-TT-TTCP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170626",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-03-2024-tt-ttcp--170626",
       "new_number": "03/2024/TT-TTCP",
       "old_number": "98/2023/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Preamble reference only",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=170626",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-022-01-2024-TT-BXD",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166988",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-01-2024-tt-bxd--166988",
       "new_number": "01/2024/TT-BXD",
       "old_number": "52/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Organizational decree cited in introduction",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166988",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-023-02-2024-TT-BTP",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166557",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-02-2024-tt-btp--166557",
       "new_number": "02/2024/TT-BTP",
       "old_number": "104/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Cited decree is not necessarily amended by this circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166557",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-024-06-2024-TT-BXD",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=169517",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-06-2024-tt-bxd--169517",
       "new_number": "06/2024/TT-BXD",
       "old_number": "52/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Organizational decree is legal basis",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=169517",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-025-04-2024-TT-BXD",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=169029",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-04-2024-tt-bxd--169029",
       "new_number": "04/2024/TT-BXD",
       "old_number": "52/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Organizational decree is legal basis",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=169029",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-026-02-2024-TT-BXD",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167263",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-02-2024-tt-bxd--167263",
       "new_number": "02/2024/TT-BXD",
       "old_number": "37/2010/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Decree mentioned in legal basis",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=167263",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-027-03-2024-TT-BKHĐT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166483",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-03-2024-tt-bkhdt--166483",
       "new_number": "03/2024/TT-BKHĐT",
       "old_number": "98/2023/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Investigate actual operative text, potential negative",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=166483",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-028-06-2024-TT-BKHĐT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=173311",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-06-2024-tt-bkhdt--173311",
       "new_number": "06/2024/TT-BKHĐT",
       "old_number": "52/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Investigate legal-basis only case, pending review",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=173311",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-029-09-2024-TT-BKHCN",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175118",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-09-2024-tt-bkhcn--175118",
       "new_number": "09/2024/TT-BKHCN",
       "old_number": "08/2014/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Cited regulation, should not imply amended",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175118",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     },
     {
       "id": "GD205-030-02-2025-TT-BGDĐT",
-      "url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175173",
+      "url": "https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-02-2025-tt-bgddt--175173",
       "new_number": "02/2025/TT-BGDĐT",
       "old_number": "86/2022/NĐ-CP",
       "expected_relation": "SUA_DOI_BO_SUNG",
       "probe_kind": "NEGATIVE_CONTROL_CANDIDATE",
       "review_hint": "Legal-basis cited in new digital competency circular",
-      "label_status": "PENDING_HUMAN"
+      "label_status": "PENDING_HUMAN",
+      "legacy_url": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=175173",
+      "source_url_status": "WINDOWS_ID_TITLE_DOCUMENT_ROOT_CHECKED",
+      "source_url_checked_at": "2026-10-14T03:50:36+00:00"
     }
-  ]
+  ],
+  "notes": "27/30 read-only Windows checks loaded a legal document root with matching source ID and title. Three roots are unavailable and original legacy URLs remain until checked. All relation labels are pending human legal verification."
 }
