@@ -390,3 +390,15 @@ Người vận hành đã `git pull` thành công, fast-forward từ `06ceb83` �
 - 2/2 ca đang là `NEGATIVE_CONTROL_CANDIDATE` và `PENDING_HUMAN`; `classification_precision` và `classification_recall` vẫn null. Không coi `NO_MATCH` là kết luận pháp lý.
 
 **Trạng thái nghiệm thu:** đã xử lý biểu hiện hai ngoại lệ trên Windows, chưa chứng minh đủ 30/30 kết quả trên **một lượt chạy từ cùng commit 8293b84**. Nên chạy full 30 cuối để tạo baseline thống nhất, sau đó tạo phiếu Pháp chế xác minh `HUMAN_VERIFIED` kèm đường dẫn nguồn, điều/khoản, mục tiêu và nhận xét. PR vẫn Draft; không ghi production.
+
+## GD2.05 — Operator-reported full baseline 30 ca (14/10/2026)
+
+Người vận hành báo đã `git pull` fast-forward từ `8293b84` lên `4d8a7ce` và chạy bộ 30 ca. **Bằng chứng hiện nhận là summary hiển thị ở PowerShell; chưa có file JSON baseline chi tiết của lượt này**.
+
+- `total_cases=30`, `cases_run=30`, `http_200=30`, `legal_text_extracted=30`.
+- `positive_candidate_cases=11`, `negative_control_candidate_cases=19`, `provisional_matches=11`, `negative_controls_without_match=19`, `result_counts={MATCH_PENDING_HUMAN:11, NO_MATCH:19}`. Không có `NO_LEGAL_TEXT`, `INCOMPLETE_EVIDENCE` hay `BROWSER_ERROR` trong summary.
+- Đây là **đạt các tiêu chí đầu ra kỹ thuật trên summary theo phân nhóm ứng viên**, không phải accuracy=100%, không bảo đảm loại bỏ mọi sai sót điều/khoản, phạm vi và ngày hiệu lực. Dữ liệu `results[].evidence_truncated` và `git_revision` của lượt baseline cuối vẫn cần kiểm tra từ file.
+- `human_labelled_cases=0`, `metrics_eligible=false`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+- Chưa thay nhãn `PENDING_HUMAN`, chưa cho phép ghi production, PR #16 vẫn Draft.
+
+**Bước kế tiếp**: nhận `output/gd205-baseline-30.json`; kiểm tra `git_revision`, manifest hash, chứng cứ theo từng ca và dựng bảng 30 dòng đối chứng Pháp chế, bao gồm văn bản nguồn, văn bản đích, loại quan hệ, vị trí điều khoản, phạm vi, diễn giải kiểm chứng, reviewer, ngày duyệt và trường `HUMAN_VERIFIED` chỉ nhập sau khi có xác minh độc lập. Không tự gán truth labels từ nhãn dự kiến.
