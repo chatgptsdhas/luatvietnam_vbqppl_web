@@ -1,0 +1,404 @@
+# GD2 - Cong cu phat hien va de xuat ra soat hieu luc (ban dau)
+
+Trang thai: **Da co code va test; chua kiem thu website that / chua deploy pipeline theo lich / khong ghi production**.
+
+## File
+
+- `legal_effect_analysis.py`: bo phan tich theo ngu canh van ban moi, doc dieu khoan va Luoc do do Step08 thu thap. Luon tra `CHUA_XAC_MINH` va `CHO_XAC_MINH`; KHONG tu ket luan da het hieu luc.
+- `08_process_field_documents_batch.py`: giu nguyen API import; them `legal_effect_candidates` vao file JSON dau ra Step08. Khong truyen candidate vao Apps Script.
+- `15_check_legal_effect.py`: doc workbook offline gom 2 sheet `VBQPPL` / `VBQPPL_Nhap`, doi chieu so hieu chuan hoa, tao report CSV/JSON phu hop 28 cot staging GD1. Ho tro `baseline` va `events`.
+- `tests/test_legal_effect_analysis.py`: unit test; chay qua GitHub Actions.
+- `requirements-legal-effect.txt`: openpyxl cho cong doan doc snapshot.
+
+## Lenh chay tren may Windows
+
+Dau vao la mot **ban sao .xlsx** cua Google Sheets, KHONG chinh sua file nguon.
+
+```powershell
+python -m pip install -r requirements-legal-effect.txt
+python -m unittest discover -s tests -p "test_legal_effect_analysis.py" -v
+
+# Khoi tao danh sach ra soat tat ca so hieu (khong tu ket luan)
+python 15_check_legal_effect.py --mode baseline --workbook "backup.xlsx" --output-dir "output/gd2-baseline"
+
+# Khi Step08 da chay phien ban moi va xuat legal_effect_candidates
+python 15_check_legal_effect.py --mode events --workbook "backup.xlsx" --step08-json "output/vbqppl_nhap_batch_payload.json" --output-dir "output/gd2-events"
+```
+
+Dau ra: `legal_effect_review.csv`, `legal_effect_review.json` co cot theo dac ta GD1. Du lieu theo nguon tu dong la **ung vien can xac minh**, khong phai ho so duoc xac nhan het hieu luc.
+
+## Gioi han an toan
+
+- Chi doc file local va tao report local, khong su dung token, khong goi API ghi Sheets, khong goi Planner.
+- Luoc do cho biet quan he goi y; can kiem tra chieu quan he, pham vi bi tac dong va quy dinh chuyen tiep. Tu khoa khong du ket luan het hieu luc.
+- Nhan dien `event_key` co tinh lap lai; so hieu co the trung/khac nguon, can review va xac minh dinh danh khi migration.
+- Trang thai `SAP_HET_HIEU_LUC` chua duoc ket luan tu dong vi thieu ngay ket thuc duoc chung minh.
+- Ma so va ngay theo nguon co the sai; khoi tao baseline khong dong nghia rang van ban da duoc xac minh phap ly.
+- Chua co bo doi chieu trang thai voi CSDL VBPL chinh thuc, OCR/PDF, trinh duyet tren may Windows, hay test E2E cua crawl 07->08->09. Can thuc hien tiep va danh gia do phu truoc khi tu dong chay theo lich.
+- Chua co action service tiep nhan ket qua vao `VBQPPL_RaSoatHieuLuc`; phan nay thuoc GD3. Khong su dung public token de ghi.
+- Hoan toan khong dong cham toi Google Sheets production, WebApp, Dashboard, MS Planner hoac Task Scheduler.
+
+## Nghiem thu GD2 - hạng muc
+
+1. Parser xu ly duoc luoc do thay the / het hieu luc / sua doi, dieu khoan va ngay du kien, khong auto-classify.
+2. Baseline 531 ban ghi, 339 so hieu (tai snapshot 12/10/2026) -> 339 phieu cho ra soat, khong nhan doi.
+3. Unit tests va CI qua; thu nghem E2E tren 30 van ban da duoc nguoi duyet danh gia, xac dinh precision/recall va cot loi.
+4. Thong nhat nguon chinh thuc va phuong an quet dinh ky an toan.
+5. Chi sau khi GD2 duoc nghiem thu moi chuyen GD3 (Apps Script service API + Dashboard admin).
+
+## GD2.01 — Tach noi dung phap ly khoi thanh phan trang (12/10/2026)
+
+- Tao `legal_effect_content.py` doc DOM duoc Playwright render **truoc khi mo Luoc do**. Uu tien cac content container co dau hieu van ban; fallback co kiem soat khi co quoc hieu va >=2 dieu; khong fallback sang `body` hoac menu/tom tat.
+- Loc nav/footer/aside/share/menu; bat canh dieu hieu luc, chuyen tiep, bai bo, thay the, sua doi/bo sung va phu luc. Moi doan co `paragraph_index`, `location`, `section_heading`, `section_kind`, `root_selector` de doi chieu.
+- Step08 giu `get_body_lines()` **chi cho luong trich thong tin chung cu** va payload import hien tai; cac de xuat `legal_effect_candidates` **chi duoc nhan bang chung tu legal_effect_evidence**. Khong thay doi API import.
+- Neu khong tim thay can cu trong nguyen ban, `legal_content_extraction_meta.status` tra `document_root_not_found` / `source_unavailable` / `no_relevant_clauses` va **khong dung `body` doan thay**; quan he Luoc do van chi la goi y cho Phap che.
+- Test `tests/test_legal_effect_content.py` bao gom: navigation/tom tat/noi dung trang phai bi loai, chia dong ten dieu, phu luc, loai website khong co nguyen ban, ranh gioi fallback.
+- **Chua kiem thu tren website that**: selector va cau truc van ban co the thay doi; GD2.05 chay 30 van ban that truoc khi xem la hoan thanh van hanh.
+- Co the khong doc duoc noi dung khi trang dung anh/PDF hoac HTML khong co cau truc dieu; truong hop nay can manual review, khong suy dien hieu luc.
+
+## GD2.02 — Xu ly chieu quan he, pham vi, ngay ap dung (12/10/2026)
+
+- `legal_effect_analysis.py`: tach phan loai hanh vi (thay the/bai bo/sua doi/dinh chi), pham vi dieu/khoan/phu luc, va nguon chung cu. Mac dinh `CHUA_XAC_MINH` va `CHO_XAC_MINH`; khong suy ra hieu luc tu dong.
+- `effect_date_candidate` chi dien khi co ngay duoc gan truc tiep voi dieu khoan, hoac `hieu_luc_chung_cung_dieu` co chung cu ro rang khong co ngoai le; khong lay ngay van ban moi mac dinh neu khong co ngay dieu khoan lien quan.
+- Cung cap `effect_date_basis`, `affected_scope`, `scope_type`, `direction_confidence`, `evidence_location`, `evidence_section_heading` de phuc vu GD3/GD2.03.
+- Nhan dien cau chu dong/bi dong; khi van ban tac dong khong duoc noi ro, de `new_number` rong va `direction=unknown`. Loai bo cau phu dinh/van ban tiep tuc co hieu luc. Hanh vi phuc tap/tron nhieu quan he -> `KHAC` de kiem tra.
+- `08_process_field_documents_batch.py` nay truyen danh sach `legal_effect_evidence` co vi tri va dieu khoan thay vi chuoi phang de parser khong danh mat ngu canh.
+- Them 9 test trong `tests/test_legal_effect_analysis.py` ve thay the mot phan, phu luc, cau bi dong, danh sach gạch dau dong, ngay khong lien quan, ngay chung cung dieu, chung cu.
+- Sua nguong de nhan van ban ngan co quoc hieu va >=2 dieu trong `legal_effect_content.py` (loi test GD2.01).
+- Chua xu ly duoc moi mau dien dat thuc te; kiem thu 30 van ban web va doi chieu nguon chinh thuc trong GD2.03/GD2.05 van bat buoc. Khong write production, khong dong den Planner.
+
+## GD2.03 — Đối chiếu nguồn VBPL chính thức (12/10/2026)
+
+- Mã: `legal_effect_official.py`, chỉ đọc nguồn HTML chính thức được cấu hình tường minh, so số hiệu văn bản **mới** với số hiệu tại chính trang chính thức, sau đó đối chiếu **văn bản cũ**, loại quan hệ, phạm vi và ngày áp dụng từ điều khoản gốc.
+- Nguồn ưu tiên: Cơ sở dữ liệu quốc gia về văn bản pháp luật (VBPL). KHÔNG suy ra `ItemID` từ số hiệu, KHÔNG coi URL LuatVietnam là URL pháp luật chính thức, KHÔNG tự suy diễn trạng thái từ nhãn website.
+- Chống SSRF: chỉ HTTPS, danh sách host được cho phép, đúng đường dẫn fulltext `/TW/Pages/vbpq-toanvan.aspx?ItemID=N` và biến thể đơn vị ban hành, không redirect, giới hạn tải 5 MB và timeout. Không sử dụng token nào.
+- Nếu HTML không truy xuất được, trang chỉ có PDF, kết cấu DOM khác, số hiệu mâu thuẫn, không có điều khoản, phạm vi/chiều/ngày xung đột: giữ `CHUA_XAC_MINH`, đánh dấu `CAN_BO_SUNG_CHUNG_CU` và ghi mã lỗi kiểm soát.
+- Đầu ra `official_verification` trong `legal_effect_review.json`: mã phiếu, mã sự kiện, trạng thái đối chiếu, URL gốc, số hiệu tài liệu, chứng cứ có vị trí, phạm vi, ngày, SHA256 đoạn trích. CSV vẫn giữ đúng 28 cột GD1, thêm URL nguồn chính thức + trích dẫn khi đủ điều kiện.
+- Trạng thái `OFFICIAL_ACTION_MATCHED_PENDING_LEGAL` chỉ được ghi khi **đúng cặp số hiệu và hành vi, có phạm vi rõ**. Đây là chứng cứ tự động, KHÔNG phải quyết định xác nhận hết hiệu lực. Không nâng thành `DA_XAC_NHAN` hoặc đưa vào kho lưu trữ.
+- `OFFICIAL_SCOPE_NEEDS_REVIEW` cho trường hợp văn bản nguồn có câu thay thế/bãi bỏ nhưng chưa rõ phạm vi. Không coi toàn bộ một cách mặc định.
+- Tạo `official_sources.json` ở máy chạy, cấu trúc:
+
+```json
+{
+  "sources": {
+    "81/2026/TT-BGDĐT": "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=12345"
+  }
+}
+```
+
+**Ví dụ URL nêu trên chỉ minh họa cấu trúc, tuyệt đối không dùng ItemID=12345 như nguồn đã xác thực.** Phải thay bằng URL toàn văn thực tế đã được kiểm tra bằng tay, đúng số hiệu tài liệu. Có thể lưu file index ở thư mục cục bộ (không commit thông tin cá nhân).
+
+Chạy:
+
+```powershell
+python 15_check_legal_effect.py --mode events --workbook "backup.xlsx" --step08-json "output/vbqppl_nhap_batch_payload.json" --official-index "official_sources.json" --output-dir "output/gd2-events"
+```
+
+Nếu không truyền `--official-index`, script vẫn chạy như trước và tất cả phiếu chỉ là gợi ý chưa xác minh. Không ghi Google Sheet production hoặc MS Planner.
+
+**Giới hạn hiện tại:** chưa xác minh kết nối HTTP/DOM trên cổng VBPL thật trong môi trường này (kết nối trực tiếp bị hạn chế); bộ test CI chỉ kiểm thử HTML giả lập và hành vi lỗi mạng/URL không tin cậy. Cần chạy E2E GD2.05 trên máy Windows được phép kết nối, bổ sung parser từ PDF chính thức khi cần, và kiểm tra 30 văn bản trước khi nghiệm thu GD2.
+
+## GD2.03 — Test case thực tế: 05/2021/TT-BGDĐT (13/10/2026)
+
+- URL người dùng cung cấp: `https://vbpl.vn/van-ban/chi-tiet/thong-tu-so-05-2021-tt-bgddt-sua-doi-bo-sung-mot-so-dieu-cua-quy-che-thi-tot-nghiep-trung-hoc-pho-thong-ban-hanh-kem-theo-thong-tu-so-15-2020-tt-bgddt-ngay-26-thang-5-nam-2020-cua-bo-truong-bo-giao-duc-va-dao-tao--147477`.
+- Khóa tra cứu dự kiến: `05/2021/TT-BGDĐT`. Văn bản này sửa đổi, bổ sung Quy chế ban hành kèm `15/2020/TT-BGDĐT`. Chỉ quan hệ sửa đổi, không được coi là thay thế toàn bộ văn bản gốc.
+- Đã mở rộng URL allowlist cho `/van-ban/chi-tiet/<slug>--<id>` của `vbpl.vn`. Có thể thử URL toàn văn/print cũ dựa trên **ID thực sự nằm trong URL đã được cung cấp**; không suy ra ID từ số hiệu.
+- Phải kiểm tra số hiệu tại đầu văn bản sau khi tải, điều khoản nguyên văn, chiều quan hệ và điều khoản chuyển tiếp. Trường hợp không chắc chắn → `CAN_BO_SUNG_CHUNG_CU`, không tự xác nhận.
+- GitHub CI kiểm thử URL của chính case này dưới dạng offline; **máy container hiện không phân giải được DNS vbpl.vn**, nên chưa có kết quả Python E2E trực tiếp trên VBPL. Không được gọi đây là test truy cập thực tế đã thành công.
+- Bộ kiểm chứng `official_html_check` hiện phục vụ mô hình *văn bản mới tác động đến văn bản cũ*; không sử dụng trang thông tư 05 để thay thế việc kiểm tra văn bản bãi bỏ nó sau này. Các điều khoản chuyển tiếp phải được kiểm tra thủ công trước khi xác nhận hết hiệu lực.
+
+## GD2.03 — Kết quả kiểm thử máy chủ thực tế (13/10/2026)
+
+GitHub Actions live probe run 38336187228 (artifact `gd2-vbpl-probe-report`):
+
+- Link `/van-ban/chi-tiet/...--147477`: HTTP 200; 83,287 byte HTML.
+- `official_check=IDENTITY_MISMATCH` (parser không tìm thấy số hiệu), `extraction_status=document_root_not_found`, `evidence_blocks=0`.
+- Các endpoint VBPL legacy `/TW/Pages/vbpq-toanvan.aspx?ItemID=147477`, `/TW/Pages/vbpq-print.aspx?ItemID=147477` và `/botuphap/Pages/vbpq-print.aspx?ItemID=147477` trả redirect; crawler hiện chặn redirect để bảo vệ SSRF.
+- `OVERALL LIVE_HTML_RETRIEVED_PARSER_UNCONFIRMED`; job fail exit 2 theo thiết kế, **chưa nghiệm thu E2E**.
+- Việc tiếp theo: phân tích DOM HTML thực (chỉ lưu trích mẫu cấu trúc/selector an toàn); cập nhật parser cho trang hiện hành; kiểm soát redirect cùng host bằng re-validation từng URL; chạy lại và phải nhận đúng 05/2021/TT-BGDĐT, quan hệ sửa đổi 15/2020/TT-BGDĐT. Không bỏ qua xác minh danh tính nguồn để pass test.
+- Không ghi dữ liệu production, không sync Planner, PR #16 vẫn Draft.
+
+## GD2.03 FIX — Kết quả điều tra trên server 13/10/2026
+
+- Đã chạy Live Probe ở GitHub Actions: URL VBPL mới có thể trả HTML 200 nhưng BODY chỉ 334 ký tự, không có quốc hiệu/Điều 1, dù tiêu đề và script chứa tham chiếu số hiệu. Đây là trang khung SPA, **không phải toàn văn**.
+- Đã chạy Playwright Chromium độc lập: trang VBPL trả HTTP 403 với trình duyệt tự động từ GitHub-hosted runner. **Không tìm cách vượt cơ chế bảo vệ website**.
+- Đã cập nhật `fetch_official_html()` theo tối đa 2 lần redirect, từng đích yêu cầu HTTPS + đúng whitelist/đường dẫn cấu trúc VBPL; không redirect tự động tới host khác.
+- Parser phân biệt `CLIENT_RENDER_REQUIRED` (khung JavaScript có số hiệu trong title nhưng không có toàn văn) với `IDENTITY_MISMATCH` (sai số hiệu); cả hai đều **không phải** chứng cứ xác minh.
+- Có test đảm bảo khung HTML có tiêu đề đúng **không** tạo kết luận; test redirect cùng host cho phép và redirect ra ngoài chặn. Các báo cáo kiểm thử chỉ lưu metadata, không lưu HTML toàn trang hoặc token.
+- Giới hạn: Mặc dù đã kiểm thử máy chủ thực tế và sửa cơ chế, **chưa thể E2E xác nhận điều khoản 05/2021 sửa đổi 15/2020** khi VBPL không trả toàn văn cho HTTP client và chặn Playwright. Để nghiệm thu cần nguồn chính thức truy cập được (PDF/tải hợp lệ, endpoint công bố hoặc truy cập trình duyệt thủ công xuất file) hoặc môi trường được VBPL cho phép, sau đó kiểm thử lại. Tránh gán trạng thái hết hiệu lực chỉ từ tiêu đề.
+- PR #16 vẫn Draft, không ghi Apps Script, Google Sheets hay Planner.
+
+## GD2.03 — Kiểm thử trên máy Windows có trình duyệt hợp lệ
+
+GitHub-hosted runner không điều khiển trực tiếp được phiên Cốc Cốc của người dùng. Đã bổ sung `scripts/gd2_vbpl_windows_test.py`: chạy foreground, mở profile mới cô lập, sử dụng trình duyệt được cài trên chính Windows người vận hành; KHÔNG lấy cookie/session của profile thực, KHÔNG ghi Apps Script/Sheets/Planner. Đây là bài test chờ người vận hành chạy, KHÔNG phải kết quả E2E đã xác nhận.
+
+```powershell
+git fetch origin
+git switch feat/gd2-legal-effect-analysis-20261012
+python -m pip install beautifulsoup4 playwright
+python scripts/gd2_vbpl_windows_test.py
+```
+
+Có thể truyền `--browser-path "C:\Program Files\CocCoc\Browser\Application\browser.exe"` nếu không dò được Cốc Cốc, hoặc cài Chromium do Playwright phân phối. Bài test dùng `headless=False`, không gắn vào profile đang đăng nhập; website từ chối truy cập phải báo `SITE_ACCESS_DENIED`, không tìm cách vượt chặn. File báo cáo tại `output/gd2-windows-vbpl-test.json` chỉ ghi trạng thái, mã phiếu, vị trí chứng cứ, không ghi HTML/token.
+
+Điều kiện đạt: `outcome=PROVISIONAL_PASS_PENDING_LEGAL`, `extraction_status=ok`, đúng số hiệu 05/2021/TT-BGDĐT, relation `SUA_DOI_BO_SUNG` tác động tới 15/2020/TT-BGDĐT; kết luận cuối vẫn đợi Pháp chế. Nếu thất bại, lưu báo cáo và điều chỉnh selector theo dữ liệu nguồn được phép chia sẻ; không kết luận chưa có hiệu lực chỉ vì không tải được trang.
+
+Lưu ý: việc chuyển nhánh của máy vận hành cần do người vận hành thực hiện ở một bản checkout thử nghiệm tách biệt, tránh làm xáo trộn pipeline Windows hiện chạy production. Không bật scheduler cho script này.
+
+## GD2.03 — Nghiệm thu thực tế ca VBPL 05/2021 trên Windows (13/10/2026)
+
+**Nguồn báo cáo:** Người vận hành cung cấp trực tiếp JSON từ `output/gd2-windows-vbpl-test.json`, chạy bằng `scripts/gd2_vbpl_windows_test.py` trên bản checkout riêng; đây là bằng chứng do người vận hành cung cấp, **không phải phiên chạy Windows do GitHub Actions hoặc trợ lý trực tiếp quan sát**.
+
+- Giờ báo cáo: `2026-10-13T08:15:32+00:00` (15:15:32 giờ Việt Nam).
+- HTTP `200`, hostname `vbpl.vn`; `document_title_matches=true`.
+- `extraction_status=ok`; vùng nguồn `structural_vbpl_rendered_root`; `evidence_blocks=119`.
+- Văn bản tác động: `05/2021/TT-BGDĐT`; văn bản chịu tác động: `15/2020/TT-BGDĐT`.
+- Quan hệ phát hiện: `SUA_DOI_BO_SUNG`; `scope_type=MOT_PHAN`.
+- Chứng cứ: `structural_vbpl_rendered_root:paragraph[7]`, thuộc `Điều 1. Sửa đổi, bổ sung một số điều của Quy chế...`. Mã sự kiện `735c1058fb624b560fdf9d1b`.
+- `outcome=PROVISIONAL_PASS_PENDING_LEGAL`; `verification_status=CHO_XAC_MINH`; `requires_legal_review=true`; `production_writes=false`.
+
+**Phán định:** ĐẠT bài kiểm thử tích hợp kỹ thuật **một ca** cho phép truy cập và trích xuất trên môi trường Windows đã được người vận hành thử; khắc phục lỗi trước đây `source_section` rỗng. **Không** chứng minh độ chính xác trên mọi văn bản, không phải xác minh pháp lý hoàn tất, không có ghi/sync dữ liệu production.
+
+**Điểm cần rà soát:** `paragraph[7]` có thể chính là tiêu đề Điều 1; cần đối chiếu `evidence_text` của sự kiện với nội dung khoản sửa đổi dưới Điều 1 để xác nhận chính xác phần nội dung tác động và mức độ chi tiết. Trước khi triển khai tự động, nên kiểm thử thêm văn bản thay thế toàn bộ, bãi bỏ một phần, chuyển tiếp, hết hiệu lực trong tương lai và văn bản không có quan hệ.
+
+**Quyết định vận hành:** Giữ PR #16 Draft; chuyển sang GD2.04 đối soát định danh/khử trùng dữ liệu, sau đó GD2.05 kiểm thử E2E đủ nhiều trường hợp và Pháp chế xác minh.
+
+## GD2.04 — Đối chiếu định danh nguồn và chống trùng (13/10/2026)
+
+Tình trạng: **mã nguồn và kiểm thử tự động đã bổ sung, chưa chạy migration hoặc ghi production**.
+
+- `legal_effect_identity.py`: đối chiếu hai sheet theo số hiệu chuẩn hóa, **không** coi số hiệu tự nó là bằng chứng duy nhất. Bảo toàn ID của hai nguồn, flag `MULTIPLE_DOCUMENT_IDS`, `DOCUMENT_TYPE_CONFLICT`, `ISSUING_AUTHORITY_CONFLICT`, `MULTIPLE_VALID_SOURCE_URLS`, `NON_URL_DOCUMENT_LINK`, `TITLE_VARIANTS`, `NONSTANDARD_DOCUMENT_NUMBER`. Trường URL chỉ chấp nhận URL HTTP(S) công khai hợp lệ, không biến nhãn văn bản thành URL.
+- `15_check_legal_effect.py`: gắn `identity_audit` trong báo cáo JSON; giữ **28 cột GD1** trong CSV; `ID nguồn VBQPPL` / `ID nguồn VBQPPL_Nhap` vẫn lưu đủ; `Dấu vân tay nguồn` ổn định khi thay thứ tự dòng; `Phạm vi tác động` lấy đúng `affected_scope`, không lấy `direction` như trước. Các khóa có xung đột định danh nghiêm trọng chuyển sang `CAN_BO_SUNG_CHUNG_CU`.
+- **Đối chiếu bản sao offline** `BACKUP_FULL_Data_TraCuuVanBan_PRE_PHASE0_2026-10-12.xlsx` do người vận hành cung cấp: 190 VBQPPL + 341 VBQPPL_Nhap = 531 bản ghi có số hiệu, 339 số hiệu chuẩn hóa; 188 số hiệu ở cả hai nguồn; 54 link tại `VBQPPL` thực chất là nhãn/văn bản, không phải URL; có 2 số hiệu với nhiều mã ID là `32/2025/TT-BTC` và `46/2014/QH13`. Riêng trường hợp `46/2014/QH13` có tiêu đề Luật Sở hữu trí tuệ ở một ID nhưng URL gắn Luật Bảo hiểm y tế: **cảnh báo mâu thuẫn nguồn, cần Pháp chế xác nhận**; không tự sửa.
+- `339` là số khóa số hiệu, KHÔNG được mặc nhiên kết luận có đúng 339 thực thể pháp lý độc lập. Không thay đổi ID gốc, bảo vệ các trường thủ công và không tạo/xóa Planner.
+- Chưa thể xác nhận cơ quan ban hành cho toàn bộ nguồn vì nguồn snapshot không có cột `Cơ quan ban hành`; đánh dấu chưa biết, không tự suy ra từ số hiệu hoặc tên đơn vị.
+
+## GD2.05 — Bộ kiểm thử đa văn bản trên Windows (13/10/2026)
+
+Tình trạng: **đã triển khai runner và test offline, chưa có dữ liệu đối chứng pháp chế đủ 30 ca thực tế**.
+
+- `scripts/gd205_validate_official_samples.py`: đọc tối đa 30 ca từ `docs/gd205_case_manifest.json`, mỗi ca gồm `id`, URL nguồn VBPL chính thức, số hiệu văn bản mới, số hiệu văn bản cũ, quan hệ dự kiến và `label_status`. Chỉ mở trình duyệt Windows với profile mới, *headless=False*, không tái sử dụng cookie phiên cá nhân và không bypass HTTP 403. Chỉ ghi mã trạng thái, vị trí điều khoản, phạm vi, kết quả và metadata vào `output/gd205-validation.json`.
+- Manifest hiện có **1 ca đã kiểm thử kỹ thuật trên Windows**: TT 05/2021/TT-BGDĐT sửa đổi TT 15/2020/TT-BGDĐT. Để `PENDING_HUMAN` vì **được xác nhận kỹ thuật không đồng nghĩa được Pháp chế dán nhãn chuẩn**.
+- Đánh giá tách biệt 3 lớp: tỷ lệ tải thành công, tỷ lệ lấy toàn văn, tỷ lệ phát hiện khớp quan hệ dự kiến. Không báo precision/recall pháp lý khi chưa có đầy đủ ground-truth gồm cả ví dụ âm tính; cột chỉ tiêu này trả `null`. Với các ca dán nhãn `HUMAN_VERIFIED`, chỉ thống kê **khả năng tìm lại trên tập ca dương tính đã lựa chọn**, không gọi đó là precision tổng thể.
+- Không tự bịa 29 link hoặc gắn nhãn căn cứ pháp luật chưa kiểm tra. Ở giai đoạn thí điểm có thể bổ sung dần các ca thay thế toàn bộ, bãi bỏ một phần, sửa đổi, ngày tương lai, ngoại lệ chuyển tiếp, và ca không có quan hệ; muốn đánh giá false positive cần mở rộng manifest riêng với nhãn âm tính.
+- Lệnh trên **checkout thử nghiệm riêng** của máy Windows đã xác nhận truy cập được vbpl.vn:
+
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py
+```
+
+- Nếu báo `MATCH_PENDING_HUMAN` đây là phát hiện kỹ thuật **cần xác minh**, không phải `DA_XAC_NHAN` hay `HET_HIEU_LUC_TOAN_BO`. Không triển khai lịch chạy tự động vào production và không merge PR #16 khi chưa nghiệm thu đủ bộ mẫu.
+
+## GD2.05 — Kết quả Windows một ca và mở rộng đối chứng (13/10/2026)
+
+Người vận hành gửi kết quả `output/gd205-validation.json` (chỉ báo cáo tóm tắt): `total_cases=1`, `cases_run=1`, `http_200=1`, `legal_text_extracted=1`, `provisional_matches=1`, `MATCH_PENDING_HUMAN=1`, `human_labelled_cases=0`, `legal_confirmation=false`, `production_writes=false`. **Kết luận: PASS kỹ thuật một ca, chưa đạt nghiệm thu 30 ca và chưa có kết luận pháp chế.**
+
+Đã mở rộng `scripts/gd205_validate_official_samples.py` cho nhãn đối chứng:
+- `label_status=PENDING_HUMAN`: chưa có nhãn sự thật, không kèm `expected_present`/`label_basis`.
+- `label_status=HUMAN_VERIFIED`: phải có `expected_present=true|false` (tác động đúng loại quan hệ có/không) và `label_basis` là căn cứ kiểm tra độc lập. Không đưa URL/trích dẫn chưa rà soát thành ground truth.
+- `NO_MATCH` được xử lý như dự đoán âm tính hợp lệ khi toàn văn nguồn được nhận diện đầy đủ; riêng lỗi mạng/không có DOM không bị gán âm tính và không được che khỏi báo cáo.
+- Báo cáo lưu TP/TN/FP/FN và số ca chưa đủ điều kiện đánh giá. **Precision/recall chỉ hiện số** khi đã đủ 30 trường hợp có nhãn, cả hai lớp dương và âm và đều kiểm tra được. Nếu chưa đủ thì `null`.
+- Bộ thử offline bổ sung trường hợp âm tính thật, dương tính giả, lỗi nguồn và tập đã gắn nhãn đủ 30. Các phép thử này mô phỏng, không chứng minh độ chính xác pháp lý.
+
+**Mức độ sẵn sàng:** PR #16 Draft; thí điểm 1 trường hợp Windows thành công; chờ bổ sung 29 URL hợp lệ và nhãn được rà soát. Không ghi Google Sheets/Planner, không deploy production.
+
+## GD2.05 — Bộ 30 trang VBPL kiểm thử (14/10/2026)
+
+- Đã tạo **30 ca trên 30 hồ sơ VBPL có ID URL khác nhau** tại `docs/gd205_case_manifest.json`. Gồm **11 ca dự kiến dương tính** (`POSITIVE_CANDIDATE`) và **19 ca thăm dò kiểm soát âm tính** (`NEGATIVE_CONTROL_CANDIDATE`).
+- URL được đối chiếu theo kết quả tìm kiếm nguồn VBPL công khai; trạng thái `PENDING_HUMAN` áp dụng đồng loạt. **Chưa phải 30 ca kết quả pháp chế đã xác minh**; các mẫu âm tính có thể có quan hệ khác trong điều khoản và cần được Pháp chế phân xử.
+- Mỗi ca có URL cụ thể, số hiệu văn bản đang quét, số hiệu cặp tham chiếu, loại quan hệ thăm dò và `review_hint` cho người rà soát. Không gán `expected_present=true/false` trước khi đối chứng pháp chế.
+- Các ca quan trọng: TT 05/2021/TT-BGDĐT sửa đổi 15/2020/TT-BGDĐT; TT 07/2024/TT-BGDĐT sửa đổi 13/2021/TT-BGDĐT; TT 02/2024/TT-BTTTT có khoản hết hiệu lực và chuyển tiếp; TT 08/2024/TT-BYT bãi bỏ một phần; TT 15/2024/TT-BLĐTBXH bãi bỏ văn bản; TT 104/2024/TT-BQP thay thế/bãi bỏ mẫu biểu. Các trường hợp chỉ nêu nghị định tại phần căn cứ làm ca âm tính thăm dò, không khẳng định không có tác động nếu chưa rà soát toàn văn.
+- Lưu ý: `HET_THOI_HAN` là nhãn thăm dò cho TT 02/2024/TT-BTTTT với quy định hết hiệu lực văn bản cũ; cần đối chiếu phân loại nghiệp vụ khi có bằng chứng, tránh suy luận hết thời hạn đồng nghĩa bãi bỏ.
+- Chạy **chỉ đọc**, chỉ trên bản clone thử nghiệm Windows đã hoạt động: `git pull origin feat/gd2-legal-effect-analysis-20261012`, sau đó `python scripts/gd205_validate_official_samples.py`. Đầu ra `output/gd205-validation.json`, bao gồm tất cả trạng thái đọc, quan hệ, lỗi truy cập và thống kê chưa được xác nhận.
+- Không ghi production, không sửa token, không deploy, không gộp PR #16. Giai đoạn tiếp theo: kiểm tra đủ 30 ca Windows; căn cứ trích từ điều khoản, nhãn đối chứng Pháp chế; sửa parser nếu có lỗi; kiểm tra tỷ lệ đạt tối thiểu được phê duyệt.
+
+## GD2.05 — Windows 30 ca, sự cố legacy redirects (14/10/2026)
+
+Người vận hành chạy manifest 30 ca trên bản checkout Windows, báo cáo: `total_cases=30`, `http_200=30`, `legal_text_extracted=1`, `provisional_matches=1`, `UNTRUSTED_REDIRECT=29`, `human_labelled_cases=0`. **Không được tính 29 trường hợp là âm tính pháp lý** hoặc kết luận có toàn văn truy xuất được chỉ dựa trên HTTP 200.
+
+Nguyên nhân kỹ thuật xác định từ logic runner: 29 ca sử dụng địa chỉ legacy `/TW/Pages/vbpq-toanvan.aspx?ItemID=...`; browser đã chuyển đến URL khác, `canonical_official_url(page.url)` không cho phép, trước khi kiểm tra HTML. **Chưa biết trang cuối cùng của cả 29 ca** do báo cáo cũ không lưu loại điểm đến; có thể là trang chủ portal, đường dẫn mới, hoặc luồng khác. Không nới allowlist để chấp nhận trang chủ, URL khác host, hoặc thay đổi ID.
+
+Đã bổ sung diagnostic `navigation` chỉ gồm loại đường dẫn đích (`PORTAL_HOME`, `MODERN_DETAIL`, `LEGACY_DOCUMENT`, `UNRECOGNIZED_OFFICIAL_PATH`, `EXTERNAL_OR_INSECURE`), host đã giới hạn, khớp ID hoặc không. Không lưu URL cuối, cookie, HTML. Mã trạng thái mới `LEGACY_REDIRECT_TO_HOME` và `SOURCE_ID_CHANGED` là lỗi nguồn, không phải `NO_MATCH`. Có thể chạy chọn ca `--case-indexes 2,3,12` để chẩn đoán mà không quét lại 30 trang.
+
+Bước tiếp theo: người vận hành chạy 3 ca, gửi `results[].navigation`; sửa các URL legacy chỉ khi có URL hiện đại, ID và **số hiệu nội dung** khớp, xác minh từng nguồn. Nếu chuyển về trang chủ, phải thay URL nguồn, không coi đường chuyển hướng là toàn văn. PR #16 tiếp tục Draft; không ghi production.
+
+## GD2.05 — Chẩn đoán URL chuyển về trang chủ và phép thử URL mới (14/10/2026)
+
+Người vận hành đã chạy 3 ca đại diện: **GD205-002, GD205-003 và GD205-012 đều có HTTP 200 nhưng `LEGACY_REDIRECT_TO_HOME`**, đường dẫn cuối `PORTAL_HOME`, số đoạn chứng cứ bằng 0. Điều này xác nhận **trang chủ không phải toàn văn**, và phương pháp dùng URL VBPL legacy `/TW/Pages/vbpq-toanvan.aspx?ItemID=...` không phù hợp với các ca được thử. Không được coi các trường hợp này là kết quả âm tính pháp lý.
+
+Đã bổ sung phương án thăm dò `--probe-same-id-modern` trong `scripts/gd205_validate_official_samples.py`: chỉ khi URL legacy chuyển về trang chủ, dựng **URL ứng viên chưa xác minh** thuộc `/van-ban/chi-tiet/` bằng ID hồ sơ `ItemID` đã có và slug tên số hiệu, sau đó mở trang trên Windows. Ứng viên này **không tự động được coi là URL chính thức**. Chỉ đề xuất `proposed_source_url` nếu đường dẫn cuối nằm trong allowlist HTTPS, có **cùng ID**, tiêu đề **khớp số hiệu mới**, bộ tách nội dung xác định được toàn văn và trả `MATCH_PENDING_HUMAN` hoặc `NO_MATCH`. Nếu trang chủ hoặc sai ID, dừng ở lỗi. Không tự ghi lại manifest, không nới whitelist, không thao tác Sheet/Planner.
+
+Lệnh chạy thử **3 ca trước** trên clone Windows riêng:
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 2,3,12 --probe-same-id-modern --output output/gd205-modern-probe.json
+```
+Chỉ sau khi người vận hành cung cấp kết quả mới được đánh giá xem có thể cập nhật URL nguồn không. Các ca còn lại chưa có URL hiện đại đã được kiểm chứng.
+
+## GD2.05 — Kết quả thử đường dẫn hiện đại trên Windows, 3 ca (14/10/2026)
+
+**Nguồn bằng chứng:** JSON summary do người vận hành cung cấp sau lệnh `python scripts/gd205_validate_official_samples.py --case-indexes 2,3,12 --probe-same-id-modern --output output/gd205-modern-probe.json`. Đây là kết quả người vận hành báo lại; **chưa có JSON chi tiết `results[]` để xác định từng ca thành công hay không và URL nào có thể được xác nhận**.
+
+- `total_cases=3`, `cases_run=3`, `http_200=3`, `legal_text_extracted=3`.
+- `provisional_matches=1`, `result_counts={MATCH_PENDING_HUMAN:1, NO_MATCH:2}`.
+- Bộ thử gồm `positive_candidate_cases=2`, `negative_control_candidate_cases=1`. **Không thể từ summary xác định `MATCH_PENDING_HUMAN` thuộc ca nào**; phải xem `results[].id` trước khi kết luận ca dương/âm được nhận diện đúng.
+- `negative_controls_without_match=1` theo bộ đếm, nhưng **chưa có nhãn Pháp chế**, nên không được tính là true negative đã nghiệm thu.
+- `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+- Kết quả khẳng định cơ chế probe có thể lấy được nội dung 3/3 ca vừa thử, cải thiện so với `LEGACY_REDIRECT_TO_HOME` cho cả 3 ca ở lượt trước. **Không** khẳng định cả 29 URL legacy còn lại sẽ được xử lý thành công; không tự động thay thế các URL trong manifest dựa trên summary.
+
+**Bước tiếp:** chạy 30 ca với `--probe-same-id-modern`, lưu JSON đầy đủ ở `output/gd205-modern-30.json`; đối chiếu `results[].id/result/navigation/proposed_source_url/matches` trước khi cập nhật manifest. Mọi ca `NO_MATCH` trên nhóm dương tính dự kiến phải rà soát chứng cứ Điều/Khoản, không tự đổi nhãn âm tính. PR #16 giữ Draft; không ghi production.
+
+## GD2.05 — Windows kiểm thử đủ 30 ca với modern URL probe (14/10/2026)
+
+**Nguồn dữ liệu:** Summary JSON do người vận hành gửi sau khi chạy `python scripts/gd205_validate_official_samples.py --probe-same-id-modern --output output/gd205-modern-30.json` trên bản checkout Windows, nhánh `feat/gd2-legal-effect-analysis-20261012`. **Chưa nhận được file JSON chi tiết `results[]`**; chưa thể xác định ID/URL từng ca.
+
+- `total_cases=30`; `cases_run=30`; `http_200=30`; `legal_text_extracted=27` (**27/30 = 90%**).
+- `provisional_matches=9`; `result_counts={MATCH_PENDING_HUMAN:9, NO_MATCH:18, NO_LEGAL_TEXT:3}`.
+- Tập nghiên cứu gồm `positive_candidate_cases=11`, `negative_control_candidate_cases=19`, và `negative_controls_without_match=16`.
+- Theo phép đối chiếu đếm: 18 ca `NO_MATCH` trừ 16 ca thuộc nhóm kiểm soát âm tính = **2 ca `NO_MATCH` thuộc nhóm dương tính dự kiến**. Cần xem `results[].id`, điều khoản, scope và link để phân biệt lỗi parser với sai nhãn nghiên cứu.
+- Không được suy ra rằng cả 9 ca `MATCH_PENDING_HUMAN` đều thuộc nhóm dương tính dự kiến: số liệu tổng hợp không chỉ rõ phân bổ; cần JSON từng ca.
+- `human_labelled_cases=0`; `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`. **Không có xác nhận pháp lý hay chỉ số độ chính xác**.
+- Khả năng trích xuất cải thiện so với lượt 30 ca dùng URL legacy (`legal_text_extracted=1`), nhưng 3 ca `NO_LEGAL_TEXT` vẫn chưa chứng minh thất bại thực sự của trang nguồn; cần kiểm tra `navigation`, `modern_candidate_probe` và tình trạng DOM.
+- Mọi URL `proposed_source_url` phải được đối chiếu với **đúng ID/số hiệu và toàn văn nguồn**, không tự sửa manifest từ con số summary. Không ghi Apps Script/Sheets/Planner; PR #16 tiếp tục Draft.
+
+**Việc cần tiếp:** nhận trực tiếp `output/gd205-modern-30.json` để lập bảng từng ca (30 hàng), xác định 3 ca `NO_LEGAL_TEXT`, 2 ca dương tính `NO_MATCH` và xác định có ca âm tính dự kiến bị phát hiện nhầm hay không; sau đó sửa dữ liệu nguồn/parser theo từng bằng chứng và chạy lại các ca có thay đổi.
+
+## GD2.05 — Đối soát 30 ca theo JSON chi tiết (14/10/2026)
+
+Đã đọc tệp `gd205-modern-30.json` do người vận hành gửi (timestamp `2026-10-14T03:50:36+00:00`). Có 30 hồ sơ, 27 có vùng nội dung nguồn được bộ trích xuất nhận diện, 9 ca `MATCH_PENDING_HUMAN`, 18 ca `NO_MATCH`, 3 ca `NO_LEGAL_TEXT`. **Không có nhãn Pháp chế, không tính được precision/recall.**
+
+**Đối chiếu theo từng ca:**
+- Dương tính dự kiến, phát hiện đề xuất: `001, 003, 004, 006, 007, 008, 009, 010` (8 ca). Trường hợp `004` trả 2 event_key trên cùng cặp/loại quan hệ, cần rà soát idempotency theo phạm vi; `009` có `scope_type=KHONG_RO`, không được chuyển trạng thái hết hiệu lực toàn bộ.
+- Dương tính dự kiến nhưng `NO_MATCH`: `002` (07/2024/TT-BGDĐT tác động 13/2021/TT-BGDĐT; vùng chứng cứ 27 đoạn) và `016` (02/2024/TT-BTTTT / 04/2023/TT-BTTTT; 250 đoạn, có khả năng đạt giới hạn chứng cứ). Đối chiếu toàn văn Điều 1, Điều 7 và quy tắc hiệu lực trước khi sửa parser hoặc nhãn loại quan hệ.
+- Dương tính dự kiến nhưng `NO_LEGAL_TEXT`: `005` (04/2024/TT-BQP).
+- Âm tính dự kiến `NO_MATCH`: 16 ca `011,013,015,017,019,020,021,022,023,024,025,026,027,028,029,030`. Chưa được Pháp chế gắn nhãn âm tính; `027` chỉ có 1 chứng cứ, không thể xem số đoạn trích này là bằng chứng đủ về khả năng bao phủ toàn văn.
+- Âm tính dự kiến nhưng `MATCH_PENDING_HUMAN`: `018` (12/2024/TT-BLĐTBXH so với 204/2004/NĐ-CP). Báo cáo chứa `source_section` là "Điều 3. Sửa đổi, bổ sung ... Thông tư 34/2016/TT-BLĐTBXH", khác số hiệu cặp được hỏi: **cần kiểm tra xem nghị định chỉ được dẫn chiếu trong điều khoản sửa đổi Thông tư khác**, không gán nhãn kết luận đúng hoặc sai từ đoạn tên Điều 3.
+- Âm tính dự kiến nhưng `NO_LEGAL_TEXT`: `012` (08/2024/TT-BYT), `014` (23/2024/TT-BTTTT).
+
+**Kiểm chứng URL nguồn trên Windows:** 26 đường dẫn `/van-ban/chi-tiet/` trong `results[].proposed_source_url` có cùng ID nguồn, host đúng allowlist, số hiệu hiển thị khớp và có vùng tài liệu gốc; đã thay **26 URL legacy** trong `docs/gd205_case_manifest.json`, giữ dấu vết `legacy_url` và `source_url_checked_at`. Một URL `001` đã là dạng mới; 3 ca lỗi vùng nguồn giữ URL cũ và gắn `CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED`. **Việc kiểm tra URL kỹ thuật không đồng nghĩa xác nhận quan hệ pháp lý.**
+
+**Ưu tiên tiếp theo:** bổ sung diagnostic pháp lý chỉ ở 5 ca `002,005,012,014,016` và kiểm tra khả năng khớp sai ở `018`; không sửa ồ ạt bộ parser trước khi có đoạn điều khoản tương ứng. Luôn giữ PR #16 Draft, không ghi Google Sheets/Apps Script/Planner production.
+
+## GD2.05 — Sửa quy tắc và hồi quy các ca bất thường (14/10/2026)
+
+Bổ sung test offline trong `tests/test_legal_effect_analysis.py` mô phỏng điều khoản đã khoanh vùng (không phải phép thử chạy live):
+- **002**: TT 07/2024/TT-BGDĐT sửa đổi Điều 7 và thay thế các phụ lục của TT 13/2021/TT-BGDĐT. Phân loại **sửa đổi, bổ sung một phần**, không chuyển thành thay thế toàn bộ chỉ vì chứa từ "thay thế".
+- **016**: TT 02/2024/TT-BTTTT ghi các thông tư cũ trước cụm `hết hiệu lực`; giữ nhiều chủ thể cũ, đề xuất `HET_THOI_HAN`, ngày hiệu lực để trống khi câu chỉ dẫn chiếu ngày hiệu lực của thông tư mới.
+- **018**: TT 12/2024/TT-BLĐTBXH sửa đổi TT 34/2016/TT-BLĐTBXH nhưng trong nội dung thay thế có dẫn chiếu NĐ 204/2004/NĐ-CP. Không tự suy ra nghị định được sửa đổi trực tiếp chỉ vì đứng sau `như sau:`.
+- **009**: cụm `một số nội dung` được nhận diện là sửa đổi **một phần**, không kết luận toàn bộ.
+
+Mã `legal_effect_analysis.py` được sửa thận trọng; mọi sự kiện mới vẫn `CHO_XAC_MINH`. `scripts/gd205_validate_official_samples.py` thêm `evidence_truncated`, `source_paragraph_count`, `source_diagnostic` (chỉ băng độ dài và cờ hiện diện cấu trúc, không lưu HTML, cookies hay token) để chẩn đoán 005/012/014. Giữ nguyên nguyên tắc không tự động dùng vùng `<body>` làm toàn văn. Tình trạng 004 (hai event cùng quan hệ) cần đối chiếu phạm vi trước khi gộp; chưa tự xoá sự kiện.
+
+**Chạy lại mục tiêu sau khi pull bản mới trên Windows clone thử nghiệm:**
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 2,4,5,9,12,14,16,18 --probe-same-id-modern --output output/gd205-targeted-recheck.json
+```
+Cần nhận file `output/gd205-targeted-recheck.json` để xác nhận cải thiện E2E. Không tự coi test offline hoặc các phát hiện là xác minh pháp lý; PR #16 Draft, không ghi production.
+
+## GD2.05 — Kết quả E2E xác định theo commit và lần xử lý tiếp (14/10/2026)
+
+Người vận hành nộp `gd205-targeted-recheck-v2.json`, commit `48b83aceff7866bdddc5fd7754df5771be7f980c`, manifest SHA256 `43339c3b097b635a005364b73eca5cdd5a714430ad9f2dde784b8b7ddc130e84`. Tám ca `2,4,5,9,12,14,16,18`: HTTP 200 và trích xuất 8/8; `MATCH_PENDING_HUMAN=6`, `NO_MATCH=2`; không có nhãn xác minh Pháp chế.
+
+- `002`: sửa đổi một phần, 27 chứng cứ, khớp Điều 1.
+- `004`: 7 event cùng quan hệ và văn bản cũ, xảy ra ở Điều 1 và Điều 2; **không tự hợp nhất vì có thể là nhiều phạm vi sửa đổi riêng**; cần kiểm tra trùng phạm vi thực sự.
+- `005`: 53 chứng cứ, tìm thấy sửa đổi Điều 1, URL cùng ItemID.
+- `009`: `scope_type=MOT_PHAN` sau sửa.
+- `012` và `014`: đã nhận diện vùng văn bản nguồn, dự đoán `NO_MATCH` trên cặp âm tính dự kiến; không xác nhận âm tính pháp lý.
+- `016`: phát hiện `HET_THOI_HAN` từ Điều 7 và ngày dự kiến 2024-05-15 nhưng **evidence_truncated=true** (giới hạn 250/666 đoạn), phải khắc phục trước khi nghiệm thu bao phủ.
+- `018`: vẫn dự đoán có sửa đổi `204/2004/NĐ-CP` ở đoạn 42 Điều 3 dù Điều 3 trực tiếp sửa `34/2016/TT-BLĐTBXH`. Cần đối chiếu câu dẫn chiếu và chặn nguồn gán sai quan hệ.
+
+Đã thêm test tái hiện câu trích dẫn/diễn giải sửa đổi, giới hạn dữ liệu; sửa bộ phân tích để không kéo ngữ cảnh `sửa đổi ... như sau:` sang số hiệu trong nội dung trích dẫn, tăng `MAX_EVIDENCE_BLOCKS` từ 250 lên 1000 để thử trên VBPL dài và không coi kết quả `NO_MATCH` là đầy đủ nếu chứng cứ bị cắt. Các giả thuyết đã sửa cần **kiểm chứng lại bằng E2E**. Kiểm thử CI trên commit `50fd034cfadd4350933253f9d1bfadab16c5ee1e` đã thành công.
+
+Bước thử Windows chỉ 3 ca để giảm công chạy:
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 4,16,18 --probe-same-id-modern --output output/gd205-targeted-recheck-v3.json
+```
+Gửi file JSON gốc cho người rà soát. Giữ `PENDING_HUMAN`, PR #16 Draft; không có hoạt động ghi production.
+
+## GD2.05 — Windows 3 ca trọng điểm, lượt v3 (14/10/2026)
+
+Người vận hành xác nhận `git pull` fast-forward từ `48b83ac` lên commit `a48d229`, sau đó chạy `--case-indexes 4,16,18 --probe-same-id-modern`. **Nguồn hiện có là summary do người vận hành gửi, chưa nhận `output/gd205-targeted-recheck-v3.json` chi tiết.**
+
+- `total_cases=3`, `cases_run=3`, `http_200=3`, `legal_text_extracted=3`.
+- `positive_candidate_cases=2`, `negative_control_candidate_cases=1`, `provisional_matches=2`, `negative_controls_without_match=1`, `result_counts={MATCH_PENDING_HUMAN:2,NO_MATCH:1}`. Vì chỉ có 2 ca dương tính (004 và 016) và 1 ca kiểm soát âm tính (018), có thể suy ra **004/016 MATCH_PENDING_HUMAN và 018 NO_MATCH** từ thống kê tổng hợp, nhưng cần JSON `results[]` để kiểm tra số event, căn cứ nguồn, `evidence_truncated`, `source_paragraph_count`, `git_revision` và `manifest_sha256`.
+- So với v2, ca 018 không còn quan hệ dương tính được phát hiện trong tập kiểm thử này. Đây là bằng chứng kỹ thuật về việc chặn liên kết có nguy cơ sai giữa TT 12/2024/TT-BLĐTBXH và NĐ 204/2004/NĐ-CP; **không khẳng định kết luận pháp lý về quan hệ văn bản**.
+- `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+
+**Bước tiếp:** yêu cầu người vận hành gửi tệp JSON `output/gd205-targeted-recheck-v3.json`; sau khi đối chiếu từng dòng, mới quyết định xử lý thêm ca 004 và tình trạng cắt chứng cứ ca 016. PR giữ trạng thái Draft, không tác động production.
+
+## GD2.05 — Đối chiếu JSON Windows v3 và 30 URL nguồn (14/10/2026)
+
+Đã nhận `gd205-targeted-recheck-v3.json` chạy từ commit `a48d2296d18054cb54f4db0d2311987042969af0` với manifest SHA256 `43339c3b097b635a005364b73eca5cdd5a714430ad9f2dde784b8b7ddc130e84`.
+
+- **004**, TT 04/2024/TT-BVHTTDL tác động TT 06/2017/TT-BVHTTDL: 42 khối chứng cứ/52 đoạn nguồn, `evidence_truncated=false`, có **7 event_key** khác nhau thuộc Điều 1 và Điều 2, cùng `relation=SUA_DOI_BO_SUNG`, `scope_type=MOT_PHAN`. Đây là 7 **chứng cứ/sự kiện đề xuất**, **không phải 7 quan hệ pháp lý được xác nhận**; cần xem đủ nội dung từng khoản để phân biệt các phạm vi thực sự và tránh ghi nhiều record tác động trùng khi chuyển pipeline.
+- **016**, TT 02/2024/TT-BTTTT tác động TT 04/2023/TT-BTTTT: 629 khối chứng cứ/666 đoạn nguồn, `evidence_truncated=false`, `MATCH_PENDING_HUMAN`, Điều 7, `HET_THOI_HAN`, ngày ứng viên 2024-05-15. Cần rà soát Điều 7 và các ngoại lệ trước khi kết luận hiệu lực pháp lý.
+- **018**, TT 12/2024/TT-BLĐTBXH đối chứng TT 204/2004/NĐ-CP: 193 khối chứng cứ/208 đoạn nguồn, `evidence_truncated=false`, `NO_MATCH`. Không còn lỗi nhận nhầm thể hiện trên cặp văn bản ở lượt v3; vẫn chưa xác định nhãn âm tính Pháp chế.
+- Cả ba `navigation.final_path_kind=MODERN_DETAIL`, `record_id_matches=true`, không chuyển hướng, `http_status=200`; `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+
+Bên cạnh đó, đã đối chiếu JSON kiểm thử v2 (commit `48b83ac`) cho **005, 012, 014**: `proposed_source_url` HTTPS VBPL đúng ID, title, extraction_status=ok, không truncated; cập nhật URL hiện đại cho 3 ca cuối cùng trong `docs/gd205_case_manifest.json` và giữ `legacy_url`. Bộ manifest hiện có **30/30 URL đã qua kiểm tra định danh nguồn ở máy Windows trên các lượt kiểm thử**, nhưng vẫn **30/30 `label_status=PENDING_HUMAN`**; đây là trạng thái nguồn, không phải chứng nhận tính đúng đắn quan hệ hiệu lực.
+
+**Tiếp theo:** chạy lại đủ 30 ca trên manifest đã chuẩn hóa để xác nhận khả năng trích xuất và hồi quy; sau đó xây dựng bộ nhãn đối chứng pháp lý, có bằng chứng và người xác minh. Không tự tạo trạng thái `HUMAN_VERIFIED` hay đồng bộ production. PR #16 tiếp tục Draft.
+
+## GD2.05 — Kết quả hồi quy 30 ca với manifest URL hiện đại (14/10/2026)
+
+Người vận hành xác nhận `git pull` từ `a48d229` lên `06ceb83` bằng fast-forward, sau đó chạy `scripts/gd205_validate_official_samples.py --output output/gd205-final-30.json` (không bật modern URL probe). Bằng chứng hiện tại **mới gồm JSON summary hiển thị trên PowerShell**; chưa có file `results[]` để định danh ca ngoại lệ hoặc xác minh `git_revision` trong báo cáo.
+
+- `total_cases=30`, `cases_run=30`, `http_200=30`, `legal_text_extracted=29` (**96,7%**).
+- `result_counts={MATCH_PENDING_HUMAN:11, NO_MATCH:17, INCOMPLETE_EVIDENCE:1, NO_LEGAL_TEXT:1}`. Có **28 ca với kết quả ứng viên có thể đối chiếu**, **2 ca chưa đầy đủ để đánh giá**, chưa đủ điều kiện nghiệm thu toàn bộ.
+- `positive_candidate_cases=11`, `negative_control_candidate_cases=19`, `negative_controls_without_match=17`. Từ summary, chỉ kết luận **17 ca thuộc nhóm âm tính dự kiến trả về NO_MATCH**; chưa thể biết 11 MATCH và 2 ngoại lệ nằm ở những ca nào khi chưa nhận `results[]`. Không coi nhãn ứng viên là ground truth.
+- `INCOMPLETE_EVIDENCE` là kết quả fail-closed khi chứng cứ bị cắt và không tìm được quan hệ dự kiến, không đồng nghĩa `NO_MATCH`. `NO_LEGAL_TEXT` là tình trạng chưa xác thực được vùng toàn văn dù HTTP 200, không được coi âm tính pháp lý.
+- `human_labelled_cases=0`, `metrics_eligible=false`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+
+**Bước tiếp:** nhận tệp `output/gd205-final-30.json`; trước tiên xác định ID, `source_diagnostic`, `navigation`, `evidence_truncated` của 2 ngoại lệ, đối chiếu kết quả 11 dương tính và 17 âm tính, rồi chỉ chạy lại các ca cần xử lý. Không quy lỗi cho hộp thoại cookie nếu chưa có bằng chứng. PR #16 giữ Draft, mọi trạng thái quan hệ `PENDING_HUMAN`, không ghi production.
+
+## GD2.05 — Phân tích JSON 30 ca và khắc phục ngoại lệ 015/025 (14/10/2026)
+
+Đã đọc trực tiếp `gd205-final-30.json`, commit Windows `06ceb83b6d34436fd5f8a699220bf64ac884b1a4`, manifest SHA256 `82a8b6c904495f13eb9ee0a7d6160156316ca46c44c6048ec4dec3207c147e1e`. Kết quả chính xác theo `results[]`: toàn bộ **11 dương tính ứng viên** trả `MATCH_PENDING_HUMAN`; **17/19 âm tính ứng viên** trả `NO_MATCH`; hai ngoại lệ đều thuộc nhóm âm tính ứng viên:
+- `GD205-015-104-2024-TT-BQP`: `INCOMPLETE_EVIDENCE`, `evidence_blocks=1000`, `source_paragraph_count=2291`, `evidence_truncated=true`, HTTP 200, VBPL detail URL đúng record ID. Giới hạn kỹ thuật cũ dừng việc phân tích giữa chừng; **không phải bằng chứng có quan hệ pháp lý**.
+- `GD205-025-04-2024-TT-BXD`: `NO_LEGAL_TEXT`, `document_root_not_found`, HTML nhiều hơn 10.000 ký tự, URL/ID/title đúng. Đã từng trích xuất được 20 khối ở lần kiểm thử trước, nên có khả năng trang tải không ổn định. Không đủ chứng cứ quy lỗi cho popup cookie. Hai cờ `source_diagnostic` trước đó sử dụng regex bị escape thừa; được sửa để cung cấp tín hiệu cấu trúc đúng.
+
+Đã tăng `MAX_EVIDENCE_BLOCKS` từ 1.000 lên **3.000** (còn giới hạn để bảo vệ tài nguyên, các ca tràn tiếp tục `INCOMPLETE_EVIDENCE`), thêm một lần `page.reload` có giới hạn chỉ khi nhận `NO_LEGAL_TEXT` trên trang chi tiết HTTPS hợp lệ, không tương tác cookie, không thay đổi vùng trích xuất fail-closed; bổ sung hồi quy với nguồn hơn 2.000 đoạn. `NO_MATCH` chỉ là kết quả của cặp quan hệ được kiểm tra, không phải xác nhận tình trạng hiệu lực.
+
+Chạy lại **2 ca** trên Windows sau khi pull branch:
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 15,25 --output output/gd205-15-25-recheck.json
+```
+Gửi file JSON chi tiết để phân tích `source_retry`, `evidence_truncated`, `matches`. Không thay đổi `PENDING_HUMAN`, không ghi production; PR #16 vẫn Draft.
+
+## GD2.05 — Windows recheck 015 và 025 (14/10/2026)
+
+Người vận hành đã `git pull` thành công, fast-forward từ `06ceb83` đến `8293b84`, sau đó chạy `--case-indexes 15,25 --output output/gd205-15-25-recheck.json`. Bằng chứng nhận được **mới là summary trên PowerShell**, không phải chi tiết `results[]` có `git_revision` và `source_retry`.
+
+- `total_cases=2`, `cases_run=2`, `http_200=2`, `legal_text_extracted=2`.
+- Cả hai đều là `NEGATIVE_CONTROL_CANDIDATE`; `result_counts={NO_MATCH:2}`, `provisional_matches=0`, `negative_controls_without_match=2`.
+- So với lượt toàn bộ trước: **015** từng `INCOMPLETE_EVIDENCE` do 1.000/2.291 chứng cứ; **025** từng `NO_LEGAL_TEXT` do thiếu root. Kết quả mới tương thích với việc các sửa đổi nguồn dài / reload đã khắc phục biểu hiện lỗi, nhưng summary **không thể chứng minh** số block đầy đủ, `evidence_truncated` cụ thể hoặc việc retry ở 025 có thực sự được gọi.
+- `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `metrics_eligible=false`, `legal_confirmation=false`, `production_writes=false`. `NO_MATCH` không phải bằng chứng pháp lý về hiệu lực.
+- Lượt 30 ca trước chạy từ commit `06ceb83`, không phải `8293b84`; **không ghi nhận 30/30 trên một phiên bản mới duy nhất** từ việc cộng dồn kết quả hai đợt.
+
+**Tiếp theo:** nhận file `output/gd205-15-25-recheck.json` để xác nhận `git_revision`, `evidence_truncated`, `evidence_blocks`, `source_paragraph_count` và `source_retry`; sau đó có thể chạy một lượt full 30 trên một commit để cố định baseline kỹ thuật, trước khi lập phiếu nhãn `HUMAN_VERIFIED` do người rà soát pháp lý độc lập xác lập. Giữ PR #16 Draft, không ghi production.
+
+## GD2.05 — Đối chiếu tệp JSON 015/025, commit 8293b84 (14/10/2026)
+
+Đã nhận file `gd205-15-25-recheck.json`, `generated_at=2026-10-14T08:21:34+00:00`, `git_revision=8293b846b5bae7596cdd51802f80851eeeb41c71`, `manifest_sha256=82a8b6c904495f13eb9ee0a7d6160156316ca46c44c6048ec4dec3207c147e1e`. Dữ liệu được kiểm chứng theo từng dòng `results[]`:
+
+- **GD205-015**: TT 104/2024/TT-BQP, `http_status=200`, `extraction_status=ok`, `source_paragraph_count=2291`, `evidence_blocks=1838`, `evidence_truncated=false`, `result=NO_MATCH`, `record_id_matches=true`. Giới hạn 1.000 chứng cứ cũ không còn gây `INCOMPLETE_EVIDENCE` trên ca này.
+- **GD205-025**: TT 04/2024/TT-BXD, `http_status=200`, `extraction_status=ok`, `source_paragraph_count=165`, `evidence_blocks=20`, `evidence_truncated=false`, `result=NO_MATCH`, `record_id_matches=true`. Không có `source_retry` trong báo cáo: không đủ căn cứ kết luận lần này có phải thực hiện tải lại trang hoặc chịu tác động từ hộp thoại cookie.
+- 2/2 ca đang là `NEGATIVE_CONTROL_CANDIDATE` và `PENDING_HUMAN`; `classification_precision` và `classification_recall` vẫn null. Không coi `NO_MATCH` là kết luận pháp lý.
+
+**Trạng thái nghiệm thu:** đã xử lý biểu hiện hai ngoại lệ trên Windows, chưa chứng minh đủ 30/30 kết quả trên **một lượt chạy từ cùng commit 8293b84**. Nên chạy full 30 cuối để tạo baseline thống nhất, sau đó tạo phiếu Pháp chế xác minh `HUMAN_VERIFIED` kèm đường dẫn nguồn, điều/khoản, mục tiêu và nhận xét. PR vẫn Draft; không ghi production.
+
+## GD2.05 — Operator-reported full baseline 30 ca (14/10/2026)
+
+Người vận hành báo đã `git pull` fast-forward từ `8293b84` lên `4d8a7ce` và chạy bộ 30 ca. **Bằng chứng hiện nhận là summary hiển thị ở PowerShell; chưa có file JSON baseline chi tiết của lượt này**.
+
+- `total_cases=30`, `cases_run=30`, `http_200=30`, `legal_text_extracted=30`.
+- `positive_candidate_cases=11`, `negative_control_candidate_cases=19`, `provisional_matches=11`, `negative_controls_without_match=19`, `result_counts={MATCH_PENDING_HUMAN:11, NO_MATCH:19}`. Không có `NO_LEGAL_TEXT`, `INCOMPLETE_EVIDENCE` hay `BROWSER_ERROR` trong summary.
+- Đây là **đạt các tiêu chí đầu ra kỹ thuật trên summary theo phân nhóm ứng viên**, không phải accuracy=100%, không bảo đảm loại bỏ mọi sai sót điều/khoản, phạm vi và ngày hiệu lực. Dữ liệu `results[].evidence_truncated` và `git_revision` của lượt baseline cuối vẫn cần kiểm tra từ file.
+- `human_labelled_cases=0`, `metrics_eligible=false`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+- Chưa thay nhãn `PENDING_HUMAN`, chưa cho phép ghi production, PR #16 vẫn Draft.
+
+**Bước kế tiếp**: nhận `output/gd205-baseline-30.json`; kiểm tra `git_revision`, manifest hash, chứng cứ theo từng ca và dựng bảng 30 dòng đối chứng Pháp chế, bao gồm văn bản nguồn, văn bản đích, loại quan hệ, vị trí điều khoản, phạm vi, diễn giải kiểm chứng, reviewer, ngày duyệt và trường `HUMAN_VERIFIED` chỉ nhập sau khi có xác minh độc lập. Không tự gán truth labels từ nhãn dự kiến.

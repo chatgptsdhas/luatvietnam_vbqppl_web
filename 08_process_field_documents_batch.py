@@ -14,6 +14,9 @@ from urllib.error import HTTPError, URLError
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
+from legal_effect_analysis import analyze_new_document
+from legal_effect_content import extract_legal_effect_evidence
+
 
 def setup_utf8_stdio():
     try:
@@ -1024,6 +1027,10 @@ def process_document(page, doc: dict, config: dict) -> dict:
     # nguon co day du thong tin.
     lines = get_body_lines(page)
     current_doc = extract_current_document_info(lines)
+    # GD2.01: Capture only clauses within an identifiable official text root.
+    # Never treat navigation/editorial summary/body as legal-effect evidence.
+    legal_content = extract_legal_effect_evidence(page)
+    legal_evidence = legal_content.get("blocks", [])
 
     click_luoc_do_tab(page)
     expand_luoc_do_sections(page)
@@ -1073,6 +1080,20 @@ def process_document(page, doc: dict, config: dict) -> dict:
         "luoc_do_data": relationships,
         "luoc_do_payload": luoc_do_payload,
         "luoc_do_extraction_meta": extraction_meta,
+        "legal_content_extraction_meta": {
+            "status": legal_content.get("status", "source_unavailable"),
+            "root_selector": legal_content.get("root_selector", ""),
+            "paragraph_count": legal_content.get("paragraph_count", 0),
+            "evidence_count": legal_content.get("evidence_count", 0),
+            "truncated": bool(legal_content.get("truncated", False)),
+        },
+        "legal_effect_evidence": legal_evidence,
+        "legal_effect_candidates": analyze_new_document({
+            "url": url,
+            "source_doc_number": doc.get("doc_number_from_list", "") or current_doc.get("so_hieu", ""),
+            "current_doc": current_doc,
+            "luoc_do_data": relationships,
+        }, lines=legal_evidence),
     }
 
 
@@ -1102,6 +1123,7 @@ def main():
 
     results = []
     payloads = []
+    legal_effect_candidates = []
     request_debug_rows = []
 
     with sync_playwright() as p:
@@ -1116,6 +1138,7 @@ def main():
 
             print(f"[{idx}/{len(docs)}] Xử lý: {sanitize_diagnostic_data(url, diagnostic_credentials)}")
             processed = process_document(page, doc, config)
+            legal_effect_candidates.extend(processed.get("legal_effect_candidates", []))
             payload = build_payload(
                 processed,
                 config=config,
@@ -1176,6 +1199,7 @@ def main():
         "total_input": len(docs),
         "total_payloads": len(payloads),
         "payloads": payloads,
+        "legal_effect_candidates": legal_effect_candidates,
         "results": results,
     }
 
