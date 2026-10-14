@@ -368,3 +368,15 @@ git pull origin feat/gd2-legal-effect-analysis-20261012
 python scripts/gd205_validate_official_samples.py --case-indexes 15,25 --output output/gd205-15-25-recheck.json
 ```
 Gửi file JSON chi tiết để phân tích `source_retry`, `evidence_truncated`, `matches`. Không thay đổi `PENDING_HUMAN`, không ghi production; PR #16 vẫn Draft.
+
+## GD2.05 — Windows recheck 015 và 025 (14/10/2026)
+
+Người vận hành đã `git pull` thành công, fast-forward từ `06ceb83` đến `8293b84`, sau đó chạy `--case-indexes 15,25 --output output/gd205-15-25-recheck.json`. Bằng chứng nhận được **mới là summary trên PowerShell**, không phải chi tiết `results[]` có `git_revision` và `source_retry`.
+
+- `total_cases=2`, `cases_run=2`, `http_200=2`, `legal_text_extracted=2`.
+- Cả hai đều là `NEGATIVE_CONTROL_CANDIDATE`; `result_counts={NO_MATCH:2}`, `provisional_matches=0`, `negative_controls_without_match=2`.
+- So với lượt toàn bộ trước: **015** từng `INCOMPLETE_EVIDENCE` do 1.000/2.291 chứng cứ; **025** từng `NO_LEGAL_TEXT` do thiếu root. Kết quả mới tương thích với việc các sửa đổi nguồn dài / reload đã khắc phục biểu hiện lỗi, nhưng summary **không thể chứng minh** số block đầy đủ, `evidence_truncated` cụ thể hoặc việc retry ở 025 có thực sự được gọi.
+- `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `metrics_eligible=false`, `legal_confirmation=false`, `production_writes=false`. `NO_MATCH` không phải bằng chứng pháp lý về hiệu lực.
+- Lượt 30 ca trước chạy từ commit `06ceb83`, không phải `8293b84`; **không ghi nhận 30/30 trên một phiên bản mới duy nhất** từ việc cộng dồn kết quả hai đợt.
+
+**Tiếp theo:** nhận file `output/gd205-15-25-recheck.json` để xác nhận `git_revision`, `evidence_truncated`, `evidence_blocks`, `source_paragraph_count` và `source_retry`; sau đó có thể chạy một lượt full 30 trên một commit để cố định baseline kỹ thuật, trước khi lập phiếu nhãn `HUMAN_VERIFIED` do người rà soát pháp lý độc lập xác lập. Giữ PR #16 Draft, không ghi production.
