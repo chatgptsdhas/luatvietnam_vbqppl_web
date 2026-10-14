@@ -279,3 +279,20 @@ Chỉ sau khi người vận hành cung cấp kết quả mới được đánh 
 **Kiểm chứng URL nguồn trên Windows:** 26 đường dẫn `/van-ban/chi-tiet/` trong `results[].proposed_source_url` có cùng ID nguồn, host đúng allowlist, số hiệu hiển thị khớp và có vùng tài liệu gốc; đã thay **26 URL legacy** trong `docs/gd205_case_manifest.json`, giữ dấu vết `legacy_url` và `source_url_checked_at`. Một URL `001` đã là dạng mới; 3 ca lỗi vùng nguồn giữ URL cũ và gắn `CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED`. **Việc kiểm tra URL kỹ thuật không đồng nghĩa xác nhận quan hệ pháp lý.**
 
 **Ưu tiên tiếp theo:** bổ sung diagnostic pháp lý chỉ ở 5 ca `002,005,012,014,016` và kiểm tra khả năng khớp sai ở `018`; không sửa ồ ạt bộ parser trước khi có đoạn điều khoản tương ứng. Luôn giữ PR #16 Draft, không ghi Google Sheets/Apps Script/Planner production.
+
+## GD2.05 — Sửa quy tắc và hồi quy các ca bất thường (14/10/2026)
+
+Bổ sung test offline trong `tests/test_legal_effect_analysis.py` mô phỏng điều khoản đã khoanh vùng (không phải phép thử chạy live):
+- **002**: TT 07/2024/TT-BGDĐT sửa đổi Điều 7 và thay thế các phụ lục của TT 13/2021/TT-BGDĐT. Phân loại **sửa đổi, bổ sung một phần**, không chuyển thành thay thế toàn bộ chỉ vì chứa từ "thay thế".
+- **016**: TT 02/2024/TT-BTTTT ghi các thông tư cũ trước cụm `hết hiệu lực`; giữ nhiều chủ thể cũ, đề xuất `HET_THOI_HAN`, ngày hiệu lực để trống khi câu chỉ dẫn chiếu ngày hiệu lực của thông tư mới.
+- **018**: TT 12/2024/TT-BLĐTBXH sửa đổi TT 34/2016/TT-BLĐTBXH nhưng trong nội dung thay thế có dẫn chiếu NĐ 204/2004/NĐ-CP. Không tự suy ra nghị định được sửa đổi trực tiếp chỉ vì đứng sau `như sau:`.
+- **009**: cụm `một số nội dung` được nhận diện là sửa đổi **một phần**, không kết luận toàn bộ.
+
+Mã `legal_effect_analysis.py` được sửa thận trọng; mọi sự kiện mới vẫn `CHO_XAC_MINH`. `scripts/gd205_validate_official_samples.py` thêm `evidence_truncated`, `source_paragraph_count`, `source_diagnostic` (chỉ băng độ dài và cờ hiện diện cấu trúc, không lưu HTML, cookies hay token) để chẩn đoán 005/012/014. Giữ nguyên nguyên tắc không tự động dùng vùng `<body>` làm toàn văn. Tình trạng 004 (hai event cùng quan hệ) cần đối chiếu phạm vi trước khi gộp; chưa tự xoá sự kiện.
+
+**Chạy lại mục tiêu sau khi pull bản mới trên Windows clone thử nghiệm:**
+```powershell
+git pull origin feat/gd2-legal-effect-analysis-20261012
+python scripts/gd205_validate_official_samples.py --case-indexes 2,4,5,9,12,14,16,18 --probe-same-id-modern --output output/gd205-targeted-recheck.json
+```
+Cần nhận file `output/gd205-targeted-recheck.json` để xác nhận cải thiện E2E. Không tự coi test offline hoặc các phát hiện là xác minh pháp lý; PR #16 Draft, không ghi production.
