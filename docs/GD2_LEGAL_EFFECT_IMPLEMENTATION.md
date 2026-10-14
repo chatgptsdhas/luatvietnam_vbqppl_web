@@ -328,3 +328,16 @@ Người vận hành xác nhận `git pull` fast-forward từ `48b83ac` lên com
 - `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
 
 **Bước tiếp:** yêu cầu người vận hành gửi tệp JSON `output/gd205-targeted-recheck-v3.json`; sau khi đối chiếu từng dòng, mới quyết định xử lý thêm ca 004 và tình trạng cắt chứng cứ ca 016. PR giữ trạng thái Draft, không tác động production.
+
+## GD2.05 — Đối chiếu JSON Windows v3 và 30 URL nguồn (14/10/2026)
+
+Đã nhận `gd205-targeted-recheck-v3.json` chạy từ commit `a48d2296d18054cb54f4db0d2311987042969af0` với manifest SHA256 `43339c3b097b635a005364b73eca5cdd5a714430ad9f2dde784b8b7ddc130e84`.
+
+- **004**, TT 04/2024/TT-BVHTTDL tác động TT 06/2017/TT-BVHTTDL: 42 khối chứng cứ/52 đoạn nguồn, `evidence_truncated=false`, có **7 event_key** khác nhau thuộc Điều 1 và Điều 2, cùng `relation=SUA_DOI_BO_SUNG`, `scope_type=MOT_PHAN`. Đây là 7 **chứng cứ/sự kiện đề xuất**, **không phải 7 quan hệ pháp lý được xác nhận**; cần xem đủ nội dung từng khoản để phân biệt các phạm vi thực sự và tránh ghi nhiều record tác động trùng khi chuyển pipeline.
+- **016**, TT 02/2024/TT-BTTTT tác động TT 04/2023/TT-BTTTT: 629 khối chứng cứ/666 đoạn nguồn, `evidence_truncated=false`, `MATCH_PENDING_HUMAN`, Điều 7, `HET_THOI_HAN`, ngày ứng viên 2024-05-15. Cần rà soát Điều 7 và các ngoại lệ trước khi kết luận hiệu lực pháp lý.
+- **018**, TT 12/2024/TT-BLĐTBXH đối chứng TT 204/2004/NĐ-CP: 193 khối chứng cứ/208 đoạn nguồn, `evidence_truncated=false`, `NO_MATCH`. Không còn lỗi nhận nhầm thể hiện trên cặp văn bản ở lượt v3; vẫn chưa xác định nhãn âm tính Pháp chế.
+- Cả ba `navigation.final_path_kind=MODERN_DETAIL`, `record_id_matches=true`, không chuyển hướng, `http_status=200`; `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+
+Bên cạnh đó, đã đối chiếu JSON kiểm thử v2 (commit `48b83ac`) cho **005, 012, 014**: `proposed_source_url` HTTPS VBPL đúng ID, title, extraction_status=ok, không truncated; cập nhật URL hiện đại cho 3 ca cuối cùng trong `docs/gd205_case_manifest.json` và giữ `legacy_url`. Bộ manifest hiện có **30/30 URL đã qua kiểm tra định danh nguồn ở máy Windows trên các lượt kiểm thử**, nhưng vẫn **30/30 `label_status=PENDING_HUMAN`**; đây là trạng thái nguồn, không phải chứng nhận tính đúng đắn quan hệ hiệu lực.
+
+**Tiếp theo:** chạy lại đủ 30 ca trên manifest đã chuẩn hóa để xác nhận khả năng trích xuất và hồi quy; sau đó xây dựng bộ nhãn đối chứng pháp lý, có bằng chứng và người xác minh. Không tự tạo trạng thái `HUMAN_VERIFIED` hay đồng bộ production. PR #16 tiếp tục Draft.
