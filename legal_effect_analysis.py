@@ -71,7 +71,7 @@ def parse_iso_date(value: Any) -> str:
 # GD2.02: relationships are suggestions, never verified legal conclusions.
 # Scope references must occur in the action clause, not in "Điều 5." headings.
 PARTIAL_SCOPE = re.compile(
-    r"\b(?:một\s+phần|một\s+số\s+(?:điều|khoản|điểm|quy\s+định)|"
+    r"\b(?:một\s+phần|một\s+số\s+(?:điều|khoản|điểm|quy\s+định|nội\s+dung)|"
     r"(?:điểm\s+[a-zđ](?:\s+khoản\s+\d+)?|khoản\s+\d+|điều\s+\d+)|"
     r"quy\s+định\s+tại|cụm\s+từ|từ\s+ngữ|biểu\s+mẫu|phụ\s+lục\s+[IVXLCDM\d]+)\b",
     re.IGNORECASE,
@@ -162,6 +162,11 @@ def relation_kind(text: str) -> str:
     # Multiple distinct legal actions in one unstructured paragraph are
     # ambiguous: retain a candidate but never interpret as whole repeal.
     if len(tokens) > 1:
+        # Updating provisions and replacing a *specified appendix* are
+        # cumulative partial amendments, never full-document replacement.
+        _, mixed_scope = _scope(content)
+        if tokens == {"sua_doi", "thay_the"} and mixed_scope == "MOT_PHAN":
+            return "SUA_DOI_BO_SUNG"
         return "KHAC"
     token = next(iter(tokens))
     _, scope_type = _scope(content)
@@ -241,6 +246,17 @@ def _number_roles(text: str, current_number: str, kind: str) -> list[tuple[str, 
     verb = ACTION_TOKEN.search(content)
     prefix, suffix = content[:verb.start()], content[verb.end():]
     before, after = document_numbers(prefix), document_numbers(suffix)
+    # A substantive amendment can quote the text that will be inserted.
+    # References following "như sau:" within quoted replacement text do
+    # not name the direct object of the amending instrument.
+    if kind == "SUA_DOI_BO_SUNG":
+        quotation = re.search(r"\bnhư\s+sau\s*:", suffix, re.I)
+        if quotation:
+            after = document_numbers(suffix[:quotation.start()])
+    # In an expiry clause, the subjects precede "hết hiệu lực".
+    if kind == "HET_THOI_HAN" and before and not after:
+        return [(number, current_number, "listed_old")
+                for number in before if number != current_number]
     passive = bool(PASSIVE_ACTION.search(content[max(0, verb.start()-16):verb.end()+4]))
     agent = re.search(r"\b(?:bởi|bằng)\b", suffix, re.IGNORECASE)
     output = []
