@@ -202,3 +202,13 @@ Người vận hành gửi kết quả `output/gd205-validation.json` (chỉ bá
 - Bộ thử offline bổ sung trường hợp âm tính thật, dương tính giả, lỗi nguồn và tập đã gắn nhãn đủ 30. Các phép thử này mô phỏng, không chứng minh độ chính xác pháp lý.
 
 **Mức độ sẵn sàng:** PR #16 Draft; thí điểm 1 trường hợp Windows thành công; chờ bổ sung 29 URL hợp lệ và nhãn được rà soát. Không ghi Google Sheets/Planner, không deploy production.
+
+## GD2.05 — Bộ 30 trang VBPL kiểm thử (14/10/2026)
+
+- Đã tạo **30 ca trên 30 hồ sơ VBPL có ID URL khác nhau** tại `docs/gd205_case_manifest.json`. Gồm **11 ca dự kiến dương tính** (`POSITIVE_CANDIDATE`) và **19 ca thăm dò kiểm soát âm tính** (`NEGATIVE_CONTROL_CANDIDATE`).
+- URL được đối chiếu theo kết quả tìm kiếm nguồn VBPL công khai; trạng thái `PENDING_HUMAN` áp dụng đồng loạt. **Chưa phải 30 ca kết quả pháp chế đã xác minh**; các mẫu âm tính có thể có quan hệ khác trong điều khoản và cần được Pháp chế phân xử.
+- Mỗi ca có URL cụ thể, số hiệu văn bản đang quét, số hiệu cặp tham chiếu, loại quan hệ thăm dò và `review_hint` cho người rà soát. Không gán `expected_present=true/false` trước khi đối chứng pháp chế.
+- Các ca quan trọng: TT 05/2021/TT-BGDĐT sửa đổi 15/2020/TT-BGDĐT; TT 07/2024/TT-BGDĐT sửa đổi 13/2021/TT-BGDĐT; TT 02/2024/TT-BTTTT có khoản hết hiệu lực và chuyển tiếp; TT 08/2024/TT-BYT bãi bỏ một phần; TT 15/2024/TT-BLĐTBXH bãi bỏ văn bản; TT 104/2024/TT-BQP thay thế/bãi bỏ mẫu biểu. Các trường hợp chỉ nêu nghị định tại phần căn cứ làm ca âm tính thăm dò, không khẳng định không có tác động nếu chưa rà soát toàn văn.
+- Lưu ý: `HET_THOI_HAN` là nhãn thăm dò cho TT 02/2024/TT-BTTTT với quy định hết hiệu lực văn bản cũ; cần đối chiếu phân loại nghiệp vụ khi có bằng chứng, tránh suy luận hết thời hạn đồng nghĩa bãi bỏ.
+- Chạy **chỉ đọc**, chỉ trên bản clone thử nghiệm Windows đã hoạt động: `git pull origin feat/gd2-legal-effect-analysis-20261012`, sau đó `python scripts/gd205_validate_official_samples.py`. Đầu ra `output/gd205-validation.json`, bao gồm tất cả trạng thái đọc, quan hệ, lỗi truy cập và thống kê chưa được xác nhận.
+- Không ghi production, không sửa token, không deploy, không gộp PR #16. Giai đoạn tiếp theo: kiểm tra đủ 30 ca Windows; căn cứ trích từ điều khoản, nhãn đối chứng Pháp chế; sửa parser nếu có lỗi; kiểm tra tỷ lệ đạt tối thiểu được phê duyệt.
