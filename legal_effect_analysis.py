@@ -393,7 +393,8 @@ def analyze_new_document(doc: dict[str, Any], lines: list[Any] | None = None) ->
 
         kind = relation_kind(text)
         nums = document_numbers(text)
-        if kind and not nums and ENUMERATION_CONTEXT.search(text):
+        if (kind and not nums and ENUMERATION_CONTEXT.search(text)
+                and not re.search(r"\bnhư\s+sau\s*:", text, re.I)):
             active_context = (text, section, idx)
             continue
 
@@ -406,6 +407,11 @@ def analyze_new_document(doc: dict[str, Any], lines: list[Any] | None = None) ->
             active_context = None
 
         if not kind or not nums:
+            continue
+        # A referenced legal document in quoted/amended replacement wording
+        # is not itself the direct object of the source document's amendment.
+        if (kind == "SUA_DOI_BO_SUNG" and text.lstrip().startswith(("-", "“", '"'))
+                and not re.search(r"\b(?:sửa\s+đổi|bổ\s+sung)\b", text, re.I)):
             continue
         scope, scope_type = _scope(origin_text)
         # Do not infer full-document replacement from affected "khoản/điều".
