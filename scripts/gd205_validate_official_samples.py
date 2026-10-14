@@ -263,7 +263,8 @@ def evaluate_case(case: dict, html: str, title: str,
         for e in matching[:12]
     ]
     # 'MATCH_PENDING_HUMAN' means only an observed provisional candidate.
-    output["result"] = "MATCH_PENDING_HUMAN" if matching else "NO_MATCH"
+    output["result"] = ("INCOMPLETE_EVIDENCE" if not matching and output["evidence_truncated"]
+                        else "MATCH_PENDING_HUMAN" if matching else "NO_MATCH")
     return output
 
 
@@ -281,7 +282,8 @@ def aggregate(cases: list[dict], results: list[dict]) -> dict:
     missing = []
     for case in labelled:
         row = by_id.get(case["id"])
-        if row is None or row["result"] not in ("MATCH_PENDING_HUMAN", "NO_MATCH"):
+        if (row is None or row["result"] not in ("MATCH_PENDING_HUMAN", "NO_MATCH")
+                or row.get("evidence_truncated", False)):
             missing.append(case["id"])
         else:
             evaluable.append((case, row))
