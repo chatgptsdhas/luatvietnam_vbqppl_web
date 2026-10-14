@@ -67,6 +67,19 @@ class ExtractionTests(unittest.TestCase):
         self.assertGreater(r["evidence_count"], 250)
         self.assertFalse(r["truncated"])
 
+    def test_2291_paragraph_source_within_bounded_budget(self):
+        html = ('<div class="doc-content">'
+                '<p>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>'
+                '<p>Điều 1. Sửa đổi, bổ sung</p>'
+                + ''.join('<p>Sửa đổi quy định tại Thông tư 04/2020/TT-BQP.</p>'
+                          for _ in range(2250))
+                + '<p>Điều 2. Hiệu lực thi hành</p>'
+                + '<p>Thông tư này có hiệu lực từ ngày 01/01/2027.</p></div>')
+        result = extract(html)
+        self.assertEqual(result["status"], "ok")
+        self.assertGreater(result["evidence_count"], 2000)
+        self.assertFalse(result["truncated"])
+
     def test_missing_or_empty(self):
         self.assertEqual(extract('')['status'],'source_unavailable')
         self.assertEqual(extract('<div></div>')['status'],'document_root_not_found')
