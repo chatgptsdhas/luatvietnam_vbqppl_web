@@ -136,6 +136,67 @@ class LegalEffectDisambiguationTest(unittest.TestCase):
         self.assertEqual(c[0]["relation_type"], "BAI_BO_TOAN_BO")
         self.assertEqual(c[0]["evidence_location"], "doc:p[11]")
 
+    def test_gd205_002_mixed_amendment_and_annex_replacement(self):
+        """Official Article 1 amends Article 7 and replaces annexes, not the entire Circular."""
+        doc = source(number="07/2024/TT-BGDĐT")
+        section = ("Điều 1. Sửa đổi, bổ sung Điều 7 và thay thế Phụ lục II, "
+                   "Phụ lục III của Thông tư số 13/2021/TT-BGDĐT ngày 15 tháng 4 năm 2021")
+        events = analyze_new_document(doc, [
+            {"text": section, "section_heading": section, "section_kind": "article",
+             "location": "official:p[12]"},
+        ])
+        matching = [e for e in events if e["old_number"] == "13/2021/TT-BGDĐT"
+                    and e["new_number"] == "07/2024/TT-BGDĐT"]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0]["relation_type"], "SUA_DOI_BO_SUNG")
+        self.assertEqual(matching[0]["scope_type"], "MOT_PHAN")
+        self.assertEqual(matching[0]["verification_status"], "CHO_XAC_MINH")
+
+    def test_gd205_016_multiple_circulars_expire_before_action_verb(self):
+        """A cited list before 'hết hiệu lực' must not disappear."""
+        doc = source(number="02/2024/TT-BTTTT")
+        section = "Điều 7. Hiệu lực thi hành"
+        clause = ("2. Thông tư số 04/2023/TT-BTTTT ngày 31 tháng 5 năm 2023 "
+                  "và Thông tư số 10/2023/TT-BTTTT ngày 05 tháng 9 năm 2023 "
+                  "hết hiệu lực thi hành kể từ ngày Thông tư này có hiệu lực thi hành.")
+        events = analyze_new_document(doc, [
+            {"text": clause, "section_heading": section, "section_kind": "article",
+             "location": "official:p[71]"},
+        ])
+        matched = {(e["old_number"], e["new_number"], e["relation_type"])
+                   for e in events}
+        self.assertIn(("04/2023/TT-BTTTT", "02/2024/TT-BTTTT", "HET_THOI_HAN"), matched)
+        self.assertIn(("10/2023/TT-BTTTT", "02/2024/TT-BTTTT", "HET_THOI_HAN"), matched)
+        self.assertTrue(all(not e["effect_date_candidate"] for e in events))
+
+    def test_gd205_018_quoted_decree_citation_not_a_direct_amendment(self):
+        """The amended Circular is 34/2016; salary decree 204/2004 is only referenced."""
+        doc = source(number="12/2024/TT-BLĐTBXH")
+        heading = ("Điều 3. Sửa đổi, bổ sung một số điều của "
+                   "Thông tư số 34/2016/TT-BLĐTBXH")
+        quote = ("2. Sửa đổi, bổ sung điểm c khoản 3 Điều 5 như sau: "
+                 "“c) Doanh thu không bù đắp được chi phí thì phải giảm mức tiền lương, "
+                 "thấp nhất theo Nghị định số 204/2004/NĐ-CP nhân với mức lương cơ sở.”")
+        events = analyze_new_document(doc, [
+            {"text": heading, "section_heading": heading, "section_kind": "article",
+             "location": "official:p[38]"},
+            {"text": quote, "section_heading": heading, "section_kind": "article",
+             "location": "official:p[42]"},
+        ])
+        self.assertTrue(any(e["old_number"] == "34/2016/TT-BLĐTBXH" for e in events))
+        self.assertFalse(any(e["old_number"] == "204/2004/NĐ-CP" for e in events))
+
+    def test_gd205_009_some_program_content_is_partial_scope(self):
+        doc = source(number="17/2025/TT-BGDĐT")
+        heading = ("Điều 1. Sửa đổi, bổ sung một số nội dung trong Chương trình "
+                   "giáo dục phổ thông ban hành kèm theo Thông tư số 32/2018/TT-BGDĐT")
+        events = analyze_new_document(doc, [
+            {"text": heading, "section_heading": heading, "section_kind": "article",
+             "location": "official:p[12]"},
+        ])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["scope_type"], "MOT_PHAN")
+
     def test_ambiguous_mixed_actions_unverified(self):
         c = analyze_new_document(source(), ["Bãi bỏ và sửa đổi Thông tư 55/2011/TT-BGDĐT."])
         self.assertEqual(c[0]["relation_type"], "KHAC")
