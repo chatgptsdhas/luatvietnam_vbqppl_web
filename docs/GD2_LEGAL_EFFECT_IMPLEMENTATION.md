@@ -263,3 +263,19 @@ Chỉ sau khi người vận hành cung cấp kết quả mới được đánh 
 - Mọi URL `proposed_source_url` phải được đối chiếu với **đúng ID/số hiệu và toàn văn nguồn**, không tự sửa manifest từ con số summary. Không ghi Apps Script/Sheets/Planner; PR #16 tiếp tục Draft.
 
 **Việc cần tiếp:** nhận trực tiếp `output/gd205-modern-30.json` để lập bảng từng ca (30 hàng), xác định 3 ca `NO_LEGAL_TEXT`, 2 ca dương tính `NO_MATCH` và xác định có ca âm tính dự kiến bị phát hiện nhầm hay không; sau đó sửa dữ liệu nguồn/parser theo từng bằng chứng và chạy lại các ca có thay đổi.
+
+## GD2.05 — Đối soát 30 ca theo JSON chi tiết (14/10/2026)
+
+Đã đọc tệp `gd205-modern-30.json` do người vận hành gửi (timestamp `2026-10-14T03:50:36+00:00`). Có 30 hồ sơ, 27 có vùng nội dung nguồn được bộ trích xuất nhận diện, 9 ca `MATCH_PENDING_HUMAN`, 18 ca `NO_MATCH`, 3 ca `NO_LEGAL_TEXT`. **Không có nhãn Pháp chế, không tính được precision/recall.**
+
+**Đối chiếu theo từng ca:**
+- Dương tính dự kiến, phát hiện đề xuất: `001, 003, 004, 006, 007, 008, 009, 010` (8 ca). Trường hợp `004` trả 2 event_key trên cùng cặp/loại quan hệ, cần rà soát idempotency theo phạm vi; `009` có `scope_type=KHONG_RO`, không được chuyển trạng thái hết hiệu lực toàn bộ.
+- Dương tính dự kiến nhưng `NO_MATCH`: `002` (07/2024/TT-BGDĐT tác động 13/2021/TT-BGDĐT; vùng chứng cứ 27 đoạn) và `016` (02/2024/TT-BTTTT / 04/2023/TT-BTTTT; 250 đoạn, có khả năng đạt giới hạn chứng cứ). Đối chiếu toàn văn Điều 1, Điều 7 và quy tắc hiệu lực trước khi sửa parser hoặc nhãn loại quan hệ.
+- Dương tính dự kiến nhưng `NO_LEGAL_TEXT`: `005` (04/2024/TT-BQP).
+- Âm tính dự kiến `NO_MATCH`: 16 ca `011,013,015,017,019,020,021,022,023,024,025,026,027,028,029,030`. Chưa được Pháp chế gắn nhãn âm tính; `027` chỉ có 1 chứng cứ, không thể xem số đoạn trích này là bằng chứng đủ về khả năng bao phủ toàn văn.
+- Âm tính dự kiến nhưng `MATCH_PENDING_HUMAN`: `018` (12/2024/TT-BLĐTBXH so với 204/2004/NĐ-CP). Báo cáo chứa `source_section` là "Điều 3. Sửa đổi, bổ sung ... Thông tư 34/2016/TT-BLĐTBXH", khác số hiệu cặp được hỏi: **cần kiểm tra xem nghị định chỉ được dẫn chiếu trong điều khoản sửa đổi Thông tư khác**, không gán nhãn kết luận đúng hoặc sai từ đoạn tên Điều 3.
+- Âm tính dự kiến nhưng `NO_LEGAL_TEXT`: `012` (08/2024/TT-BYT), `014` (23/2024/TT-BTTTT).
+
+**Kiểm chứng URL nguồn trên Windows:** 26 đường dẫn `/van-ban/chi-tiet/` trong `results[].proposed_source_url` có cùng ID nguồn, host đúng allowlist, số hiệu hiển thị khớp và có vùng tài liệu gốc; đã thay **26 URL legacy** trong `docs/gd205_case_manifest.json`, giữ dấu vết `legacy_url` và `source_url_checked_at`. Một URL `001` đã là dạng mới; 3 ca lỗi vùng nguồn giữ URL cũ và gắn `CONTENT_ROOT_NOT_FOUND_REVIEW_REQUIRED`. **Việc kiểm tra URL kỹ thuật không đồng nghĩa xác nhận quan hệ pháp lý.**
+
+**Ưu tiên tiếp theo:** bổ sung diagnostic pháp lý chỉ ở 5 ca `002,005,012,014,016` và kiểm tra khả năng khớp sai ở `018`; không sửa ồ ạt bộ parser trước khi có đoạn điều khoản tương ứng. Luôn giữ PR #16 Draft, không ghi Google Sheets/Apps Script/Planner production.
