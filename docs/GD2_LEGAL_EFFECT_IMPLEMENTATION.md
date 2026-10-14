@@ -212,3 +212,13 @@ Người vận hành gửi kết quả `output/gd205-validation.json` (chỉ bá
 - Lưu ý: `HET_THOI_HAN` là nhãn thăm dò cho TT 02/2024/TT-BTTTT với quy định hết hiệu lực văn bản cũ; cần đối chiếu phân loại nghiệp vụ khi có bằng chứng, tránh suy luận hết thời hạn đồng nghĩa bãi bỏ.
 - Chạy **chỉ đọc**, chỉ trên bản clone thử nghiệm Windows đã hoạt động: `git pull origin feat/gd2-legal-effect-analysis-20261012`, sau đó `python scripts/gd205_validate_official_samples.py`. Đầu ra `output/gd205-validation.json`, bao gồm tất cả trạng thái đọc, quan hệ, lỗi truy cập và thống kê chưa được xác nhận.
 - Không ghi production, không sửa token, không deploy, không gộp PR #16. Giai đoạn tiếp theo: kiểm tra đủ 30 ca Windows; căn cứ trích từ điều khoản, nhãn đối chứng Pháp chế; sửa parser nếu có lỗi; kiểm tra tỷ lệ đạt tối thiểu được phê duyệt.
+
+## GD2.05 — Windows 30 ca, sự cố legacy redirects (14/10/2026)
+
+Người vận hành chạy manifest 30 ca trên bản checkout Windows, báo cáo: `total_cases=30`, `http_200=30`, `legal_text_extracted=1`, `provisional_matches=1`, `UNTRUSTED_REDIRECT=29`, `human_labelled_cases=0`. **Không được tính 29 trường hợp là âm tính pháp lý** hoặc kết luận có toàn văn truy xuất được chỉ dựa trên HTTP 200.
+
+Nguyên nhân kỹ thuật xác định từ logic runner: 29 ca sử dụng địa chỉ legacy `/TW/Pages/vbpq-toanvan.aspx?ItemID=...`; browser đã chuyển đến URL khác, `canonical_official_url(page.url)` không cho phép, trước khi kiểm tra HTML. **Chưa biết trang cuối cùng của cả 29 ca** do báo cáo cũ không lưu loại điểm đến; có thể là trang chủ portal, đường dẫn mới, hoặc luồng khác. Không nới allowlist để chấp nhận trang chủ, URL khác host, hoặc thay đổi ID.
+
+Đã bổ sung diagnostic `navigation` chỉ gồm loại đường dẫn đích (`PORTAL_HOME`, `MODERN_DETAIL`, `LEGACY_DOCUMENT`, `UNRECOGNIZED_OFFICIAL_PATH`, `EXTERNAL_OR_INSECURE`), host đã giới hạn, khớp ID hoặc không. Không lưu URL cuối, cookie, HTML. Mã trạng thái mới `LEGACY_REDIRECT_TO_HOME` và `SOURCE_ID_CHANGED` là lỗi nguồn, không phải `NO_MATCH`. Có thể chạy chọn ca `--case-indexes 2,3,12` để chẩn đoán mà không quét lại 30 trang.
+
+Bước tiếp theo: người vận hành chạy 3 ca, gửi `results[].navigation`; sửa các URL legacy chỉ khi có URL hiện đại, ID và **số hiệu nội dung** khớp, xác minh từng nguồn. Nếu chuyển về trang chủ, phải thay URL nguồn, không coi đường chuyển hướng là toàn văn. PR #16 tiếp tục Draft; không ghi production.
