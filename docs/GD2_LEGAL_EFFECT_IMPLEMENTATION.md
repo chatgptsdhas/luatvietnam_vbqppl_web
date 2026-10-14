@@ -317,3 +317,14 @@ git pull origin feat/gd2-legal-effect-analysis-20261012
 python scripts/gd205_validate_official_samples.py --case-indexes 4,16,18 --probe-same-id-modern --output output/gd205-targeted-recheck-v3.json
 ```
 Gửi file JSON gốc cho người rà soát. Giữ `PENDING_HUMAN`, PR #16 Draft; không có hoạt động ghi production.
+
+## GD2.05 — Windows 3 ca trọng điểm, lượt v3 (14/10/2026)
+
+Người vận hành xác nhận `git pull` fast-forward từ `48b83ac` lên commit `a48d229`, sau đó chạy `--case-indexes 4,16,18 --probe-same-id-modern`. **Nguồn hiện có là summary do người vận hành gửi, chưa nhận `output/gd205-targeted-recheck-v3.json` chi tiết.**
+
+- `total_cases=3`, `cases_run=3`, `http_200=3`, `legal_text_extracted=3`.
+- `positive_candidate_cases=2`, `negative_control_candidate_cases=1`, `provisional_matches=2`, `negative_controls_without_match=1`, `result_counts={MATCH_PENDING_HUMAN:2,NO_MATCH:1}`. Vì chỉ có 2 ca dương tính (004 và 016) và 1 ca kiểm soát âm tính (018), có thể suy ra **004/016 MATCH_PENDING_HUMAN và 018 NO_MATCH** từ thống kê tổng hợp, nhưng cần JSON `results[]` để kiểm tra số event, căn cứ nguồn, `evidence_truncated`, `source_paragraph_count`, `git_revision` và `manifest_sha256`.
+- So với v2, ca 018 không còn quan hệ dương tính được phát hiện trong tập kiểm thử này. Đây là bằng chứng kỹ thuật về việc chặn liên kết có nguy cơ sai giữa TT 12/2024/TT-BLĐTBXH và NĐ 204/2004/NĐ-CP; **không khẳng định kết luận pháp lý về quan hệ văn bản**.
+- `human_labelled_cases=0`, `classification_precision=null`, `classification_recall=null`, `legal_confirmation=false`, `production_writes=false`.
+
+**Bước tiếp:** yêu cầu người vận hành gửi tệp JSON `output/gd205-targeted-recheck-v3.json`; sau khi đối chiếu từng dòng, mới quyết định xử lý thêm ca 004 và tình trạng cắt chứng cứ ca 016. PR giữ trạng thái Draft, không tác động production.
