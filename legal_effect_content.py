@@ -50,7 +50,7 @@ PARAGRAPH_TAGS = {"p", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6"}
 # the structural boundary; a page title or status badge alone is never proof.
 OFFICIAL_DOC_TITLE = re.compile(r"^(?:THÔNG\s+TƯ|NGHỊ\s+ĐỊNH|QUYẾT\s+ĐỊNH|LUẬT|NGHỊ\s+QUYẾT|BỘ\s+LUẬT)$", re.I)
 MAX_HTML_BYTES = 8_000_000
-MAX_EVIDENCE_BLOCKS = 250
+MAX_EVIDENCE_BLOCKS = 1000
 MAX_PARAGRAPH_CHARS = 2400
 
 
