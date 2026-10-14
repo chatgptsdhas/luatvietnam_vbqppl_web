@@ -380,3 +380,13 @@ Người vận hành đã `git pull` thành công, fast-forward từ `06ceb83` �
 - Lượt 30 ca trước chạy từ commit `06ceb83`, không phải `8293b84`; **không ghi nhận 30/30 trên một phiên bản mới duy nhất** từ việc cộng dồn kết quả hai đợt.
 
 **Tiếp theo:** nhận file `output/gd205-15-25-recheck.json` để xác nhận `git_revision`, `evidence_truncated`, `evidence_blocks`, `source_paragraph_count` và `source_retry`; sau đó có thể chạy một lượt full 30 trên một commit để cố định baseline kỹ thuật, trước khi lập phiếu nhãn `HUMAN_VERIFIED` do người rà soát pháp lý độc lập xác lập. Giữ PR #16 Draft, không ghi production.
+
+## GD2.05 — Đối chiếu tệp JSON 015/025, commit 8293b84 (14/10/2026)
+
+Đã nhận file `gd205-15-25-recheck.json`, `generated_at=2026-10-14T08:21:34+00:00`, `git_revision=8293b846b5bae7596cdd51802f80851eeeb41c71`, `manifest_sha256=82a8b6c904495f13eb9ee0a7d6160156316ca46c44c6048ec4dec3207c147e1e`. Dữ liệu được kiểm chứng theo từng dòng `results[]`:
+
+- **GD205-015**: TT 104/2024/TT-BQP, `http_status=200`, `extraction_status=ok`, `source_paragraph_count=2291`, `evidence_blocks=1838`, `evidence_truncated=false`, `result=NO_MATCH`, `record_id_matches=true`. Giới hạn 1.000 chứng cứ cũ không còn gây `INCOMPLETE_EVIDENCE` trên ca này.
+- **GD205-025**: TT 04/2024/TT-BXD, `http_status=200`, `extraction_status=ok`, `source_paragraph_count=165`, `evidence_blocks=20`, `evidence_truncated=false`, `result=NO_MATCH`, `record_id_matches=true`. Không có `source_retry` trong báo cáo: không đủ căn cứ kết luận lần này có phải thực hiện tải lại trang hoặc chịu tác động từ hộp thoại cookie.
+- 2/2 ca đang là `NEGATIVE_CONTROL_CANDIDATE` và `PENDING_HUMAN`; `classification_precision` và `classification_recall` vẫn null. Không coi `NO_MATCH` là kết luận pháp lý.
+
+**Trạng thái nghiệm thu:** đã xử lý biểu hiện hai ngoại lệ trên Windows, chưa chứng minh đủ 30/30 kết quả trên **một lượt chạy từ cùng commit 8293b84**. Nên chạy full 30 cuối để tạo baseline thống nhất, sau đó tạo phiếu Pháp chế xác minh `HUMAN_VERIFIED` kèm đường dẫn nguồn, điều/khoản, mục tiêu và nhận xét. PR vẫn Draft; không ghi production.
