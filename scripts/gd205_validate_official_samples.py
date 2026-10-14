@@ -216,6 +216,8 @@ def evaluate_case(case: dict, html: str, title: str,
     output["extraction_status"] = extracted.get("status", "unknown")
     blocks = extracted.get("blocks") or []
     output["evidence_blocks"] = len(blocks)
+    output["evidence_truncated"] = bool(extracted.get("truncated", False))
+    output["source_paragraph_count"] = extracted.get("paragraph_count")
     if not blocks:
         # A legally validated full-text root with no matching action clauses
         # is an admissible negative example, not a failure to read the page.
@@ -223,6 +225,18 @@ def evaluate_case(case: dict, html: str, title: str,
             output["result"] = "NO_MATCH"
         else:
             output["result"] = "NO_LEGAL_TEXT"
+            # Text-free metadata for root diagnosis; no complete HTML,
+            # raw quotes, credentials, DOM paths, or tokens in JSON.
+            from bs4 import BeautifulSoup
+            source_text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+            output["source_diagnostic"] = {
+                "text_length_band": ("0-159" if len(source_text) < 160 else
+                                     "160-999" if len(source_text) < 1000 else
+                                     "1000-9999" if len(source_text) < 10000 else
+                                     "10000+"),
+                "has_article_marker": bool(re.search(r"Điều\\s+\\d+", source_text, re.I)),
+                "has_official_masthead": bool(re.search(r"CỘNG\\s+HÒA\\s+XÃ\\s+HỘI\\s+CHỦ\\s+NGHĨA", source_text, re.I)),
+            }
         return output
     events = analyze_new_document(
         {"source_doc_number": case["new_number"], "url": final_url, "luoc_do_data": []},
